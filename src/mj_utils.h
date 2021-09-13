@@ -15,6 +15,9 @@ void mujoco_create_window();
 /*! Sets initial qpos and qvel in mjData */
 bool mujoco_set_const(const std::vector<double> & qpos, const std::vector<double> & qvel);
 
+/*! Returns timestep defined in XML. */
+double mujoco_get_timestep();
+
 /*! Get true position of robot root joint. */
 void mujoco_get_root_pos(Eigen::Vector3d & pos);
 

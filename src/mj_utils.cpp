@@ -198,6 +198,11 @@ bool mujoco_render()
   return !glfwWindowShouldClose(window);
 }
 
+double mujoco_get_timestep()
+{
+  return m->opt.timestep;
+}
+
 void mujoco_get_root_pos(Eigen::Vector3d & pos)
 {
   pos.setZero();

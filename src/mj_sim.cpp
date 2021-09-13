@@ -12,6 +12,7 @@ private:
   mc_control::MCGlobalController & controller;
 
   size_t iterCount_ = 0;
+  size_t frameskip_ = 1;
 
   Eigen::Vector3d root_pos;
   Eigen::Quaterniond root_orient;
@@ -185,6 +186,12 @@ public:
       mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
     }
 
+    // get sim timestep and set the frameskip parameter
+    double simTimestep = mujoco_get_timestep();
+    frameskip_ = std::round(controller.timestep() / simTimestep);
+    mc_rtc::log::info("[mc_mujoco] MC-RTC timestep: {}. MJ timestep: {}", controller.timestep(), simTimestep);
+    mc_rtc::log::info("[mc_mujoco] Hence, Frameskip: {}", frameskip_);
+
     controller.setEncoderValues(encoders);
     controller.init(encoders);
     controller.running = true;
@@ -272,6 +279,12 @@ public:
 
   bool controlStep()
   {
+    // skip control.run() from frameskip_ number of iters.
+    if (iterCount_++ % frameskip_ != 0)
+    {
+      return false;
+    }
+
     std::vector<double> ctrl;
     // step controller and get QP result
     if (controller.run())
