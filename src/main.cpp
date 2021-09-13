@@ -8,12 +8,13 @@
 #include <iostream>
 #include <thread>
 
-std::mutex mtx;
+//std::mutex mtx;
+bool render_state = true;
 
 void simulate(MjSim & mj_sim)
 {
   bool done = false;
-  while(!done)
+  while(!done && render_state)
   {
     mj_sim.simStep();
     mj_sim.updateData();
@@ -51,8 +52,6 @@ int main(int argc, char * argv[])
 
   std::thread simThread(simulate, std::ref(mj_sim));
 
-
-  bool render_state = true;
   while (render_state){
     render_state = mj_sim.render();
   }
