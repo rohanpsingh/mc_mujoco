@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD 11)
 project(${PROJECT_NAME} LANGUAGES CXX VERSION 1.0.0)
 
 set(USE_GL 1)
-set(MUJOCO_SRC_DIR /home/rohan/.mujoco/mujoco200/bin)
-set(MUJOCO_INCLUDE_DIR /home/rohan/.mujoco/mujoco200/include)
+set(MUJOCO_SRC_DIR "$ENV{HOME}/.mujoco/mujoco200/bin" CACHE String "Path to mujoco bin directory.")
+set(MUJOCO_INCLUDE_DIR "$ENV{HOME}/.mujoco/mujoco200/include" CACHE String "Path to mujoco include directory.")
 message(STATUS "MuJoCo path: " ${MUJOCO_SRC_DIR})
 
 link_directories(${MUJOCO_SRC_DIR})
