@@ -18,3 +18,9 @@ $ mkdir build && cd build
 $ cmake ..
 $ make
 ```
+Then, to run the interface:  
+```sh
+$ cd mc_mujoco/build/src
+$ ./mc_mujoco
+```
+
