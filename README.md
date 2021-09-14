@@ -18,6 +18,8 @@ $ mkdir build && cd build
 $ cmake ..
 $ make
 ```
+Set the environment variabe `MUJOCO_KEY_PATH` to the path where your mjkey.txt exists.
+
 Then, to run the interface:  
 ```sh
 $ cd mc_mujoco/build/src
