@@ -33,6 +33,8 @@ private:
   std::vector<std::string> mj_act_names;
   std::vector<std::string> mj_jnt_names;
 
+  /** Transform mj_act index to mj_jnt index */
+  std::vector<size_t> mj_act_to_jnt;
   /** Transform from index in mj_act_names to index in mbc, -1 if not in mbc */
   std::vector<int> mj_to_mbc;
   /** Command send to mujoco */
@@ -156,8 +158,24 @@ public:
     // get names of actuated joints
     mujoco_get_motor_names(mj_act_names);
 
+    mj_act_to_jnt.resize(0);
+    for(const auto & jn : mj_act_names)
+    {
+      auto it = std::find(mj_jnt_names.begin(), mj_jnt_names.end(), jn);
+      if(it == mj_jnt_names.end())
+      {
+        // Probably impossible?
+        mc_rtc::log::error_and_throw<std::runtime_error>(
+            "[mc_mujoco] An actutated joint is not part of the model joints!");
+      }
+      mj_act_to_jnt.push_back(std::distance(mj_jnt_names.begin(), it));
+    }
+
+    mj_to_mbc.resize(0);
+    mj_prev_ctrl_q.resize(0);
+    mj_prev_ctrl_alpha.resize(0);
     const auto & robot = controller.robot();
-    for(const auto & jn : mj_jnt_names)
+    for(const auto & jn : mj_act_names)
     {
       if(robot.hasJoint(jn))
       {
@@ -174,8 +192,6 @@ public:
       else
       {
         mj_to_mbc.push_back(-1);
-        mj_prev_ctrl_q.push_back(0);
-        mj_prev_ctrl_alpha.push_back(0);
       }
     }
     mj_ctrl = mj_prev_ctrl_q;
@@ -342,19 +358,26 @@ public:
       mj_prev_ctrl_q = mj_next_ctrl_q;
       mj_prev_ctrl_alpha = mj_next_ctrl_alpha;
       const auto & robot = controller.robot();
+      size_t ctrl_idx = 0;
       for(size_t i = 0; i < mj_to_mbc.size(); ++i)
       {
         auto jIndex = mj_to_mbc[i];
-        mj_next_ctrl_q[i] = robot.mbc().q[jIndex][0];
-        mj_next_ctrl_alpha[i] = robot.mbc().alpha[jIndex][0];
+        if(jIndex != -1)
+        {
+          mj_next_ctrl_q[ctrl_idx] = robot.mbc().q[jIndex][0];
+          mj_next_ctrl_alpha[ctrl_idx] = robot.mbc().alpha[jIndex][0];
+          ctrl_idx++;
+        }
       }
     }
     for(size_t i = 0; i < mj_ctrl.size(); ++i)
     {
-      mj_ctrl[i] = PD(
-          i, mj_prev_ctrl_q[i] + (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_, encoders[i],
-          mj_prev_ctrl_alpha[i] + (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_,
-          alphas[i]);
+      auto jnt_idx = mj_act_to_jnt[i];
+      mj_ctrl[i] =
+          PD(jnt_idx, mj_prev_ctrl_q[i] + (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_,
+             encoders[jnt_idx],
+             mj_prev_ctrl_alpha[i] + (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_,
+             alphas[jnt_idx]);
     }
     iterCount_++;
     // send control signal to mujoco

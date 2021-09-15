@@ -350,7 +350,7 @@ bool mujoco_set_ctrl(const std::vector<double> & ctrl)
   mju_zero(d->ctrl, m->nu);
   if(ctrl.size() != m->nu)
   {
-    std::cerr << "Invalid size of control signal(" << ctrl.size() << ")." << std::endl;
+    std::cerr << "Invalid size of control signal(" << ctrl.size() << ", expected " << m->nu << ")." << std::endl;
     return false;
   }
   // TODO: Check if mapping is correct.
