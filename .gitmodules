@@ -1,0 +1,3 @@
+[submodule "robots/jvrc_mj_description"]
+	path = robots/jvrc_mj_description
+	url = git@github.com:isri-aist/jvrc_mj_description.git
