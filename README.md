@@ -25,7 +25,8 @@ Then, to run the interface:
 $ cd mc_mujoco/build/
 $ ./src/mc_mujoco
 ```
+---
 
-
-By default, we assume your mujoco key is at `${MUJOCO_ROOT_DIR}/bin/mjkey.txt` if that is not the case you can set the environment variabe `MUJOCO_KEY_PATH` to the path where your `mjkey.txt` is.
+- By default, we assume your mujoco key is at `${MUJOCO_ROOT_DIR}/bin/mjkey.txt` if that is not the case you can set the environment variabe `MUJOCO_KEY_PATH` to the path where your `mjkey.txt` is.
+- If Mujoco simulation becomes unstable `WARNING: Nan, Inf or huge value ... The simulation is unstable`. Try setting the mc-rtc control timestep lower (`0.001` or `0.002`).
 
