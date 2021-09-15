@@ -8,10 +8,10 @@
 #include <iostream>
 #include <thread>
 
-//std::mutex mtx;
+// std::mutex mtx;
 bool render_state = true;
 
-void simulate(MjSim & mj_sim)
+void simulate(mc_mujoco::MjSim & mj_sim)
 {
   bool done = false;
   while(!done && render_state)
@@ -19,7 +19,7 @@ void simulate(MjSim & mj_sim)
     mj_sim.simStep();
     mj_sim.updateData();
     done = mj_sim.controlStep();
-    //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
 
@@ -41,18 +41,19 @@ int main(int argc, char * argv[])
 
   mc_control::MCGlobalController controller(conf_file);
 
-  MjConfiguration config;
+  mc_mujoco::MjConfiguration config;
   auto mj_c = controller.configuration().config("MUJOCO", mc_rtc::Configuration{});
   config.simulationTimestep = controller.timestep();
   mj_c("xmlModelPath", config.xmlPath);
   mj_c("pdGainsPath", config.pdGains);
 
-  MjSim mj_sim(controller, config);
+  mc_mujoco::MjSim mj_sim(controller, config);
   mj_sim.startSimulation();
 
   std::thread simThread(simulate, std::ref(mj_sim));
 
-  while (render_state){
+  while(render_state)
+  {
     render_state = mj_sim.render();
   }
 

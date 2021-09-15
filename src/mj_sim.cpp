@@ -1,10 +1,12 @@
 #include "mj_sim.h"
 #include "mj_utils.h"
 
-#include <type_traits>
-#include <chrono>
 #include <cassert>
+#include <chrono>
+#include <type_traits>
 
+namespace mc_mujoco
+{
 
 struct MjSimImpl
 {
@@ -31,15 +33,12 @@ private:
   std::vector<std::string> mj_act_names;
   std::vector<std::string> mj_jnt_names;
 
-
   /* PD control */
-  double PD(double jnt_id,
-	    double q_ref, double q,
-	    double qdot_ref, double qdot)
+  double PD(double jnt_id, double q_ref, double q, double qdot_ref, double qdot)
   {
-    double p_error = q_ref-q;
-    double v_error = qdot_ref-qdot;
-    double ret = (kp[jnt_id]*p_error + kd[jnt_id]*v_error);
+    double p_error = q_ref - q;
+    double v_error = qdot_ref - qdot;
+    double ret = (kp[jnt_id] * p_error + kd[jnt_id] * v_error);
     return ret;
   }
 
@@ -47,71 +46,73 @@ private:
   bool loadGain(const std::string & path_to_pd, const std::vector<std::string> & joints)
   {
     std::ifstream strm(path_to_pd.c_str());
-    if (!strm.is_open()) {
-	std::cerr << path_to_pd << " not found" << std::endl;
-	return false;
+    if(!strm.is_open())
+    {
+      std::cerr << path_to_pd << " not found" << std::endl;
+      return false;
     }
 
     int num_joints = joints.size();
-    if (!num_joints)
+    if(!num_joints)
     {
       return false;
     }
     std::vector<double> default_pgain(num_joints, 0);
     std::vector<double> default_dgain(num_joints, 0);
-    for (int i = 0; i < num_joints; i++) {
-	std::string str;
-	bool getlinep;
-	while ((getlinep = !!(std::getline(strm, str)))) {
-	    if (str.empty())   {
-		continue;
-	    }
-	    if (str[0] == '#') {
-		continue;
-	    }
-	    double tmp;
-	    std::istringstream sstrm(str);
-	    sstrm >> tmp;
-	    default_pgain[i] = tmp;
-	    if(sstrm.eof()) break;
+    for(int i = 0; i < num_joints; i++)
+    {
+      std::string str;
+      bool getlinep;
+      while((getlinep = !!(std::getline(strm, str))))
+      {
+        if(str.empty())
+        {
+          continue;
+        }
+        if(str[0] == '#')
+        {
+          continue;
+        }
+        double tmp;
+        std::istringstream sstrm(str);
+        sstrm >> tmp;
+        default_pgain[i] = tmp;
+        if(sstrm.eof()) break;
 
-	    sstrm >> tmp;
-	    default_dgain[i] = tmp;
-	    if(sstrm.eof()) break;
-	    break;
-	}
-	if(!getlinep) {
-	    if (i < num_joints) {
-		std::cerr << "[mc_mujoco] loadGain error: size of gains reading from file ("
-			  << path_to_pd
-			  << ") does not match size of joints" << std::endl;
-	    }
-	    break;
-	}
+        sstrm >> tmp;
+        default_dgain[i] = tmp;
+        if(sstrm.eof()) break;
+        break;
+      }
+      if(!getlinep)
+      {
+        if(i < num_joints)
+        {
+          std::cerr << "[mc_mujoco] loadGain error: size of gains reading from file (" << path_to_pd
+                    << ") does not match size of joints" << std::endl;
+        }
+        break;
+      }
     }
 
     strm.close();
     // Print loaded gain
     std::cerr << "[mc_mujoco] loadGain" << std::endl;
-    for (unsigned int i=0; i<num_joints; i++) {
-	std::cerr << "[mc_mujoco]   " << joints[i]
-		  << ", pgain = " << default_pgain[i]
-		  << ", dgain = " << default_dgain[i]
-		  << std::endl;
-	// push to kp and kd
-	kp.push_back(default_pgain[i]);
-	kd.push_back(default_dgain[i]);
+    for(unsigned int i = 0; i < num_joints; i++)
+    {
+      std::cerr << "[mc_mujoco]   " << joints[i] << ", pgain = " << default_pgain[i] << ", dgain = " << default_dgain[i]
+                << std::endl;
+      // push to kp and kd
+      kp.push_back(default_pgain[i]);
+      kd.push_back(default_dgain[i]);
     }
     return true;
   }
 
-
 public:
-  MjSimImpl(mc_control::MCGlobalController & controller,
-	    const MjConfiguration & config)
-  : controller(controller)
+  MjSimImpl(mc_control::MCGlobalController & controller, const MjConfiguration & config) : controller(controller)
   {
-    // initial mujoco here and load XML model 
+    // initial mujoco here and load XML model
     bool initialized = mujoco_init(config.xmlPath.c_str());
     if(!initialized)
     {
@@ -153,42 +154,44 @@ public:
       const auto & rjo = controller.ref_joint_order();
       for(const auto & jn : rjo)
       {
-	if(controller.robot().hasJoint(jn))
-	{
-	  for(auto & qj : mbc.q[controller.robot().jointIndexByName(jn)])
-	  {
-	    encoders.push_back(qj);
-	    if(std::find(mj_jnt_names.begin(), mj_jnt_names.end(), jn)!=mj_jnt_names.end())
-	    {
-	      mj_qpos_init.push_back(qj);
-	      mj_qvel_init.push_back(0);
-	    }
-	  }
-	}
-	else
-	{
-	  // FIXME This assumes that a joint that is in ref_joint_order but missing from the robot is of size 1 (very
-	  // likely to be true)
-	  encoders.push_back(0);
-	}
+        if(controller.robot().hasJoint(jn))
+        {
+          for(auto & qj : mbc.q[controller.robot().jointIndexByName(jn)])
+          {
+            encoders.push_back(qj);
+            if(std::find(mj_jnt_names.begin(), mj_jnt_names.end(), jn) != mj_jnt_names.end())
+            {
+              mj_qpos_init.push_back(qj);
+              mj_qvel_init.push_back(0);
+            }
+          }
+        }
+        else
+        {
+          // FIXME This assumes that a joint that is in ref_joint_order but missing from the robot is of size 1 (very
+          // likely to be true)
+          encoders.push_back(0);
+          mj_qpos_init.push_back(0);
+          mj_qvel_init.push_back(0);
+        }
       }
     }
     alphas.resize(encoders.size());
     std::fill(alphas.begin(), alphas.end(), 0);
 
     // sanity check
-    if(encoders.size()!=mj_jnt_names.size())
+    if(encoders.size() != mj_jnt_names.size())
     {
       mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Num encoders size mismatch.");
     }
     // zero force/torque wrenches
-    for (const auto & fs : controller.robot().module().forceSensors())
+    for(const auto & fs : controller.robot().module().forceSensors())
     {
       wrenches[fs.name()] = sva::ForceVecd(Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
     }
 
     // set initial qpos, qvel in mujoco
-    if (!mujoco_set_const(mj_qpos_init, mj_qvel_init))
+    if(!mujoco_set_const(mj_qpos_init, mj_qvel_init))
     {
       mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
     }
@@ -241,13 +244,13 @@ public:
     // set angular velocity
     std::vector<double> _gyro;
     mujoco_get_sensordata(_gyro, "root_gyro");
-    if (_gyro.size()!=3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] gyro read failed.");
+    if(_gyro.size() != 3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] gyro read failed.");
     controller.setSensorAngularVelocities({{"Accelerometer", Eigen::Vector3d(_gyro.data())}});
 
     // set linear acceleration
     std::vector<double> _accel;
     mujoco_get_sensordata(_accel, "root_accel");
-    if (_accel.size()!=3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] accel read failed.");
+    if(_accel.size() != 3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] accel read failed.");
     controller.setSensorLinearAccelerations({{"Accelerometer", Eigen::Vector3d(_accel.data())}});
 
     // set encoders
@@ -265,29 +268,25 @@ public:
     std::vector<double> _lf_fsensor, _lf_tsensor;
     std::vector<double> _rh_fsensor, _rh_tsensor;
     std::vector<double> _lh_fsensor, _lh_tsensor;
-    if (mujoco_get_sensordata(_rf_fsensor, "rf_fsensor") &&
-	mujoco_get_sensordata(_rf_tsensor, "rf_tsensor"))
+    if(mujoco_get_sensordata(_rf_fsensor, "rf_fsensor") && mujoco_get_sensordata(_rf_tsensor, "rf_tsensor"))
     {
-      wrenches["RightFootForceSensor"].force()  = -1*Eigen::Vector3d(_rf_fsensor.data());
-      wrenches["RightFootForceSensor"].couple() = -1*Eigen::Vector3d(_rf_tsensor.data());
+      wrenches["RightFootForceSensor"].force() = -1 * Eigen::Vector3d(_rf_fsensor.data());
+      wrenches["RightFootForceSensor"].couple() = -1 * Eigen::Vector3d(_rf_tsensor.data());
     }
-    if (mujoco_get_sensordata(_lf_fsensor, "lf_fsensor") &&
-	mujoco_get_sensordata(_lf_tsensor, "lf_tsensor"))
+    if(mujoco_get_sensordata(_lf_fsensor, "lf_fsensor") && mujoco_get_sensordata(_lf_tsensor, "lf_tsensor"))
     {
-      wrenches["LeftFootForceSensor"].force()   = -1*Eigen::Vector3d(_lf_fsensor.data());
-      wrenches["LeftFootForceSensor"].couple()  = -1*Eigen::Vector3d(_lf_tsensor.data());
+      wrenches["LeftFootForceSensor"].force() = -1 * Eigen::Vector3d(_lf_fsensor.data());
+      wrenches["LeftFootForceSensor"].couple() = -1 * Eigen::Vector3d(_lf_tsensor.data());
     }
-    if (mujoco_get_sensordata(_rh_fsensor, "rh_fsensor") &&
-	mujoco_get_sensordata(_rh_tsensor, "rh_tsensor"))
+    if(mujoco_get_sensordata(_rh_fsensor, "rh_fsensor") && mujoco_get_sensordata(_rh_tsensor, "rh_tsensor"))
     {
-      wrenches["RightHandForceSensor"].force()  = -1*Eigen::Vector3d(_rh_fsensor.data());
-      wrenches["RightHandForceSensor"].couple() = -1*Eigen::Vector3d(_rh_tsensor.data());
+      wrenches["RightHandForceSensor"].force() = -1 * Eigen::Vector3d(_rh_fsensor.data());
+      wrenches["RightHandForceSensor"].couple() = -1 * Eigen::Vector3d(_rh_tsensor.data());
     }
-    if (mujoco_get_sensordata(_lh_fsensor, "lh_fsensor") &&
-	mujoco_get_sensordata(_lh_tsensor, "lh_tsensor"))
+    if(mujoco_get_sensordata(_lh_fsensor, "lh_fsensor") && mujoco_get_sensordata(_lh_tsensor, "lh_tsensor"))
     {
-      wrenches["LeftHandForceSensor"].force()   = -1*Eigen::Vector3d(_lh_fsensor.data());
-      wrenches["LeftHandForceSensor"].couple()  = -1*Eigen::Vector3d(_lh_tsensor.data());
+      wrenches["LeftHandForceSensor"].force() = -1 * Eigen::Vector3d(_lh_fsensor.data());
+      wrenches["LeftHandForceSensor"].couple() = -1 * Eigen::Vector3d(_lh_tsensor.data());
     }
     controller.setWrenches(wrenches);
   }
@@ -295,43 +294,41 @@ public:
   bool controlStep()
   {
     // skip control.run() from frameskip_ number of iters.
-    if (iterCount_++ % frameskip_ != 0)
+    if(iterCount_++ % frameskip_ != 0)
     {
       return false;
     }
 
     std::vector<double> ctrl;
     // step controller and get QP result
-    if (controller.run())
+    if(controller.run())
     {
-      double t = 0; //unused argument
+      double t = 0; // unused argument
       const mc_solver::QPResultMsg & res = controller.send(t);
       const auto & rjo = controller.robot().refJointOrder();
-      for (size_t i = 0; i < rjo.size(); ++i)
+      for(size_t i = 0; i < rjo.size(); ++i)
       {
-	const auto & jn = rjo[i];
-	if(res.robots_state[0].q.count(jn))
-	{
-	  auto id = std::find(mj_act_names.begin(), mj_act_names.end(), jn);
-	  if (id!=mj_act_names.end())
-	  {
-	    // convert PD targets to torque using PD control
-	    double tau = PD(i,
-			    res.robots_state[0].q.at(jn)[0], encoders[i],
-			    0, alphas[i]);
-	    ctrl.push_back(tau);
-	  }
-	}
+        const auto & jn = rjo[i];
+        if(res.robots_state[0].q.count(jn))
+        {
+          auto id = std::find(mj_act_names.begin(), mj_act_names.end(), jn);
+          if(id != mj_act_names.end())
+          {
+            // convert PD targets to torque using PD control
+            double tau = PD(i, res.robots_state[0].q.at(jn)[0], encoders[i], 0, alphas[i]);
+            ctrl.push_back(tau);
+          }
+        }
       }
     }
 
     // send control signal to mujoco
     bool done = true;
-    if (controller.running)
+    if(controller.running)
     {
-      if (mujoco_set_ctrl(ctrl))
+      if(mujoco_set_ctrl(ctrl))
       {
-	done = false;
+        done = false;
       }
     }
     return done;
@@ -350,11 +347,8 @@ public:
     return mujoco_render();
   }
 
-  void stopSimulation()
-  {
-  }
+  void stopSimulation() {}
 };
-
 
 MjSim::MjSim(mc_control::MCGlobalController & controller, const MjConfiguration & config)
 : impl(new MjSimImpl(controller, config))
@@ -395,3 +389,5 @@ bool MjSim::render()
 {
   return impl->render();
 }
+
+} // namespace mc_mujoco

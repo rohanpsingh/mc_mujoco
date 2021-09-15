@@ -1,8 +1,11 @@
 #pragma once
 
 #include <mc_control/mc_global_controller.h>
-#include <mc_rtc/logging.h>
 #include <mc_rtc/config.h>
+#include <mc_rtc/logging.h>
+
+namespace mc_mujoco
+{
 
 struct MjSimImpl;
 
@@ -57,3 +60,5 @@ public:
 private:
   std::unique_ptr<MjSimImpl> impl;
 };
+
+} // namespace mc_mujoco

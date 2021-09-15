@@ -1,13 +1,16 @@
 #ifndef MJ_UTILS_H
 #define MJ_UTILS_H
 
-#include <iostream>
-#include <vector>
-#include <map>
 #include <Eigen/Dense>
+#include <iostream>
+#include <map>
+#include <vector>
+
+namespace mc_mujoco
+{
 
 /*! Load XML model and initialize */
-bool mujoco_init(const char *modelfile);
+bool mujoco_init(const char * modelfile);
 
 /*! Create GLFW window */
 void mujoco_create_window();
@@ -68,5 +71,7 @@ bool mujoco_render();
 
 /*! Cleanup. */
 void mujoco_cleanup();
+
+} // namespace mc_mujoco
 
 #endif // MJ_UTILS_H_
