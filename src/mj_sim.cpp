@@ -31,7 +31,9 @@ private:
   std::vector<double> kd = {};
 
   std::vector<std::string> mj_act_names;
+  std::vector<int> mj_act_ids;
   std::vector<std::string> mj_jnt_names;
+  std::vector<int> mj_jnt_ids;
 
   /** Transform mj_act index to mj_jnt index */
   std::vector<size_t> mj_act_to_jnt;
@@ -154,22 +156,9 @@ public:
   void startSimulation()
   {
     // get names of all joints
-    mujoco_get_joint_names(mj_jnt_names);
+    mujoco_get_joints(mj_jnt_names, mj_jnt_ids);
     // get names of actuated joints
-    mujoco_get_motor_names(mj_act_names);
-
-    mj_act_to_jnt.resize(0);
-    for(const auto & jn : mj_act_names)
-    {
-      auto it = std::find(mj_jnt_names.begin(), mj_jnt_names.end(), jn);
-      if(it == mj_jnt_names.end())
-      {
-        // Probably impossible?
-        mc_rtc::log::error_and_throw<std::runtime_error>(
-            "[mc_mujoco] An actutated joint is not part of the model joints!");
-      }
-      mj_act_to_jnt.push_back(std::distance(mj_jnt_names.begin(), it));
-    }
+    mujoco_get_motors(mj_act_names, mj_act_ids);
 
     mj_to_mbc.resize(0);
     mj_prev_ctrl_q.resize(0);
@@ -372,7 +361,7 @@ public:
     }
     for(size_t i = 0; i < mj_ctrl.size(); ++i)
     {
-      auto jnt_idx = mj_act_to_jnt[i];
+      auto jnt_idx = mj_act_ids[i]-1; // subtract 1 because mujoco counts from the "freejoint"
       mj_ctrl[i] =
           PD(jnt_idx, mj_prev_ctrl_q[i] + (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_,
              encoders[jnt_idx],

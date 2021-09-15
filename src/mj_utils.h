@@ -50,11 +50,11 @@ void mujoco_get_joint_vel(std::vector<double> & qvel);
  */
 bool mujoco_get_sensordata(std::vector<double> & read, const std::string & sensor_name);
 
-/*! Get names of all joints except the freejoint. */
-void mujoco_get_joint_names(std::vector<std::string> & names);
+/*! Get names and ids of all joints except the freejoint. */
+void mujoco_get_joints(std::vector<std::string> & names, std::vector<int> & ids);
 
-/*! Get names of all actuated joints (NOT the names of actuators). */
-void mujoco_get_motor_names(std::vector<std::string> & names);
+/*! Get names and ids of all actuated joints (NOT the names of actuators). */
+void mujoco_get_motors(std::vector<std::string> & names, std::vector<int> & ids);
 
 /*! Sets the control data after scaling down by gear ratio.
  * Returns false if there is a vector size mismatch.
