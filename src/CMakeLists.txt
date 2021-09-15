@@ -6,7 +6,7 @@ set(mc_mujoco_SRC
 
 add_executable(mc_mujoco ${mc_mujoco_SRC})
 target_include_directories(mc_mujoco PUBLIC ${MUJOCO_INCLUDE_DIR})
-target_link_libraries(mc_mujoco PUBLIC ${LIB_MUJOCO} ${GLFW} libGL.so libglew.so mc_rtc::mc_control)
+target_link_libraries(mc_mujoco PUBLIC ${LIB_MUJOCO} ${GLFW} GLEW::GLEW mc_rtc::mc_control)
 
 install(TARGETS mc_mujoco
   RUNTIME DESTINATION bin
