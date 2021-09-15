@@ -33,6 +33,19 @@ private:
   std::vector<std::string> mj_act_names;
   std::vector<std::string> mj_jnt_names;
 
+  /** Transform from index in mj_act_names to index in mbc, -1 if not in mbc */
+  std::vector<int> mj_to_mbc;
+  /** Command send to mujoco */
+  std::vector<double> mj_ctrl;
+  /** Previous position desired by mc_rtc */
+  std::vector<double> mj_prev_ctrl_q;
+  /** Previous velocity desired by mc_rtc */
+  std::vector<double> mj_prev_ctrl_alpha;
+  /** Next position desired by mc_rtc */
+  std::vector<double> mj_next_ctrl_q;
+  /** Next velocity desired by mc_rtc */
+  std::vector<double> mj_next_ctrl_alpha;
+
   /* PD control */
   double PD(double jnt_id, double q_ref, double q, double qdot_ref, double qdot)
   {
@@ -142,6 +155,32 @@ public:
     mujoco_get_joint_names(mj_jnt_names);
     // get names of actuated joints
     mujoco_get_motor_names(mj_act_names);
+
+    const auto & robot = controller.robot();
+    for(const auto & jn : mj_jnt_names)
+    {
+      if(robot.hasJoint(jn))
+      {
+        auto jIndex = robot.jointIndexByName(jn);
+        mj_to_mbc.push_back(jIndex);
+        if(robot.mb().joint(jIndex).dof() != 1)
+        {
+          mc_rtc::log::error_and_throw<std::runtime_error>(
+              "[mc_mujoco] Only support revolute and prismatic joint for control");
+        }
+        mj_prev_ctrl_q.push_back(robot.mbc().q[jIndex][0]);
+        mj_prev_ctrl_alpha.push_back(robot.mbc().alpha[jIndex][0]);
+      }
+      else
+      {
+        mj_to_mbc.push_back(-1);
+        mj_prev_ctrl_q.push_back(0);
+        mj_prev_ctrl_alpha.push_back(0);
+      }
+    }
+    mj_ctrl = mj_prev_ctrl_q;
+    mj_next_ctrl_q = mj_prev_ctrl_q;
+    mj_next_ctrl_alpha = mj_prev_ctrl_alpha;
 
     // init attitude from mc-rtc
     const auto q0 = controller.robot().module().default_attitude();
@@ -293,45 +332,33 @@ public:
 
   bool controlStep()
   {
-    // skip control.run() from frameskip_ number of iters.
-    if(iterCount_++ % frameskip_ != 0)
+    auto interp_idx = iterCount_ % frameskip_;
+    if(interp_idx == 0)
     {
-      return false;
-    }
-
-    std::vector<double> ctrl;
-    // step controller and get QP result
-    if(controller.run())
-    {
-      double t = 0; // unused argument
-      const mc_solver::QPResultMsg & res = controller.send(t);
-      const auto & rjo = controller.robot().refJointOrder();
-      for(size_t i = 0; i < rjo.size(); ++i)
+      if(!controller.run())
       {
-        const auto & jn = rjo[i];
-        if(res.robots_state[0].q.count(jn))
-        {
-          auto id = std::find(mj_act_names.begin(), mj_act_names.end(), jn);
-          if(id != mj_act_names.end())
-          {
-            // convert PD targets to torque using PD control
-            double tau = PD(i, res.robots_state[0].q.at(jn)[0], encoders[i], 0, alphas[i]);
-            ctrl.push_back(tau);
-          }
-        }
+        return true;
+      }
+      mj_prev_ctrl_q = mj_next_ctrl_q;
+      mj_prev_ctrl_alpha = mj_next_ctrl_alpha;
+      const auto & robot = controller.robot();
+      for(size_t i = 0; i < mj_to_mbc.size(); ++i)
+      {
+        auto jIndex = mj_to_mbc[i];
+        mj_next_ctrl_q[i] = robot.mbc().q[jIndex][0];
+        mj_next_ctrl_alpha[i] = robot.mbc().alpha[jIndex][0];
       }
     }
-
+    for(size_t i = 0; i < mj_ctrl.size(); ++i)
+    {
+      mj_ctrl[i] = PD(
+          i, mj_prev_ctrl_q[i] + (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_, encoders[i],
+          mj_prev_ctrl_alpha[i] + (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_,
+          alphas[i]);
+    }
+    iterCount_++;
     // send control signal to mujoco
-    bool done = true;
-    if(controller.running)
-    {
-      if(mujoco_set_ctrl(ctrl))
-      {
-        done = false;
-      }
-    }
-    return done;
+    return !(controller.running && mujoco_set_ctrl(mj_ctrl));
   }
 
   void simStep()
