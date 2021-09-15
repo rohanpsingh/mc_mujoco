@@ -35,8 +35,6 @@ private:
   std::vector<std::string> mj_jnt_names;
   std::vector<int> mj_jnt_ids;
 
-  /** Transform mj_act index to mj_jnt index */
-  std::vector<size_t> mj_act_to_jnt;
   /** Transform from index in mj_act_names to index in mbc, -1 if not in mbc */
   std::vector<int> mj_to_mbc;
   /** Command send to mujoco */
@@ -157,7 +155,7 @@ public:
   {
     // get names of all joints
     mujoco_get_joints(mj_jnt_names, mj_jnt_ids);
-    // get names of actuated joints
+    // get names of acuated joints
     mujoco_get_motors(mj_act_names, mj_act_ids);
 
     mj_to_mbc.resize(0);
