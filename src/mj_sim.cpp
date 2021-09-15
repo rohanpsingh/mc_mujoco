@@ -33,13 +33,13 @@ private:
 
 
   /* PD control */
-  double PD(double idx,
+  double PD(double jnt_id,
 	    double q_ref, double q,
 	    double qdot_ref, double qdot)
   {
     double p_error = q_ref-q;
     double v_error = qdot_ref-qdot;
-    double ret = (kp[idx]*p_error + kd[idx]*v_error);
+    double ret = (kp[jnt_id]*p_error + kd[jnt_id]*v_error);
     return ret;
   }
 
@@ -53,6 +53,10 @@ private:
     }
 
     int num_joints = joints.size();
+    if (!num_joints)
+    {
+      return false;
+    }
     std::vector<double> default_pgain(num_joints, 0);
     std::vector<double> default_dgain(num_joints, 0);
     for (int i = 0; i < num_joints; i++) {
@@ -116,8 +120,11 @@ public:
 
     // read PD gains from file
     std::string path_to_pd = config.pdGains.c_str();
-    std::vector<std::string> rjo = controller.ref_joint_order();
-    loadGain(path_to_pd, rjo);
+    const std::vector<std::string> rjo = controller.ref_joint_order();
+    if(!loadGain(path_to_pd, rjo))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains load failed.");
+    }
 
     mujoco_create_window();
     mc_rtc::log::info("[mc_mujoco] Initialized successful.");
@@ -308,9 +315,8 @@ public:
 	  auto id = std::find(mj_act_names.begin(), mj_act_names.end(), jn);
 	  if (id!=mj_act_names.end())
 	  {
-	    unsigned int index_ = std::distance(mj_act_names.begin(), id);
 	    // convert PD targets to torque using PD control
-	    double tau = PD(index_,
+	    double tau = PD(i,
 			    res.robots_state[0].q.at(jn)[0], encoders[i],
 			    0, alphas[i]);
 	    ctrl.push_back(tau);
