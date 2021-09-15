@@ -34,11 +34,22 @@ double lasty = 0;
 // keyboard callback
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods)
 {
-  // backspace: reset simulation
-  if( act==GLFW_PRESS && key==GLFW_KEY_BACKSPACE )
+  // C: show contacts
+  if(act==GLFW_PRESS)
   {
-      mj_resetData(m, d);
-      mj_forward(m, d);
+    if(key==GLFW_KEY_C)
+    {
+      opt.flags[mjVIS_CONTACTPOINT] = !opt.flags[mjVIS_CONTACTPOINT];
+    }
+    if(key==GLFW_KEY_F)
+    {
+      opt.flags[mjVIS_CONTACTFORCE] = !opt.flags[mjVIS_CONTACTFORCE];
+    }
+    if(key>=GLFW_KEY_0 && key<=GLFW_KEY_9)
+    {
+      int group = key-GLFW_KEY_0;
+      opt.geomgroup[group] = !opt.geomgroup[group];
+    }
   }
 }
 
@@ -143,6 +154,8 @@ void mujoco_create_window()
   mjv_defaultOption(&opt);
   mjv_defaultScene(&scn);
   mjr_defaultContext(&con);
+  // set the geom group to false by default
+  opt.geomgroup[0] = false;
 
   // create scene and context
   mjv_makeScene(m, &scn, 2000);
@@ -186,7 +199,6 @@ bool mujoco_render()
   glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
 
   // update scene and render
-  opt.geomgroup[0] = false;
   mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
   mjr_render(viewport, &scn, &con);
 
