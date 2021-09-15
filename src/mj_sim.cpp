@@ -241,13 +241,13 @@ public:
     // set angular velocity
     std::vector<double> _gyro;
     mujoco_get_sensordata(_gyro, "root_gyro");
-    if (!_gyro.size()==3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] gyro read failed.");
+    if (_gyro.size()!=3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] gyro read failed.");
     controller.setSensorAngularVelocities({{"Accelerometer", Eigen::Vector3d(_gyro.data())}});
 
     // set linear acceleration
     std::vector<double> _accel;
     mujoco_get_sensordata(_accel, "root_accel");
-    if (!_accel.size()==3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] accel read failed.");
+    if (_accel.size()!=3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] accel read failed.");
     controller.setSensorLinearAccelerations({{"Accelerometer", Eigen::Vector3d(_accel.data())}});
 
     // set encoders
@@ -373,7 +373,7 @@ void MjSim::startSimulation()
 
 bool MjSim::controlStep()
 {
-  impl->controlStep();
+  return impl->controlStep();
 }
 
 void MjSim::simStep()
@@ -393,5 +393,5 @@ void MjSim::updateData()
 
 bool MjSim::render()
 {
-  impl->render();
+  return impl->render();
 }
