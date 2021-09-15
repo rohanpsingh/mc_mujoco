@@ -153,9 +153,9 @@ public:
 
   void startSimulation()
   {
-    // get names of all joints
+    // get names and ids of all joints
     mujoco_get_joints(mj_jnt_names, mj_jnt_ids);
-    // get names of acuated joints
+    // get names and ids of actuated joints
     mujoco_get_motors(mj_mot_names, mj_mot_ids);
 
     mj_to_mbc.resize(0);
