@@ -30,12 +30,12 @@ private:
   std::vector<double> kp = {};
   std::vector<double> kd = {};
 
-  std::vector<std::string> mj_act_names;
-  std::vector<int> mj_act_ids;
+  std::vector<std::string> mj_mot_names;
+  std::vector<int> mj_mot_ids;
   std::vector<std::string> mj_jnt_names;
   std::vector<int> mj_jnt_ids;
 
-  /** Transform from index in mj_act_names to index in mbc, -1 if not in mbc */
+  /** Transform from index in mj_mot_names to index in mbc, -1 if not in mbc */
   std::vector<int> mj_to_mbc;
   /** Command send to mujoco */
   std::vector<double> mj_ctrl;
@@ -156,13 +156,13 @@ public:
     // get names of all joints
     mujoco_get_joints(mj_jnt_names, mj_jnt_ids);
     // get names of acuated joints
-    mujoco_get_motors(mj_act_names, mj_act_ids);
+    mujoco_get_motors(mj_mot_names, mj_mot_ids);
 
     mj_to_mbc.resize(0);
     mj_prev_ctrl_q.resize(0);
     mj_prev_ctrl_alpha.resize(0);
     const auto & robot = controller.robot();
-    for(const auto & jn : mj_act_names)
+    for(const auto & jn : mj_mot_names)
     {
       if(robot.hasJoint(jn))
       {
@@ -359,7 +359,7 @@ public:
     }
     for(size_t i = 0; i < mj_ctrl.size(); ++i)
     {
-      auto jnt_idx = mj_act_ids[i]-1; // subtract 1 because mujoco counts from the "freejoint"
+      auto jnt_idx = mj_mot_ids[i]-1; // subtract 1 because mujoco counts from the "freejoint"
       mj_ctrl[i] =
           PD(jnt_idx, mj_prev_ctrl_q[i] + (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_,
              encoders[jnt_idx],
