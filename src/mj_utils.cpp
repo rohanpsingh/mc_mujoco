@@ -323,25 +323,29 @@ bool mujoco_get_sensordata(std::vector<double> & read, const std::string & senso
   return (read.size() ? true : false);
 }
 
-void mujoco_get_joint_names(std::vector<std::string> & names)
+void mujoco_get_joints(std::vector<std::string> & names, std::vector<int> & ids)
 {
   names.clear();
+  ids.clear();
   for(size_t i = 0; i < m->njnt; ++i)
   {
     if(m->jnt_type[i] != mjJNT_FREE)
     {
       names.push_back(mj_id2name(m, mjOBJ_JOINT, i));
+      ids.push_back(i);
     }
   }
 }
 
-void mujoco_get_motor_names(std::vector<std::string> & names)
+void mujoco_get_motors(std::vector<std::string> & names, std::vector<int> & ids)
 {
   names.clear();
+  ids.clear();
   for(size_t i = 0; i < m->nu; ++i)
   {
     unsigned int jnt_id = m->actuator_trnid[2 * i];
     names.push_back(mj_id2name(m, mjOBJ_JOINT, jnt_id));
+    ids.push_back(jnt_id);
   }
 }
 
@@ -350,7 +354,7 @@ bool mujoco_set_ctrl(const std::vector<double> & ctrl)
   mju_zero(d->ctrl, m->nu);
   if(ctrl.size() != m->nu)
   {
-    std::cerr << "Invalid size of control signal(" << ctrl.size() << ")." << std::endl;
+    std::cerr << "Invalid size of control signal(" << ctrl.size() << ", expected " << m->nu << ")." << std::endl;
     return false;
   }
   // TODO: Check if mapping is correct.
