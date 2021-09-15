@@ -8,12 +8,17 @@ set(CMAKE_CXX_STANDARD 11)
 
 project(${PROJECT_NAME} LANGUAGES CXX VERSION 1.0.0)
 
-set(USE_GL 1)
-set(MUJOCO_SRC_DIR "$ENV{HOME}/.mujoco/mujoco200/bin" CACHE String "Path to mujoco bin directory.")
-set(MUJOCO_INCLUDE_DIR "$ENV{HOME}/.mujoco/mujoco200/include" CACHE String "Path to mujoco include directory.")
-message(STATUS "MuJoCo path: " ${MUJOCO_SRC_DIR})
+if(NOT DEFINED MUJOCO_ROOT_DIR)
+  message(FATAL_ERROR "Provide MUJOCO_ROOT_DIR")
+endif()
 
-link_directories(${MUJOCO_SRC_DIR})
+find_package(mc_rtc REQUIRED)
+
+option(USE_GL "Use Mujoco with OpenGL" ON)
+set(MUJOCO_SRC_DIR "${MUJOCO_ROOT_DIR}/bin")
+set(MUJOCO_INCLUDE_DIR "${MUJOCO_ROOT_DIR}/include")
+message("${MUJOCO_INCLUDE_DIR}")
+message(STATUS "MuJoCo path: " ${MUJOCO_SRC_DIR})
 
 # find glfw library
 find_library(GLFW
@@ -22,15 +27,15 @@ find_library(GLFW
   NO_DEFAULT_PATH)
 message(STATUS "GLFW lib found at: " ${GLFW})
 
+find_package(GLEW REQUIRED)
+
 # find mujoco library
-if(${USE_GL})
+if(USE_GL)
   file(GLOB LIB_MUJOCO ${MUJOCO_SRC_DIR}/libmujoco[0-9][0-9][0-9].so)
 else()
   file(GLOB LIB_MUJOCO ${MUJOCO_SRC_DIR}/libmujoco[0-9][0-9][0-9]nogl.so)
 endif()
 message(STATUS "MuJoCo lib found at: " ${LIB_MUJOCO})
-
-find_package(mc_rtc 1.4.0 REQUIRED)
 
 add_subdirectory(src)
 

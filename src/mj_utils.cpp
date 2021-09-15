@@ -3,6 +3,8 @@
 
 #include "mj_utils.h"
 
+#include "config.h"
+
 /*******************************************************************************
  * Global library state
  ******************************************************************************/
@@ -115,8 +117,15 @@ bool mujoco_init(const char *file_input)
   // Initialize MuJoCo
   if (!mujoco_initialized) {
       // Activate MuJoCo
-      const char* key_buf = getenv("MUJOCO_KEY_PATH");
-      mj_activate(key_buf);
+      const char * key_buf_ptr = getenv("MUJOCO_KEY_PATH");
+      std::string key_buf = [&]() -> std::string {
+        if(key_buf_ptr)
+        {
+          return key_buf_ptr;
+        }
+        return mc_mujoco::MUJOCO_KEY_PATH;
+      }();
+      mj_activate(key_buf.c_str());
 
       // Load the model;
       const char* modelfile = file_input;
