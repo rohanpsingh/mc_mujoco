@@ -283,19 +283,18 @@ void mujoco_get_joint_vel(std::vector<double> & qvel)
 
 bool mujoco_get_sensordata(std::vector<double> & read, const std::string & sensor_name)
 {
-  bool success = false;
+  read.clear();
   for (unsigned int i = 0; i < m->nsensor; ++i)
   {
     if (mj_id2name(m, mjOBJ_SENSOR, i)==sensor_name)
     {
-      success = true;
       for (unsigned int j = 0; j < m->sensor_dim[i]; ++j)
       {
 	read.push_back(d->sensordata[m->sensor_adr[i]+j]);
       }
     }
   }
-  return success;
+  return (read.size()?true:false);
 }
 
 void mujoco_get_joint_names(std::vector<std::string> & names)

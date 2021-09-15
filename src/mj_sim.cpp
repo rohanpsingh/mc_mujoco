@@ -258,22 +258,30 @@ public:
     std::vector<double> _lf_fsensor, _lf_tsensor;
     std::vector<double> _rh_fsensor, _rh_tsensor;
     std::vector<double> _lh_fsensor, _lh_tsensor;
-    mujoco_get_sensordata(_rf_fsensor, "rf_fsensor");
-    mujoco_get_sensordata(_lf_fsensor, "lf_fsensor");
-    mujoco_get_sensordata(_rf_tsensor, "rf_tsensor");
-    mujoco_get_sensordata(_lf_tsensor, "lf_tsensor");
-    mujoco_get_sensordata(_rh_fsensor, "rh_fsensor");
-    mujoco_get_sensordata(_lh_fsensor, "lh_fsensor");
-    mujoco_get_sensordata(_rh_tsensor, "rh_tsensor");
-    mujoco_get_sensordata(_lh_tsensor, "lh_tsensor");
-    wrenches["RightFootForceSensor"].force()  = -1*Eigen::Vector3d(_rf_fsensor.data());
-    wrenches["RightFootForceSensor"].couple() = -1*Eigen::Vector3d(_rf_tsensor.data());
-    wrenches["LeftFootForceSensor"].force()   = -1*Eigen::Vector3d(_lf_fsensor.data());
-    wrenches["LeftFootForceSensor"].couple()  = -1*Eigen::Vector3d(_lf_tsensor.data());
-    wrenches["RightHandForceSensor"].force()  = -1*Eigen::Vector3d(_rh_fsensor.data());
-    wrenches["RightHandForceSensor"].couple() = -1*Eigen::Vector3d(_rh_tsensor.data());
-    wrenches["LeftHandForceSensor"].force()   = -1*Eigen::Vector3d(_lh_fsensor.data());
-    wrenches["LeftHandForceSensor"].couple()  = -1*Eigen::Vector3d(_lh_tsensor.data());
+    if (mujoco_get_sensordata(_rf_fsensor, "rf_fsensor") &&
+	mujoco_get_sensordata(_rf_tsensor, "rf_tsensor"))
+    {
+      wrenches["RightFootForceSensor"].force()  = -1*Eigen::Vector3d(_rf_fsensor.data());
+      wrenches["RightFootForceSensor"].couple() = -1*Eigen::Vector3d(_rf_tsensor.data());
+    }
+    if (mujoco_get_sensordata(_lf_fsensor, "lf_fsensor") &&
+	mujoco_get_sensordata(_lf_tsensor, "lf_tsensor"))
+    {
+      wrenches["LeftFootForceSensor"].force()   = -1*Eigen::Vector3d(_lf_fsensor.data());
+      wrenches["LeftFootForceSensor"].couple()  = -1*Eigen::Vector3d(_lf_tsensor.data());
+    }
+    if (mujoco_get_sensordata(_rh_fsensor, "rh_fsensor") &&
+	mujoco_get_sensordata(_rh_tsensor, "rh_tsensor"))
+    {
+      wrenches["RightHandForceSensor"].force()  = -1*Eigen::Vector3d(_rh_fsensor.data());
+      wrenches["RightHandForceSensor"].couple() = -1*Eigen::Vector3d(_rh_tsensor.data());
+    }
+    if (mujoco_get_sensordata(_lh_fsensor, "lh_fsensor") &&
+	mujoco_get_sensordata(_lh_tsensor, "lh_tsensor"))
+    {
+      wrenches["LeftHandForceSensor"].force()   = -1*Eigen::Vector3d(_lh_fsensor.data());
+      wrenches["LeftHandForceSensor"].couple()  = -1*Eigen::Vector3d(_lh_tsensor.data());
+    }
     controller.setWrenches(wrenches);
   }
 
