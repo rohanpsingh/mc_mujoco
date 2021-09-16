@@ -82,6 +82,15 @@ int main(int argc, char * argv[])
     mj_c("pdGainsPath", config.pdGains);
   }
 
+  if(!bfs::exists(config.xmlPath))
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {}", config.xmlPath);
+  }
+  if(!bfs::exists(config.pdGains))
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file cannot be found at {}", config.xmlPath);
+  }
+
   mc_mujoco::MjSim mj_sim(controller, config);
   mj_sim.startSimulation();
 
