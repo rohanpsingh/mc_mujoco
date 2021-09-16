@@ -8,7 +8,7 @@ MUJOCO:
   pdGainsPath: "<path_to_your_pdgains>"
 ```
 
-### Usage:
+### Usage
 
 Assuming that you have mujoco installed under `${HOME}/.mujoco/mujoco200`,
 
@@ -30,3 +30,10 @@ $ ./src/mc_mujoco
 - By default, we assume your mujoco key is at `${MUJOCO_ROOT_DIR}/bin/mjkey.txt` if that is not the case you can set the environment variabe `MUJOCO_KEY_PATH` to the path where your `mjkey.txt` is.
 - If Mujoco simulation becomes unstable `WARNING: Nan, Inf or huge value ... The simulation is unstable`. Try setting the mc-rtc control timestep lower (`0.001` or `0.002`).
 
+
+### Credits
+
+This package includes code from:
+- [imgui v1.84.2](https://github.com/ocornut/imgui/)
+- [implot v0.11](https://github.com/epezent/implot)
+- [Roboto font](https://github.com/googlefonts/roboto)

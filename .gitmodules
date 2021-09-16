@@ -1,3 +1,6 @@
 [submodule "robots/jvrc_mj_description"]
 	path = robots/jvrc_mj_description
 	url = git@github.com:isri-aist/jvrc_mj_description.git
+[submodule "ext/mc_rtc-imgui"]
+	path = ext/mc_rtc-imgui
+	url = https://github.com/mc-rtc/mc_rtc-imgui
