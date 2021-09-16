@@ -164,7 +164,12 @@ void mujoco_create_window()
   glfwSwapInterval(1);
 
   // initialize visualization data structures
-  mjv_defaultCamera(&cam);
+  cam.lookat[0] = 0.0f;
+  cam.lookat[1] = 0.0f;
+  cam.lookat[2] = 0.75f;
+  cam.distance = 6.0f;
+  cam.azimuth = -150.0f;
+  cam.elevation = -20.0f;
   mjv_defaultOption(&opt);
   mjv_defaultScene(&scn);
   mjr_defaultContext(&con);
