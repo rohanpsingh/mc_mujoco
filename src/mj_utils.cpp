@@ -5,14 +5,20 @@
 
 #include "config.h"
 
+#include "imgui.h"
+
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
-#include "imgui.h"
+
 #include "implot.h"
+
+#include "ImGuizmo.h"
 
 #include "Robot_Regular_ttf.h"
 
-#include "Client.h"
+#include "MujocoClient.h"
+
+#include "widgets/details/InteractiveMarker.h"
 
 namespace mc_mujoco
 {
@@ -41,7 +47,7 @@ double lastx = 0;
 double lasty = 0;
 
 // mc_rtc client
-std::unique_ptr<mc_rtc::imgui::Client> client;
+std::unique_ptr<MujocoClient> client;
 
 /*******************************************************************************
  * Callbacks for GLFWwindow
@@ -253,7 +259,7 @@ void mujoco_create_window()
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
-  client = std::make_unique<mc_rtc::imgui::Client>();
+  client = std::make_unique<MujocoClient>();
 }
 
 bool mujoco_set_const(const std::vector<double> & qpos, const std::vector<double> & qvel)
@@ -300,10 +306,12 @@ bool mujoco_render()
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
-  int width;
-  int height;
-  glfwGetWindowSize(window, &width, &height);
-  client->draw2D({static_cast<float>(width), static_cast<float>(height)});
+  ImGuizmo::BeginFrame();
+  ImGuiIO & io = ImGui::GetIO();
+  ImGuizmo::AllowAxisFlip(false);
+  ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+  client->draw2D(window);
+  client->draw3D();
   ImGui::Render();
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
