@@ -8,6 +8,11 @@
 #include <iostream>
 #include <thread>
 
+#include "config.h"
+
+#include <boost/filesystem.hpp>
+namespace bfs = boost::filesystem;
+
 // std::mutex mtx;
 bool render_state = true;
 
@@ -41,11 +46,41 @@ int main(int argc, char * argv[])
 
   mc_control::MCGlobalController controller(conf_file);
 
+  const auto & robot_name = controller.robot().module().name;
+  auto get_robot_cfg_path = [&]() -> std::string {
+    if(bfs::exists(bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")))
+    {
+      return (bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")).string();
+    }
+    else if(bfs::exists(bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml")))
+    {
+      return (bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml")).string();
+    }
+    else
+    {
+      return "";
+    }
+  };
+
   mc_mujoco::MjConfiguration config;
-  auto mj_c = controller.configuration().config("MUJOCO", mc_rtc::Configuration{});
   config.simulationTimestep = controller.timestep();
-  mj_c("xmlModelPath", config.xmlPath);
-  mj_c("pdGainsPath", config.pdGains);
+  const auto & robot_cfg_path = get_robot_cfg_path();
+  if(robot_cfg_path.size())
+  {
+    auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
+    if(!robot_cfg.has("xmlModelPath") || !robot_cfg.has("pdGainsPath"))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath or pdGainsPath in {}", robot_cfg_path);
+    }
+    config.xmlPath = static_cast<std::string>(robot_cfg("xmlModelPath"));
+    config.pdGains = static_cast<std::string>(robot_cfg("pdGainsPath"));
+  }
+  else
+  {
+    auto mj_c = controller.configuration().config("MUJOCO", mc_rtc::Configuration{});
+    mj_c("xmlModelPath", config.xmlPath);
+    mj_c("pdGainsPath", config.pdGains);
+  }
 
   mc_mujoco::MjSim mj_sim(controller, config);
   mj_sim.startSimulation();
