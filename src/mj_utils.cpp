@@ -294,6 +294,27 @@ bool mujoco_render()
 
   // update scene and render
   mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
+
+  for(const auto & g : client->geoms())
+  {
+    if(scn.ngeom < scn.maxgeom)
+    {
+      scn.geoms[scn.ngeom] = g;
+      scn.ngeom++;
+    }
+    else
+    {
+      static bool warned_once = false;
+      if(!warned_once)
+      {
+        mc_rtc::log::critical(
+            "Too many geometric objects in the scene, increase maxgeom in model, some elements will not be visible");
+        warned_once = true;
+      }
+      break;
+    }
+  }
+
   mjr_render(viewport, &scn, &con);
 
   // process pending GUI events, call GLFW callbacks

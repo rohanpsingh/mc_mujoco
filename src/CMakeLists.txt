@@ -4,6 +4,8 @@ set(mc_mujoco_SRC
   mj_utils.cpp
   MujocoClient.cpp
   MujocoClient.h
+  widgets/Arrow.h
+  widgets/Force.h
   widgets/MujocoWidget.h
   widgets/Polygon.h
   widgets/XYTheta.h
@@ -51,7 +53,7 @@ add_executable(mc_mujoco ${mc_mujoco_SRC} ${imgui_SRC} ${implot_SRC} ${ImGuizmo_
 target_include_directories(mc_mujoco PUBLIC ${MUJOCO_INCLUDE_DIR})
 target_include_directories(mc_mujoco PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 target_include_directories(mc_mujoco PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}")
-target_link_libraries(mc_mujoco PUBLIC ${LIB_MUJOCO} ${GLFW} GLEW::GLEW mc_rtc::mc_control mc_rtc::mc_control_client ${CMAKE_DL_LIBS} GL)
+target_link_libraries(mc_mujoco PUBLIC ${LIB_MUJOCO} ${GLFW} GLEW::GLEW OpenGL::GL mc_rtc::mc_control mc_rtc::mc_control_client ${CMAKE_DL_LIBS})
 
 install(TARGETS mc_mujoco
   RUNTIME DESTINATION bin
