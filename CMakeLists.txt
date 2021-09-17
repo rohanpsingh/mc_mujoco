@@ -27,6 +27,7 @@ find_library(GLFW
   NO_DEFAULT_PATH)
 message(STATUS "GLFW lib found at: " ${GLFW})
 
+set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 

@@ -39,6 +39,20 @@ struct MujocoClient : public mc_rtc::imgui::Client
     return geoms_;
   }
 
+  void draw_line(const Eigen::Vector3d & from, const Eigen::Vector3d & to, const mc_rtc::gui::Color & color);
+
+  inline void draw_line(const sva::PTransformd & from, const sva::PTransformd & to, const mc_rtc::gui::Color & color)
+  {
+    draw_line(from.translation(), to.translation(), color);
+  }
+
+  void draw_box(const Eigen::Vector3d & center,
+                const Eigen::Matrix3d & orientation,
+                const Eigen::Vector3d & size,
+                const mc_rtc::gui::Color & color);
+
+  void draw_sphere(const Eigen::Vector3d & center, double radius, const mc_rtc::gui::Color & color);
+
   void draw_arrow(const Eigen::Vector3d & from,
                   const Eigen::Vector3d & to,
                   double shaft_diam,
@@ -53,6 +67,16 @@ struct MujocoClient : public mc_rtc::imgui::Client
                     double thickness) noexcept;
 
 protected:
+  void point3d(const ElementId & id,
+               const ElementId & requestId,
+               bool ro,
+               const Eigen::Vector3d & pos,
+               const mc_rtc::gui::PointConfig & config) override;
+
+  void rotation(const ElementId & id, const ElementId & requestId, bool ro, const sva::PTransformd & pos) override;
+
+  void transform(const ElementId & id, const ElementId & requestId, bool ro, const sva::PTransformd & pos) override;
+
   void xytheta(const ElementId & id,
                const ElementId & requestId,
                bool ro,
@@ -83,6 +107,20 @@ protected:
              const Eigen::Vector3d & end,
              const mc_rtc::gui::ArrowConfig & config,
              bool ro) override;
+
+  void trajectory(const ElementId & id,
+                  const std::vector<Eigen::Vector3d> & points,
+                  const mc_rtc::gui::LineConfig & config) override;
+
+  void trajectory(const ElementId & id,
+                  const std::vector<sva::PTransformd> & points,
+                  const mc_rtc::gui::LineConfig & config) override;
+
+  void trajectory(const ElementId & id, const Eigen::Vector3d & point, const mc_rtc::gui::LineConfig & config) override;
+
+  void trajectory(const ElementId & id,
+                  const sva::PTransformd & point,
+                  const mc_rtc::gui::LineConfig & config) override;
 
 private:
   std::array<float, 16> view_;

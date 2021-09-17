@@ -1,6 +1,10 @@
 #include "widgets/Arrow.h"
 #include "widgets/Force.h"
+#include "widgets/Point3D.h"
 #include "widgets/Polygon.h"
+#include "widgets/Rotation.h"
+#include "widgets/Trajectory.h"
+#include "widgets/Transform.h"
 #include "widgets/XYTheta.h"
 
 #include "imgui.h"
@@ -96,6 +100,25 @@ void MujocoClient::draw3D()
   mc_rtc::imgui::Client::draw3D();
 }
 
+void MujocoClient::point3d(const ElementId & id,
+                           const ElementId & requestId,
+                           bool ro,
+                           const Eigen::Vector3d & pos,
+                           const mc_rtc::gui::PointConfig & config)
+{
+  widget<Point3D>(id, requestId).data(ro, pos, config);
+}
+
+void MujocoClient::rotation(const ElementId & id, const ElementId & requestId, bool ro, const sva::PTransformd & pos)
+{
+  widget<Rotation>(id, requestId).data(ro, pos);
+}
+
+void MujocoClient::transform(const ElementId & id, const ElementId & requestId, bool ro, const sva::PTransformd & pos)
+{
+  widget<TransformWidget>(id, requestId).data(ro, pos);
+}
+
 void MujocoClient::xytheta(const ElementId & id,
                            const ElementId & requestId,
                            bool ro,
@@ -132,9 +155,72 @@ void MujocoClient::force(const ElementId & id,
   widget<Force>(id, requestId).data(force, pos, config, ro);
 }
 
+void MujocoClient::trajectory(const ElementId & id,
+                              const std::vector<Eigen::Vector3d> & points,
+                              const mc_rtc::gui::LineConfig & config)
+{
+  widget<Trajectory<Eigen::Vector3d>>(id).data(points, config);
+}
+
+void MujocoClient::trajectory(const ElementId & id,
+                              const std::vector<sva::PTransformd> & points,
+                              const mc_rtc::gui::LineConfig & config)
+{
+  widget<Trajectory<sva::PTransformd>>(id).data(points, config);
+}
+
+void MujocoClient::trajectory(const ElementId & id,
+                              const Eigen::Vector3d & point,
+                              const mc_rtc::gui::LineConfig & config)
+{
+  widget<Trajectory<Eigen::Vector3d>>(id).data(point, config);
+}
+
+void MujocoClient::trajectory(const ElementId & id,
+                              const sva::PTransformd & point,
+                              const mc_rtc::gui::LineConfig & config)
+{
+  widget<Trajectory<sva::PTransformd>>(id).data(point, config);
+}
+
 ImVec2 MujocoClient::to_screen(const Eigen::Vector3d & point)
 {
   return internal::to_screen(point, mvp_, width_, height_);
+}
+
+void MujocoClient::draw_line(const Eigen::Vector3d & from,
+                             const Eigen::Vector3d & to,
+                             const mc_rtc::gui::Color & color_)
+{
+  geoms_.push_back({});
+  auto & geom = geoms_.back();
+  double length = (to - from).norm();
+  double size[3] = {1.0, 1.0, length};
+  Eigen::Matrix3d orientation =
+      Eigen::Quaterniond::FromTwoVectors(to - from, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+  auto color = internal::to_rgba(color_);
+  mjv_initGeom(&geom, mjGEOM_LINE, size, from.data(), orientation.data(), color.data());
+}
+
+void MujocoClient::draw_box(const Eigen::Vector3d & center,
+                            const Eigen::Matrix3d & orientation,
+                            const Eigen::Vector3d & size,
+                            const mc_rtc::gui::Color & color_)
+{
+  geoms_.push_back({});
+  auto & geom = geoms_.back();
+  auto color = internal::to_rgba(color_);
+  mjv_initGeom(&geom, mjGEOM_BOX, size.data(), center.data(), orientation.data(), color.data());
+}
+
+void MujocoClient::draw_sphere(const Eigen::Vector3d & center, double radius, const mc_rtc::gui::Color & color_)
+{
+  geoms_.push_back({});
+  auto & geom = geoms_.back();
+  double size[3] = {radius, radius, radius};
+  Eigen::Matrix3d mat = Eigen::Matrix3d::Identity();
+  auto color = internal::to_rgba(color_);
+  mjv_initGeom(&geom, mjGEOM_SPHERE, size, center.data(), mat.data(), color.data());
 }
 
 void MujocoClient::draw_arrow(const Eigen::Vector3d & from_,
@@ -173,25 +259,13 @@ void MujocoClient::draw_polygon(const std::vector<Eigen::Vector3d> & points,
   {
     return;
   }
-  auto color = internal::to_rgba(color_);
-  auto drawLine = [&](const Eigen::Vector3d & p0, const Eigen::Vector3d & p1) {
-    geoms_.push_back({});
-    auto & geom = geoms_.back();
-    double length = (p1 - p0).norm();
-    // FIXME Thickness is actually unused
-    double size[3] = {thickness, thickness, length};
-    Eigen::Matrix3d orientation =
-        Eigen::Quaterniond::FromTwoVectors(p1 - p0, Eigen::Vector3d::UnitZ()).toRotationMatrix();
-    auto color = internal::to_rgba(color_);
-    mjv_initGeom(&geom, mjGEOM_LINE, size, p0.data(), orientation.data(), color.data());
-  };
   auto lineTo = [&](const Eigen::Vector3d & p) { drawList_->PathLineTo(to_screen(p)); };
   for(const auto & p : points)
     for(size_t i = 0; i < points.size(); ++i)
     {
       const auto & p0 = points[i];
       const auto & p1 = points[(i + 1) % points.size()];
-      drawLine(p0, p1);
+      draw_line(p0, p1, color_);
     }
 }
 

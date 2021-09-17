@@ -7,7 +7,11 @@ set(mc_mujoco_SRC
   widgets/Arrow.h
   widgets/Force.h
   widgets/MujocoWidget.h
+  widgets/Point3D.h
   widgets/Polygon.h
+  widgets/Rotation.h
+  widgets/Trajectory.h
+  widgets/Transform.h
   widgets/XYTheta.h
   widgets/details/ControlAxis.h
   widgets/details/InteractiveMarker.h
