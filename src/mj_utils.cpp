@@ -312,6 +312,18 @@ void mujoco_get_joint_vel(std::vector<double> & qvel)
   }
 }
 
+void mujoco_get_joint_qfrc(std::vector<double> & qfrc)
+{
+  qfrc.clear();
+  for (unsigned int i = 0; i < m->nv; ++i)
+  {
+    if (m->jnt_type[m->dof_jntid[i]] != mjJNT_FREE)
+    {
+      qfrc.push_back(d->qfrc_actuator[i]);
+    }
+  }
+}
+
 bool mujoco_get_sensordata(std::vector<double> & read, const std::string & sensor_name)
 {
   read.clear();

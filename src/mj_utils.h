@@ -45,6 +45,11 @@ void mujoco_get_joint_pos(std::vector<double> & qpos);
 /*! Get velocities of all joints except the freejoint. */
 void mujoco_get_joint_vel(std::vector<double> & qvel);
 
+/*! Get joint torques (in joint space).
+ * See definition of qfrc_actuator at mujoco.org.
+ */
+void mujoco_get_joint_qfrc(std::vector<double> & qfrc);
+
 /*! Generic function to read sensor meansurements.
  * Returns false if sensor name is not present in model.
  */

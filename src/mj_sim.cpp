@@ -305,6 +305,11 @@ public:
     mujoco_get_joint_vel(alphas);
     controller.setEncoderVelocities(alphas);
 
+    // set joint torques
+    std::vector<double> qfrc;
+    mujoco_get_joint_qfrc(qfrc);
+    controller.setJointTorques(qfrc);
+
     // set foot force
     std::vector<double> _rf_fsensor, _rf_tsensor;
     std::vector<double> _lf_fsensor, _lf_tsensor;
