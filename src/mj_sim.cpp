@@ -336,12 +336,15 @@ public:
   bool controlStep()
   {
     auto interp_idx = iterCount_ % frameskip_;
+    // After every frameskip iters
     if(interp_idx == 0)
     {
+      // run the controller
       if(!controller.run())
       {
         return true;
       }
+      // and get QP result
       mj_prev_ctrl_q = mj_next_ctrl_q;
       mj_prev_ctrl_alpha = mj_next_ctrl_alpha;
       const auto & robot = controller.robot();
@@ -357,14 +360,18 @@ public:
         }
       }
     }
+    // On each control iter
     for(size_t i = 0; i < mj_ctrl.size(); ++i)
     {
       auto jnt_idx = mj_mot_ids[i]-1; // subtract 1 because mujoco counts from the "freejoint"
-      mj_ctrl[i] =
-          PD(jnt_idx, mj_prev_ctrl_q[i] + (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_,
-             encoders[jnt_idx],
-             mj_prev_ctrl_alpha[i] + (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_,
-             alphas[jnt_idx]);
+      // compute desired q using interpolation
+      double q_ref = (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_;
+      q_ref += mj_prev_ctrl_q[i];
+      // compute desired alpha using interpolation
+      double alpha_ref = (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_;
+      alpha_ref += mj_prev_ctrl_alpha[i];
+      // compute desired torque using PD control
+      mj_ctrl[i] = PD(jnt_idx, q_ref, encoders[jnt_idx], alpha_ref, alphas[jnt_idx]);
     }
     iterCount_++;
     // send control signal to mujoco
