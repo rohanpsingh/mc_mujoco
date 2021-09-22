@@ -5,6 +5,7 @@
 #include "widgets/Rotation.h"
 #include "widgets/Trajectory.h"
 #include "widgets/Transform.h"
+#include "widgets/Visual.h"
 #include "widgets/XYTheta.h"
 
 #include "imgui.h"
@@ -183,6 +184,11 @@ void MujocoClient::trajectory(const ElementId & id,
   widget<Trajectory<sva::PTransformd>>(id).data(point, config);
 }
 
+void MujocoClient::visual(const ElementId & id, const rbd::parsers::Visual & visual, const sva::PTransformd & pos)
+{
+  widget<Visual>(id).data(visual, pos);
+}
+
 ImVec2 MujocoClient::to_screen(const Eigen::Vector3d & point)
 {
   return internal::to_screen(point, mvp_, width_, height_);
@@ -226,13 +232,21 @@ void MujocoClient::draw_sphere(const Eigen::Vector3d & center, double radius, co
 void MujocoClient::draw_arrow(const Eigen::Vector3d & from_,
                               const Eigen::Vector3d & to_,
                               double shaft_diam_,
-                              double /*head_diam_*/,
+                              double head_diam_,
                               double head_len_,
                               const mc_rtc::gui::Color & color_) noexcept
 {
   geoms_.push_back({});
   auto & geom = geoms_.back();
-  auto type = head_len_ == 0 ? mjGEOM_ARROW1 : mjGEOM_ARROW;
+  auto type = mjGEOM_ARROW;
+  if(head_diam_ == 0.0 || head_len_ == 0.0)
+  {
+    type = mjGEOM_CYLINDER;
+  }
+  if(head_diam_ == shaft_diam_)
+  {
+    type = mjGEOM_ARROW1;
+  }
   Eigen::Vector3d dir_ = (to_ - from_);
   // FIXME For some reason it seems size[2] is half of the arrow length?
   double size[3] = {shaft_diam_, shaft_diam_, 2 * dir_.norm()};

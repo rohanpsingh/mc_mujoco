@@ -11,6 +11,8 @@ set(mc_mujoco_lib_SRC
   widgets/Rotation.h
   widgets/Trajectory.h
   widgets/Transform.h
+  widgets/Visual.h
+  widgets/Visual.cpp
   widgets/XYTheta.h
   widgets/details/ControlAxis.h
   widgets/details/InteractiveMarker.h

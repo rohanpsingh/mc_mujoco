@@ -122,6 +122,8 @@ protected:
                   const sva::PTransformd & point,
                   const mc_rtc::gui::LineConfig & config) override;
 
+  void visual(const ElementId & id, const rbd::parsers::Visual & visual, const sva::PTransformd & pos) override;
+
 private:
   std::array<float, 16> view_;
   std::array<float, 16> projection_;
