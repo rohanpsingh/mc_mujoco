@@ -12,9 +12,6 @@ struct MjSimImpl;
 /** Configuration for the connection to MuJoCo and the simulation */
 struct MjConfiguration
 {
-  double simulationTimestep = -1;
-  std::string xmlPath = "";
-  std::string pdGains = "";
 };
 
 struct MjSim
@@ -24,11 +21,12 @@ public:
    *
    * Prepare to start a simulation.
    *
-   * \param controller The mc_rtc controller instance used in the simulation.
-   * \param config loaded user configuration.
+   * \param config Configuration for mc_mujoco
+   *
+   * \param mc_config Configuration file used by mc_rtc
    *
    */
-  MjSim(mc_control::MCGlobalController & controller, const MjConfiguration & config);
+  MjSim(const MjConfiguration & config, const std::string & mc_config = "");
 
   /*! \brief Destructor */
   ~MjSim();

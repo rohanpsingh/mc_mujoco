@@ -1,6 +1,9 @@
 set(mc_mujoco_lib_SRC
   mj_sim.cpp
   mj_utils.cpp
+  mj_sim.h
+  mj_sim_impl.h
+  mj_utils.h
   MujocoClient.cpp
   MujocoClient.h
   widgets/Arrow.h
@@ -55,16 +58,13 @@ configure_file(config.in.h "${CMAKE_CURRENT_BINARY_DIR}/include/config.h")
 file(COPY "${MUJOCO_INCLUDE_DIR}/glfw3.h" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/GLFW/")
 
 add_library(mc_mujoco_lib STATIC ${mc_mujoco_lib_SRC} ${imgui_SRC} ${implot_SRC} ${ImGuizmo_SRC} ${mc_rtc-imgui-SRC} ${mc_rtc-imgui-HDR})
-target_include_directories(mc_mujoco_lib PUBLIC ${MUJOCO_INCLUDE_DIR})
-target_include_directories(mc_mujoco_lib PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/include")
-target_include_directories(mc_mujoco_lib PUBLIC "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}")
+target_include_directories(mc_mujoco_lib PUBLIC $<BUILD_INTERFACE:${MUJOCO_INCLUDE_DIR}>$<INSTALL_INTERFACE:include>)
+target_include_directories(mc_mujoco_lib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
+target_include_directories(mc_mujoco_lib PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}")
 target_link_libraries(mc_mujoco_lib PUBLIC ${LIB_MUJOCO} ${GLFW} GLEW::GLEW OpenGL::GL mc_rtc::mc_control mc_rtc::mc_control_client ${CMAKE_DL_LIBS})
 
 add_executable(mc_mujoco main.cpp)
 target_link_libraries(mc_mujoco PRIVATE mc_mujoco_lib)
-
-add_executable(mc_mujoco_no_gc main_no_gc.cpp)
-target_link_libraries(mc_mujoco_no_gc PRIVATE mc_mujoco_lib)
 
 install(TARGETS mc_mujoco
   RUNTIME DESTINATION bin
