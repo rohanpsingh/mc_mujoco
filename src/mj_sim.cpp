@@ -263,6 +263,12 @@ void MjSimImpl::startSimulation()
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
   }
 
+  if(!config.with_controller)
+  {
+    controller.reset();
+    return;
+  }
+
   // get sim timestep and set the frameskip parameter
   double simTimestep = model->opt.timestep;
   frameskip_ = std::round(controller->timestep() / simTimestep);
@@ -276,6 +282,16 @@ void MjSimImpl::startSimulation()
 
 void MjSimImpl::updateData()
 {
+  encoders.resize(mj_jnt_names.size());
+  mujoco_get_joint_pos(*model, *data, encoders);
+
+  alphas.resize(mj_jnt_names.size());
+  mujoco_get_joint_vel(*model, *data, alphas);
+
+  if(!config.with_controller)
+  {
+    return;
+  }
   auto & robot = controller->controller().robots().robot();
 
   /* True state of floating base */
@@ -321,13 +337,9 @@ void MjSimImpl::updateData()
   controller->setSensorLinearAccelerations({{"Accelerometer", Eigen::Vector3d(_accel.data())}});
 
   // set encoders
-  encoders.resize(robot.refJointOrder().size());
-  mujoco_get_joint_pos(*model, *data, encoders);
   controller->setEncoderValues(encoders);
 
   // set velocities
-  alphas.resize(robot.refJointOrder().size());
-  mujoco_get_joint_vel(*model, *data, alphas);
   controller->setEncoderVelocities(alphas);
 
   // set joint torques
@@ -357,7 +369,7 @@ bool MjSimImpl::controlStep()
 {
   auto interp_idx = iterCount_ % frameskip_;
   // After every frameskip iters
-  if(interp_idx == 0)
+  if(config.with_controller && interp_idx == 0)
   {
     // run the controller
     if(!controller->run())
@@ -395,7 +407,7 @@ bool MjSimImpl::controlStep()
   }
   iterCount_++;
   // send control signal to mujoco
-  return !(controller->running && mujoco_set_ctrl(*model, *data, mj_ctrl));
+  return !mujoco_set_ctrl(*model, *data, mj_ctrl);
 }
 
 void MjSimImpl::simStep()
@@ -414,9 +426,14 @@ bool MjSimImpl::stepSimulation()
     return controlStep();
   };
   bool done = false;
-  if(!config.step_by_step || (config.step_by_step && rem_steps > 0))
+  if(!config.step_by_step)
   {
     done = do_step();
+  }
+  if(config.step_by_step && rem_steps > 0)
+  {
+    done = do_step();
+    rem_steps--;
   }
   if(config.step_by_step && rem_steps == 0 && controller)
   {
@@ -435,7 +452,7 @@ bool MjSimImpl::render()
 {
   if(!config.with_visualization)
   {
-    return false;
+    return true;
   }
   // get framebuffer viewport
   mjrRect viewport = {0, 0, 0, 0};

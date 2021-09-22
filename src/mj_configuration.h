@@ -22,6 +22,4 @@ struct MjConfiguration
   std::string mc_config = "";
 };
 
-MjConfiguration make_configuration(int argc, char * argv[]);
-
 } // namespace mc_mujoco

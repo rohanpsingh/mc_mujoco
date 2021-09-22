@@ -7,6 +7,9 @@
 #include <iostream>
 #include <thread>
 
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
+
 // std::mutex mtx;
 bool render_state = true;
 
@@ -28,7 +31,33 @@ int main(int argc, char * argv[])
                        mc_rtc::MC_RTC_VERSION, mc_rtc::version());
   }
 
-  mc_mujoco::MjConfiguration config = mc_mujoco::make_configuration(argc, argv);
+  mc_mujoco::MjConfiguration config;
+  {
+    po::options_description desc("mc_mujoco options");
+    po::positional_options_description p;
+    p.add("mc-config", 1);
+    // clang-format off
+    desc.add_options()
+      ("help", "Show this help message")
+      ("mc-config", po::value<std::string>(&config.mc_config), "Configuration given to mc_rtc")
+      ("step-by-step", po::bool_switch(&config.step_by_step), "Start the simulation in step-by-step mode")
+      ("without-controller", po::bool_switch(), "Disable mc_rtc controller inside mc_mujoco")
+      ("without-visualization", po::bool_switch(), "Disable mc_mujoco GUI")
+      ("without-mc-rtc-gui", po::bool_switch(), "Disable mc_rtc GUI")
+      ("sync", po::bool_switch(&config.sync_real_time), "Synchronize mc_mujoco simulation time with real time");
+    // clang-format on
+    po::variables_map vm;
+    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+    po::notify(vm);
+    if(vm.count("help"))
+    {
+      std::cout << desc << "\n";
+      return 0;
+    }
+    config.with_controller = !vm["without-controller"].as<bool>();
+    config.with_visualization = !vm["without-visualization"].as<bool>();
+    config.with_mc_rtc_gui = !vm["without-mc-rtc-gui"].as<bool>();
+  }
   mc_mujoco::MjSim mj_sim(config);
 
   std::thread simThread(simulate, std::ref(mj_sim));

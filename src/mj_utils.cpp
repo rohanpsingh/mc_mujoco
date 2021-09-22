@@ -440,12 +440,15 @@ bool mujoco_set_ctrl(const mjModel & m, mjData & d, const std::vector<double> & 
 
 void mujoco_cleanup(MjSimImpl * mj_sim)
 {
-  // Close the window
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplGlfw_Shutdown();
-  ImGui::DestroyContext();
+  if(mj_sim->config.with_visualization)
+  {
+    // Close the window
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
-  glfwDestroyWindow(mj_sim->window);
+    glfwDestroyWindow(mj_sim->window);
+  }
 
   // free visualization storage
   mjv_freeScene(&mj_sim->scene);

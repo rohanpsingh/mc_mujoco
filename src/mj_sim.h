@@ -39,7 +39,7 @@ public:
 
   /*! Update the GUI, no-op if visualization is disabled
    *
-   * \returns True if the window was closed by the user
+   * \returns False if the application should quit
    */
   bool render();
 

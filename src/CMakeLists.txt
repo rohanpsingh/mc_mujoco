@@ -1,6 +1,5 @@
 set(mc_mujoco_lib_SRC
   mj_configuration.h
-  mj_configuration.cpp
   mj_sim.cpp
   mj_utils.cpp
   mj_sim.h
@@ -65,8 +64,10 @@ target_include_directories(mc_mujoco_lib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/in
 target_include_directories(mc_mujoco_lib PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}")
 target_link_libraries(mc_mujoco_lib PUBLIC ${LIB_MUJOCO} ${GLFW} GLEW::GLEW OpenGL::GL mc_rtc::mc_control mc_rtc::mc_control_client ${CMAKE_DL_LIBS})
 
+find_package(Boost REQUIRED COMPONENTS program_options)
+
 add_executable(mc_mujoco main.cpp)
-target_link_libraries(mc_mujoco PRIVATE mc_mujoco_lib)
+target_link_libraries(mc_mujoco PRIVATE mc_mujoco_lib Boost::program_options Boost::disable_autolinking)
 
 install(TARGETS mc_mujoco
   RUNTIME DESTINATION bin
