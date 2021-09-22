@@ -5,6 +5,21 @@
 
 #include "config.h"
 
+#include "imgui.h"
+
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+
+#include "implot.h"
+
+#include "ImGuizmo.h"
+
+#include "Robot_Regular_ttf.h"
+
+#include "MujocoClient.h"
+
+#include "widgets/details/InteractiveMarker.h"
+
 namespace mc_mujoco
 {
 
@@ -31,6 +46,9 @@ bool button_right = false;
 double lastx = 0;
 double lasty = 0;
 
+// mc_rtc client
+std::unique_ptr<MujocoClient> client;
+
 /*******************************************************************************
  * Callbacks for GLFWwindow
  ******************************************************************************/
@@ -38,6 +56,10 @@ double lasty = 0;
 // keyboard callback
 void keyboard(GLFWwindow * window, int key, int scancode, int act, int mods)
 {
+  if(ImGui::GetIO().WantCaptureKeyboard)
+  {
+    return;
+  }
   // C: show contacts
   if(act == GLFW_PRESS)
   {
@@ -60,6 +82,10 @@ void keyboard(GLFWwindow * window, int key, int scancode, int act, int mods)
 // mouse button callback
 void mouse_button(GLFWwindow * window, int button, int act, int mods)
 {
+  if(ImGui::GetIO().WantCaptureMouse)
+  {
+    return;
+  }
   // update button state
   button_left = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
   button_middle = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
@@ -72,6 +98,10 @@ void mouse_button(GLFWwindow * window, int button, int act, int mods)
 // mouse move callback
 void mouse_move(GLFWwindow * window, double xpos, double ypos)
 {
+  if(ImGui::GetIO().WantCaptureMouse)
+  {
+    return;
+  }
   // no buttons down: nothing to do
   if(!button_left && !button_middle && !button_right) return;
 
@@ -105,6 +135,10 @@ void mouse_move(GLFWwindow * window, double xpos, double ypos)
 // scroll callback
 void scroll(GLFWwindow * window, double xoffset, double yoffset)
 {
+  if(ImGui::GetIO().WantCaptureMouse)
+  {
+    return;
+  }
   // emulate vertical mouse motion = 5% of window height
   mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &scn, &cam);
 }
@@ -185,6 +219,47 @@ void mujoco_create_window()
   glfwSetCursorPosCallback(window, mouse_move);
   glfwSetMouseButtonCallback(window, mouse_button);
   glfwSetScrollCallback(window, scroll);
+
+  /** Initialize Dear Imgui */
+
+  // Decide GL+GLSL versions
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+  // GL ES 2.0 + GLSL 100
+  const char * glsl_version = "#version 100";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#elif defined(__APPLE__)
+  // GL 3.2 + GLSL 150
+  const char * glsl_version = "#version 150";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+ only
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Required on Mac
+#else
+  // GL 3.0 + GLSL 130
+  const char * glsl_version = "#version 130";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+  // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+#endif
+  ImGui::CreateContext();
+  ImPlot::CreateContext();
+  ImGuiIO & io = ImGui::GetIO();
+  ImFontConfig fontConfig;
+  fontConfig.FontDataOwnedByAtlas = false;
+  io.FontDefault = io.Fonts->AddFontFromMemoryTTF(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 18.0f, &fontConfig);
+
+  ImGui::StyleColorsLight();
+  auto & style = ImGui::GetStyle();
+  style.FrameRounding = 6.0f;
+  auto & bgColor = style.Colors[ImGuiCol_WindowBg];
+  bgColor.w = 0.5f;
+  ImGui_ImplGlfw_InitForOpenGL(window, true);
+  ImGui_ImplOpenGL3_Init(glsl_version);
+
+  client = std::make_unique<MujocoClient>();
 }
 
 bool mujoco_set_const(const std::vector<double> & qpos, const std::vector<double> & qvel)
@@ -219,13 +294,51 @@ bool mujoco_render()
 
   // update scene and render
   mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
+
+  for(const auto & g : client->geoms())
+  {
+    if(scn.ngeom < scn.maxgeom)
+    {
+      scn.geoms[scn.ngeom] = g;
+      scn.ngeom++;
+    }
+    else
+    {
+      static bool warned_once = false;
+      if(!warned_once)
+      {
+        mc_rtc::log::critical(
+            "Too many geometric objects in the scene, increase maxgeom in model, some elements will not be visible");
+        warned_once = true;
+      }
+      break;
+    }
+  }
+
   mjr_render(viewport, &scn, &con);
+
+  // process pending GUI events, call GLFW callbacks
+  glfwPollEvents();
+
+  // update mc_rtc GUI client
+  client->update();
+
+  // Render ImGui
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+  ImGuizmo::BeginFrame();
+  ImGuiIO & io = ImGui::GetIO();
+  ImGuizmo::AllowAxisFlip(false);
+  ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+  client->draw2D(window);
+  client->draw3D();
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
   // swap OpenGL buffers (blocking call due to v-sync)
   glfwSwapBuffers(window);
 
-  // process pending GUI events, call GLFW callbacks
-  glfwPollEvents();
   return !glfwWindowShouldClose(window);
 }
 
@@ -388,6 +501,13 @@ bool mujoco_set_ctrl(const std::vector<double> & ctrl)
 
 void mujoco_cleanup()
 {
+  // Close the window
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+
+  glfwDestroyWindow(window);
+
   // free visualization storage
   mjv_freeScene(&scn);
   mjr_freeContext(&con);
@@ -399,6 +519,8 @@ void mujoco_cleanup()
 
   mujoco_initialized = false;
   glfw_initialized = false;
+  // FIXME Segfault?
+  // glfwTerminate();
 }
 
 } // namespace mc_mujoco
