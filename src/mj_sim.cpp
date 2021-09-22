@@ -368,7 +368,7 @@ public:
     // On each control iter
     for(size_t i = 0; i < mj_ctrl.size(); ++i)
     {
-      auto jnt_idx = mj_mot_ids[i]-1; // subtract 1 because mujoco counts from the "freejoint"
+      auto jnt_idx = mj_mot_ids[i] - 1; // subtract 1 because mujoco counts from the "freejoint"
       // compute desired q using interpolation
       double q_ref = (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_;
       q_ref += mj_prev_ctrl_q[i];

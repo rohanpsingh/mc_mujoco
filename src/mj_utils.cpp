@@ -193,7 +193,7 @@ bool mujoco_init(const char * file_input)
 void mujoco_create_window()
 {
   // create window, make OpenGL context current, request v-sync
-  window = glfwCreateWindow(1200, 900, "Demo", NULL, NULL);
+  window = glfwCreateWindow(1600, 900, "Demo", NULL, NULL);
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1);
 
@@ -428,9 +428,9 @@ void mujoco_get_joint_vel(std::vector<double> & qvel)
 void mujoco_get_joint_qfrc(std::vector<double> & qfrc)
 {
   qfrc.clear();
-  for (unsigned int i = 0; i < m->nv; ++i)
+  for(unsigned int i = 0; i < m->nv; ++i)
   {
-    if (m->jnt_type[m->dof_jntid[i]] != mjJNT_FREE)
+    if(m->jnt_type[m->dof_jntid[i]] != mjJNT_FREE)
     {
       qfrc.push_back(d->qfrc_actuator[i]);
     }
