@@ -24,6 +24,8 @@ struct MujocoClient : public mc_rtc::imgui::Client
 
   void draw3D();
 
+  void updateScene(mjvScene & scene);
+
   inline const std::array<float, 16> & view() const noexcept
   {
     return view_;
@@ -32,11 +34,6 @@ struct MujocoClient : public mc_rtc::imgui::Client
   inline const std::array<float, 16> & projection() const noexcept
   {
     return projection_;
-  }
-
-  inline const std::vector<mjvGeom> & geoms() const noexcept
-  {
-    return geoms_;
   }
 
   void draw_line(const Eigen::Vector3d & from, const Eigen::Vector3d & to, const mc_rtc::gui::Color & color);

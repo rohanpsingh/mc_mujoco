@@ -15,22 +15,12 @@ void simulate(mc_mujoco::MjSim & mj_sim)
   bool done = false;
   while(!done && render_state)
   {
-    mj_sim.simStep();
-    mj_sim.updateData();
-    done = mj_sim.controlStep();
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    mj_sim.stepSimulation();
   }
 }
 
 int main(int argc, char * argv[])
 {
-  /* Create a global controller */
-  std::string conf_file = "";
-  if(argc > 1)
-  {
-    conf_file = argv[1];
-  }
-
   if(mc_rtc::MC_RTC_VERSION != mc_rtc::version())
   {
     mc_rtc::log::error("mc_mujoco was compiled with {} but mc_rtc is at version {}, you might "
@@ -38,9 +28,8 @@ int main(int argc, char * argv[])
                        mc_rtc::MC_RTC_VERSION, mc_rtc::version());
   }
 
-  mc_mujoco::MjConfiguration config;
-  mc_mujoco::MjSim mj_sim(config, conf_file);
-  mj_sim.startSimulation();
+  mc_mujoco::MjConfiguration config = mc_mujoco::make_configuration(argc, argv);
+  mc_mujoco::MjSim mj_sim(config);
 
   std::thread simThread(simulate, std::ref(mj_sim));
 

@@ -101,6 +101,29 @@ void MujocoClient::draw3D()
   mc_rtc::imgui::Client::draw3D();
 }
 
+void MujocoClient::updateScene(mjvScene & scene)
+{
+  for(const auto & g : geoms_)
+  {
+    if(scene.ngeom < scene.maxgeom)
+    {
+      scene.geoms[scene.ngeom] = g;
+      scene.ngeom++;
+    }
+    else
+    {
+      static bool warned_once = false;
+      if(!warned_once)
+      {
+        mc_rtc::log::critical(
+            "Too many geometric objects in the scene, increase maxgeom in model, some elements will not be visible");
+        warned_once = true;
+      }
+      break;
+    }
+  }
+}
+
 void MujocoClient::point3d(const ElementId & id,
                            const ElementId & requestId,
                            bool ro,

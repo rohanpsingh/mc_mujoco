@@ -4,15 +4,12 @@
 #include <mc_rtc/config.h>
 #include <mc_rtc/logging.h>
 
+#include "mj_configuration.h"
+
 namespace mc_mujoco
 {
 
 struct MjSimImpl;
-
-/** Configuration for the connection to MuJoCo and the simulation */
-struct MjConfiguration
-{
-};
 
 struct MjSim
 {
@@ -26,33 +23,24 @@ public:
    * \param mc_config Configuration file used by mc_rtc
    *
    */
-  MjSim(const MjConfiguration & config, const std::string & mc_config = "");
+  MjSim(const MjConfiguration & config);
 
   /*! \brief Destructor */
   ~MjSim();
 
-  /*! \brief Start the simulation. This should be called
-   * only once
+  /** Plays one step of physics simulation, should be called as often as possible
+   *
+   * \returns True if the controller fails and the simulation should stop
    */
-  void startSimulation();
-
-  /*! Trigger the next simulation step. This should be
-   * called as long as the simulation is running.
-   */
-  bool controlStep();
-
-  /*! Trigger the next simulation step. This should be
-   * called as long as the simulation is running.
-   */
-  void simStep();
+  bool stepSimulation();
 
   /*! Stop the simulation */
   void stopSimulation();
 
-  /*! Read sim state and set in controller */
-  void updateData();
-
-  /*! Update the GUI */
+  /*! Update the GUI, no-op if visualization is disabled
+   *
+   * \returns True if the window was closed by the user
+   */
   bool render();
 
 private:

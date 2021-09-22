@@ -98,8 +98,8 @@ bool MjSimImpl::loadGain(const std::string & path_to_pd, const std::vector<std::
   return true;
 }
 
-MjSimImpl::MjSimImpl(const MjConfiguration & config, const std::string & mc_config)
-: controller(std::make_unique<mc_control::MCGlobalController>(mc_config))
+MjSimImpl::MjSimImpl(const MjConfiguration & config)
+: controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config)
 {
   const auto & robot_name = controller->robot().module().name;
   auto get_robot_cfg_path = [&]() -> std::string {
@@ -147,7 +147,7 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config, const std::string & mc_conf
   }
 
   // initial mujoco here and load XML model
-  bool initialized = mujoco_init(this, xmlPath.c_str());
+  bool initialized = mujoco_init(this, xmlPath.c_str(), config.with_visualization);
   if(!initialized)
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Initialized failed.");
@@ -160,7 +160,14 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config, const std::string & mc_conf
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains load failed.");
   }
 
-  mujoco_create_window(this);
+  if(config.with_visualization)
+  {
+    mujoco_create_window(this);
+    if(config.with_mc_rtc_gui)
+    {
+      client = std::make_unique<MujocoClient>();
+    }
+  }
   mc_rtc::log::info("[mc_mujoco] Initialized successful.");
 }
 
@@ -398,8 +405,38 @@ void MjSimImpl::simStep()
   mj_step(model, data);
 }
 
+bool MjSimImpl::stepSimulation()
+{
+  auto start_step = std::chrono::high_resolution_clock::now();
+  auto do_step = [this]() {
+    simStep();
+    updateData();
+    return controlStep();
+  };
+  bool done = false;
+  if(!config.step_by_step || (config.step_by_step && rem_steps > 0))
+  {
+    done = do_step();
+  }
+  if(config.step_by_step && rem_steps == 0 && controller)
+  {
+    controller->running = false;
+    controller->run();
+    controller->running = true;
+  }
+  if(config.sync_real_time)
+  {
+    std::this_thread::sleep_until(start_step + std::chrono::duration<double, std::micro>(1e6 * model->opt.timestep));
+  }
+  return done;
+}
+
 bool MjSimImpl::render()
 {
+  if(!config.with_visualization)
+  {
+    return false;
+  }
   // get framebuffer viewport
   mjrRect viewport = {0, 0, 0, 0};
   glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
@@ -407,33 +444,15 @@ bool MjSimImpl::render()
   // update scene and render
   mjv_updateScene(model, data, &options, NULL, &camera, mjCAT_ALL, &scene);
 
-  for(const auto & g : client->geoms())
+  if(client)
   {
-    if(scene.ngeom < scene.maxgeom)
-    {
-      scene.geoms[scene.ngeom] = g;
-      scene.ngeom++;
-    }
-    else
-    {
-      static bool warned_once = false;
-      if(!warned_once)
-      {
-        mc_rtc::log::critical(
-            "Too many geometric objects in the scene, increase maxgeom in model, some elements will not be visible");
-        warned_once = true;
-      }
-      break;
-    }
+    client->updateScene(scene);
   }
 
   mjr_render(viewport, &scene, &context);
 
   // process pending GUI events, call GLFW callbacks
   glfwPollEvents();
-
-  // update mc_rtc GUI client
-  client->update();
 
   // Render ImGui
   ImGui_ImplOpenGL3_NewFrame();
@@ -443,8 +462,12 @@ bool MjSimImpl::render()
   ImGuiIO & io = ImGui::GetIO();
   ImGuizmo::AllowAxisFlip(false);
   ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
-  client->draw2D(window);
-  client->draw3D();
+  if(client)
+  {
+    client->update();
+    client->draw2D(window);
+    client->draw3D();
+  }
   ImGui::Render();
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -456,36 +479,24 @@ bool MjSimImpl::render()
 
 void MjSimImpl::stopSimulation() {}
 
-MjSim::MjSim(const MjConfiguration & config, const std::string & mc_config) : impl(new MjSimImpl(config, mc_config)) {}
+MjSim::MjSim(const MjConfiguration & config) : impl(new MjSimImpl(config))
+{
+  impl->startSimulation();
+}
 
 MjSim::~MjSim()
 {
   impl->cleanup();
 }
 
-void MjSim::startSimulation()
+bool MjSim::stepSimulation()
 {
-  impl->startSimulation();
-}
-
-bool MjSim::controlStep()
-{
-  return impl->controlStep();
-}
-
-void MjSim::simStep()
-{
-  impl->simStep();
+  return impl->stepSimulation();
 }
 
 void MjSim::stopSimulation()
 {
   impl->stopSimulation();
-}
-
-void MjSim::updateData()
-{
-  impl->updateData();
 }
 
 bool MjSim::render()

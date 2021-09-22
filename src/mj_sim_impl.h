@@ -16,6 +16,9 @@ private:
   std::unique_ptr<mc_control::MCGlobalController> controller;
 
 public:
+  /** Configuration and data for the step-by-step mode */
+  MjConfiguration config;
+
   /** Client instance in this simulation, might be null if the visualization is disabled */
   std::unique_ptr<MujocoClient> client;
 
@@ -52,6 +55,9 @@ private:
   size_t iterCount_ = 0;
   /** How often we run mc_rtc relative to MuJoCo physics */
   size_t frameskip_ = 1;
+
+  /** Number of steps left to play in step by step mode */
+  size_t rem_steps = 0;
 
   /** Position of FloatingBase sensor */
   Eigen::Vector3d root_pos;
@@ -108,7 +114,7 @@ private:
   bool loadGain(const std::string & path_to_pd, const std::vector<std::string> & joints);
 
 public:
-  MjSimImpl(const MjConfiguration & config, const std::string & mc_config);
+  MjSimImpl(const MjConfiguration & config);
 
   void cleanup();
 
@@ -119,6 +125,8 @@ public:
   bool controlStep();
 
   void simStep();
+
+  bool stepSimulation();
 
   bool render();
 

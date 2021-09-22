@@ -12,7 +12,7 @@ namespace mc_mujoco
 {
 
 /*! Load XML model and initialize */
-bool mujoco_init(MjSimImpl * mj_sim, const char * modelfile);
+bool mujoco_init(MjSimImpl * mj_sim, const char * modelfile, bool init_glfw);
 
 /*! Create GLFW window */
 void mujoco_create_window(MjSimImpl * mj_sim);

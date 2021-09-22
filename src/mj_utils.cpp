@@ -16,8 +16,6 @@
 
 #include "Robot_Regular_ttf.h"
 
-#include "MujocoClient.h"
-
 namespace mc_mujoco
 {
 
@@ -141,7 +139,7 @@ void scroll(GLFWwindow * window, double xoffset, double yoffset)
  * Mujoco utility functions
  ******************************************************************************/
 
-bool mujoco_init(MjSimImpl * mj_sim, const char * file_input)
+bool mujoco_init(MjSimImpl * mj_sim, const char * file_input, bool init_glfw)
 {
   // Initialize MuJoCo
   if(!mujoco_initialized)
@@ -172,6 +170,11 @@ bool mujoco_init(MjSimImpl * mj_sim, const char * file_input)
   // make data
   mj_sim->data = mj_makeData(mj_sim->model);
 
+  if(!init_glfw)
+  {
+    return true;
+  }
+
   // Initialize GLFW
   if(!glfw_initialized)
   {
@@ -182,7 +185,7 @@ bool mujoco_init(MjSimImpl * mj_sim, const char * file_input)
     glfw_initialized = true;
   }
 
-  return mujoco_initialized && glfw_initialized;
+  return true;
 }
 
 void mujoco_create_window(MjSimImpl * mj_sim)
@@ -258,8 +261,6 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   bgColor.w = 0.5f;
   ImGui_ImplGlfw_InitForOpenGL(mj_sim->window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
-
-  mj_sim->client = std::make_unique<MujocoClient>();
 }
 
 bool mujoco_set_const(mjModel * m, mjData * d, const std::vector<double> & qpos, const std::vector<double> & qvel)

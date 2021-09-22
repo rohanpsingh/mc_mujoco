@@ -1,4 +1,6 @@
 set(mc_mujoco_lib_SRC
+  mj_configuration.h
+  mj_configuration.cpp
   mj_sim.cpp
   mj_utils.cpp
   mj_sim.h
