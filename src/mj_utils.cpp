@@ -252,7 +252,14 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   ImGuiIO & io = ImGui::GetIO();
   ImFontConfig fontConfig;
   fontConfig.FontDataOwnedByAtlas = false;
-  io.FontDefault = io.Fonts->AddFontFromMemoryTTF(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 18.0f, &fontConfig);
+  ImVector<ImWchar> ranges;
+  ImFontGlyphRangesBuilder builder;
+  builder.AddText(u8"μ");
+  builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+  builder.BuildRanges(&ranges);
+  io.FontDefault =
+      io.Fonts->AddFontFromMemoryTTF(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 18.0f, &fontConfig, ranges.Data);
+  io.Fonts->Build();
 
   ImGui::StyleColorsLight();
   auto & style = ImGui::GetStyle();

@@ -9,6 +9,13 @@
 namespace mc_mujoco
 {
 
+using duration_ms = std::chrono::duration<double, std::milli>;
+using duration_us = std::chrono::duration<double, std::micro>;
+
+using clock = std::conditional_t<std::chrono::high_resolution_clock::is_steady,
+                                 std::chrono::high_resolution_clock,
+                                 std::chrono::steady_clock>;
+
 struct MjSimImpl
 {
 private:
@@ -49,6 +56,15 @@ public:
   bool button_right = false;
   double lastx = 0;
   double lasty = 0;
+
+  /** Start of the previous iteration */
+  clock::time_point mj_sim_start_t;
+  /** Accumulated delay to catch up to real-time performace */
+  duration_us mj_sync_delay = duration_us(0);
+  /** Time taken for the last 1024 iterations */
+  std::array<double, 1024> mj_sim_dt;
+  /** Average of the last 1024 iterations */
+  double mj_sim_dt_average;
 
 private:
   /** Number of MuJoCo iteration since the start */

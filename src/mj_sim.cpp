@@ -419,8 +419,24 @@ void MjSimImpl::simStep()
 
 bool MjSimImpl::stepSimulation()
 {
-  auto start_step = std::chrono::high_resolution_clock::now();
-  auto do_step = [this]() {
+  auto start_step = clock::now();
+  // Only run the GUI update if the simulation is paused
+  if(config.step_by_step && rem_steps == 0 && controller)
+  {
+    controller->running = false;
+    controller->run();
+    controller->running = true;
+    mj_sim_start_t = start_step;
+    return false;
+  }
+  if(iterCount_ > 0)
+  {
+    duration_us dt = start_step - mj_sim_start_t;
+    mj_sync_delay += duration_us(1e6 * model->opt.timestep) - dt;
+    mj_sim_dt[(iterCount_ - 1) % mj_sim_dt.size()] = dt.count();
+  }
+  mj_sim_start_t = start_step;
+  auto do_step = [this, &start_step]() {
     simStep();
     updateData();
     return controlStep();
@@ -435,15 +451,9 @@ bool MjSimImpl::stepSimulation()
     done = do_step();
     rem_steps--;
   }
-  if(config.step_by_step && rem_steps == 0 && controller)
-  {
-    controller->running = false;
-    controller->run();
-    controller->running = true;
-  }
   if(config.sync_real_time)
   {
-    std::this_thread::sleep_until(start_step + std::chrono::duration<double, std::micro>(1e6 * model->opt.timestep));
+    std::this_thread::sleep_until(start_step + duration_us(1e6 * model->opt.timestep) + mj_sync_delay);
   }
   return done;
 }
@@ -484,6 +494,51 @@ bool MjSimImpl::render()
     client->update();
     client->draw2D(window);
     client->draw3D();
+  }
+  {
+    auto right_margin = 5.0f;
+    auto top_margin = 5.0f;
+    auto width = io.DisplaySize.x - 2 * right_margin;
+    auto height = io.DisplaySize.y - 2 * top_margin;
+    ImGui::SetNextWindowPos({0.8f * width - right_margin, top_margin}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize({0.2f * width, 0.2f * height}, ImGuiCond_FirstUseEver);
+    ImGui::Begin("mc_mujoco");
+    size_t nsamples = std::min(mj_sim_dt.size(), iterCount_);
+    mj_sim_dt_average = 0;
+    for(size_t i = 0; i < nsamples; ++i)
+    {
+      mj_sim_dt_average += mj_sim_dt[i] / nsamples;
+    }
+    ImGui::Text("Average sim time: %.2fμs", mj_sim_dt_average);
+    ImGui::Text("Simulation/Real time: %.2f", mj_sim_dt_average / (1e6 * model->opt.timestep));
+    if(ImGui::Checkbox("Sync with real-time", &config.sync_real_time))
+    {
+      if(config.sync_real_time)
+      {
+        mj_sync_delay = duration_us(0);
+      }
+    }
+    ImGui::Checkbox("Step-by-step", &config.step_by_step);
+    if(config.step_by_step)
+    {
+      auto doNStepsButton = [&](size_t n, bool final_) {
+        size_t n_ms = std::ceil(n * 1000 * (controller ? controller->timestep() : model->opt.timestep));
+        if(ImGui::Button(fmt::format("+{}ms", n_ms).c_str()))
+        {
+          rem_steps = n;
+        }
+        if(!final_)
+        {
+          ImGui::SameLine();
+        }
+      };
+      doNStepsButton(1, false);
+      doNStepsButton(5, false);
+      doNStepsButton(10, false);
+      doNStepsButton(50, false);
+      doNStepsButton(100, true);
+    }
+    ImGui::End();
   }
   ImGui::Render();
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
