@@ -1,6 +1,5 @@
 #include "mj_sim.h"
 
-#include <mc_control/mc_global_controller.h>
 #include <mc_rtc/logging.h>
 #include <mc_rtc/version.h>
 
@@ -8,10 +7,8 @@
 #include <iostream>
 #include <thread>
 
-#include "config.h"
-
-#include <boost/filesystem.hpp>
-namespace bfs = boost::filesystem;
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
 
 // std::mutex mtx;
 bool render_state = true;
@@ -21,22 +18,12 @@ void simulate(mc_mujoco::MjSim & mj_sim)
   bool done = false;
   while(!done && render_state)
   {
-    mj_sim.simStep();
-    mj_sim.updateData();
-    done = mj_sim.controlStep();
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    mj_sim.stepSimulation();
   }
 }
 
 int main(int argc, char * argv[])
 {
-  /* Create a global controller */
-  std::string conf_file = "";
-  if(argc > 1)
-  {
-    conf_file = argv[1];
-  }
-
   if(mc_rtc::MC_RTC_VERSION != mc_rtc::version())
   {
     mc_rtc::log::error("mc_mujoco was compiled with {} but mc_rtc is at version {}, you might "
@@ -44,55 +31,34 @@ int main(int argc, char * argv[])
                        mc_rtc::MC_RTC_VERSION, mc_rtc::version());
   }
 
-  mc_control::MCGlobalController controller(conf_file);
-
-  const auto & robot_name = controller.robot().module().name;
-  auto get_robot_cfg_path = [&]() -> std::string {
-    if(bfs::exists(bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")))
-    {
-      return (bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")).string();
-    }
-    else if(bfs::exists(bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml")))
-    {
-      return (bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml")).string();
-    }
-    else
-    {
-      return "";
-    }
-  };
-
   mc_mujoco::MjConfiguration config;
-  config.simulationTimestep = controller.timestep();
-  const auto & robot_cfg_path = get_robot_cfg_path();
-  if(robot_cfg_path.size())
   {
-    auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
-    if(!robot_cfg.has("xmlModelPath") || !robot_cfg.has("pdGainsPath"))
+    po::options_description desc("mc_mujoco options");
+    po::positional_options_description p;
+    p.add("mc-config", 1);
+    // clang-format off
+    desc.add_options()
+      ("help", "Show this help message")
+      ("mc-config", po::value<std::string>(&config.mc_config), "Configuration given to mc_rtc")
+      ("step-by-step", po::bool_switch(&config.step_by_step), "Start the simulation in step-by-step mode")
+      ("without-controller", po::bool_switch(), "Disable mc_rtc controller inside mc_mujoco")
+      ("without-visualization", po::bool_switch(), "Disable mc_mujoco GUI")
+      ("without-mc-rtc-gui", po::bool_switch(), "Disable mc_rtc GUI")
+      ("sync", po::bool_switch(&config.sync_real_time), "Synchronize mc_mujoco simulation time with real time");
+    // clang-format on
+    po::variables_map vm;
+    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+    po::notify(vm);
+    if(vm.count("help"))
     {
-      mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath or pdGainsPath in {}", robot_cfg_path);
+      std::cout << desc << "\n";
+      return 0;
     }
-    config.xmlPath = static_cast<std::string>(robot_cfg("xmlModelPath"));
-    config.pdGains = static_cast<std::string>(robot_cfg("pdGainsPath"));
+    config.with_controller = !vm["without-controller"].as<bool>();
+    config.with_visualization = !vm["without-visualization"].as<bool>();
+    config.with_mc_rtc_gui = !vm["without-mc-rtc-gui"].as<bool>();
   }
-  else
-  {
-    auto mj_c = controller.configuration().config("MUJOCO", mc_rtc::Configuration{});
-    mj_c("xmlModelPath", config.xmlPath);
-    mj_c("pdGainsPath", config.pdGains);
-  }
-
-  if(!bfs::exists(config.xmlPath))
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {}", config.xmlPath);
-  }
-  if(!bfs::exists(config.pdGains))
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file cannot be found at {}", config.xmlPath);
-  }
-
-  mc_mujoco::MjSim mj_sim(controller, config);
-  mj_sim.startSimulation();
+  mc_mujoco::MjSim mj_sim(config);
 
   std::thread simThread(simulate, std::ref(mj_sim));
 

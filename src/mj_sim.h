@@ -4,18 +4,12 @@
 #include <mc_rtc/config.h>
 #include <mc_rtc/logging.h>
 
+#include "mj_configuration.h"
+
 namespace mc_mujoco
 {
 
 struct MjSimImpl;
-
-/** Configuration for the connection to MuJoCo and the simulation */
-struct MjConfiguration
-{
-  double simulationTimestep = -1;
-  std::string xmlPath = "";
-  std::string pdGains = "";
-};
 
 struct MjSim
 {
@@ -24,37 +18,29 @@ public:
    *
    * Prepare to start a simulation.
    *
-   * \param controller The mc_rtc controller instance used in the simulation.
-   * \param config loaded user configuration.
+   * \param config Configuration for mc_mujoco
+   *
+   * \param mc_config Configuration file used by mc_rtc
    *
    */
-  MjSim(mc_control::MCGlobalController & controller, const MjConfiguration & config);
+  MjSim(const MjConfiguration & config);
 
   /*! \brief Destructor */
   ~MjSim();
 
-  /*! \brief Start the simulation. This should be called
-   * only once
+  /** Plays one step of physics simulation, should be called as often as possible
+   *
+   * \returns True if the controller fails and the simulation should stop
    */
-  void startSimulation();
-
-  /*! Trigger the next simulation step. This should be
-   * called as long as the simulation is running.
-   */
-  bool controlStep();
-
-  /*! Trigger the next simulation step. This should be
-   * called as long as the simulation is running.
-   */
-  void simStep();
+  bool stepSimulation();
 
   /*! Stop the simulation */
   void stopSimulation();
 
-  /*! Read sim state and set in controller */
-  void updateData();
-
-  /*! Update the GUI */
+  /*! Update the GUI, no-op if visualization is disabled
+   *
+   * \returns False if the application should quit
+   */
   bool render();
 
 private:

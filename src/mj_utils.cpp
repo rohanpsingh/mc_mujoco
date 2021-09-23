@@ -16,10 +16,6 @@
 
 #include "Robot_Regular_ttf.h"
 
-#include "MujocoClient.h"
-
-#include "widgets/details/InteractiveMarker.h"
-
 namespace mc_mujoco
 {
 
@@ -30,25 +26,6 @@ namespace mc_mujoco
 static bool glfw_initialized = false;
 static bool mujoco_initialized = false;
 
-// MuJoCo data structures
-mjModel * m = NULL; // MuJoCo model
-mjData * d = NULL; // MuJoCo data
-GLFWwindow * window; // GLFWwindow
-mjvCamera cam; // abstract camera
-mjvOption opt; // visualization options
-mjvScene scn; // abstract scene
-mjrContext con; // custom GPU context
-
-// mouse interaction
-bool button_left = false;
-bool button_middle = false;
-bool button_right = false;
-double lastx = 0;
-double lasty = 0;
-
-// mc_rtc client
-std::unique_ptr<MujocoClient> client;
-
 /*******************************************************************************
  * Callbacks for GLFWwindow
  ******************************************************************************/
@@ -56,6 +33,8 @@ std::unique_ptr<MujocoClient> client;
 // keyboard callback
 void keyboard(GLFWwindow * window, int key, int scancode, int act, int mods)
 {
+  auto mj_sim = static_cast<MjSimImpl *>(glfwGetWindowUserPointer(window));
+  auto & opt = mj_sim->options;
   if(ImGui::GetIO().WantCaptureKeyboard)
   {
     return;
@@ -86,6 +65,12 @@ void mouse_button(GLFWwindow * window, int button, int act, int mods)
   {
     return;
   }
+  auto mj_sim = static_cast<MjSimImpl *>(glfwGetWindowUserPointer(window));
+  auto & button_left = mj_sim->button_left;
+  auto & button_middle = mj_sim->button_middle;
+  auto & button_right = mj_sim->button_right;
+  auto & lastx = mj_sim->lastx;
+  auto & lasty = mj_sim->lasty;
   // update button state
   button_left = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
   button_middle = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
@@ -102,6 +87,12 @@ void mouse_move(GLFWwindow * window, double xpos, double ypos)
   {
     return;
   }
+  auto mj_sim = static_cast<MjSimImpl *>(glfwGetWindowUserPointer(window));
+  auto & button_left = mj_sim->button_left;
+  auto & button_middle = mj_sim->button_middle;
+  auto & button_right = mj_sim->button_right;
+  auto & lastx = mj_sim->lastx;
+  auto & lasty = mj_sim->lasty;
   // no buttons down: nothing to do
   if(!button_left && !button_middle && !button_right) return;
 
@@ -129,7 +120,7 @@ void mouse_move(GLFWwindow * window, double xpos, double ypos)
     action = mjMOUSE_ZOOM;
 
   // move camera
-  mjv_moveCamera(m, action, dx / height, dy / height, &scn, &cam);
+  mjv_moveCamera(mj_sim->model, action, dx / height, dy / height, &mj_sim->scene, &mj_sim->camera);
 }
 
 // scroll callback
@@ -139,15 +130,16 @@ void scroll(GLFWwindow * window, double xoffset, double yoffset)
   {
     return;
   }
+  auto mj_sim = static_cast<MjSimImpl *>(glfwGetWindowUserPointer(window));
   // emulate vertical mouse motion = 5% of window height
-  mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &scn, &cam);
+  mjv_moveCamera(mj_sim->model, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &mj_sim->scene, &mj_sim->camera);
 }
 
 /*******************************************************************************
  * Mujoco utility functions
  ******************************************************************************/
 
-bool mujoco_init(const char * file_input)
+bool mujoco_init(MjSimImpl * mj_sim, const char * file_input, bool init_glfw)
 {
   // Initialize MuJoCo
   if(!mujoco_initialized)
@@ -162,21 +154,27 @@ bool mujoco_init(const char * file_input)
       return mc_mujoco::MUJOCO_KEY_PATH;
     }();
     mj_activate(key_buf.c_str());
-
-    // Load the model;
-    const char * modelfile = file_input;
-    char error[1000] = "Could not load XML model";
-    m = mj_loadXML(modelfile, 0, error, 1000);
-    if(!m)
-    {
-      std::cerr << error << std::endl;
-      return false;
-    }
-
-    // make data
-    d = mj_makeData(m);
     mujoco_initialized = true;
   }
+
+  // Load the model;
+  const char * modelfile = file_input;
+  char error[1000] = "Could not load XML model";
+  mj_sim->model = mj_loadXML(modelfile, 0, error, 1000);
+  if(!mj_sim->model)
+  {
+    std::cerr << error << std::endl;
+    return false;
+  }
+
+  // make data
+  mj_sim->data = mj_makeData(mj_sim->model);
+
+  if(!init_glfw)
+  {
+    return true;
+  }
+
   // Initialize GLFW
   if(!glfw_initialized)
   {
@@ -187,38 +185,43 @@ bool mujoco_init(const char * file_input)
     glfw_initialized = true;
   }
 
-  return mujoco_initialized && glfw_initialized;
+  return true;
 }
 
-void mujoco_create_window()
+void mujoco_create_window(MjSimImpl * mj_sim)
 {
   // create window, make OpenGL context current, request v-sync
-  window = glfwCreateWindow(1200, 900, "Demo", NULL, NULL);
-  glfwMakeContextCurrent(window);
+  mj_sim->window = glfwCreateWindow(1600, 900, "mc_mujoco", NULL, NULL);
+  if(!mj_sim->window)
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] GLFW window creation failed");
+  }
+  glfwMakeContextCurrent(mj_sim->window);
   glfwSwapInterval(1);
+  glfwSetWindowUserPointer(mj_sim->window, static_cast<void *>(mj_sim));
 
   // initialize visualization data structures
-  cam.lookat[0] = 0.0f;
-  cam.lookat[1] = 0.0f;
-  cam.lookat[2] = 0.75f;
-  cam.distance = 6.0f;
-  cam.azimuth = -150.0f;
-  cam.elevation = -20.0f;
-  mjv_defaultOption(&opt);
-  mjv_defaultScene(&scn);
-  mjr_defaultContext(&con);
+  mj_sim->camera.lookat[0] = 0.0f;
+  mj_sim->camera.lookat[1] = 0.0f;
+  mj_sim->camera.lookat[2] = 0.75f;
+  mj_sim->camera.distance = 6.0f;
+  mj_sim->camera.azimuth = -150.0f;
+  mj_sim->camera.elevation = -20.0f;
+  mjv_defaultOption(&mj_sim->options);
+  mjv_defaultScene(&mj_sim->scene);
+  mjr_defaultContext(&mj_sim->context);
   // set the geom group to false by default
-  opt.geomgroup[0] = false;
+  mj_sim->options.geomgroup[0] = false;
 
   // create scene and context
-  mjv_makeScene(m, &scn, 2000);
-  mjr_makeContext(m, &con, mjFONTSCALE_150);
+  mjv_makeScene(mj_sim->model, &mj_sim->scene, 2000);
+  mjr_makeContext(mj_sim->model, &mj_sim->context, mjFONTSCALE_150);
 
   // install GLFW mouse and keyboard callbacks
-  glfwSetKeyCallback(window, keyboard);
-  glfwSetCursorPosCallback(window, mouse_move);
-  glfwSetMouseButtonCallback(window, mouse_button);
-  glfwSetScrollCallback(window, scroll);
+  glfwSetKeyCallback(mj_sim->window, keyboard);
+  glfwSetCursorPosCallback(mj_sim->window, mouse_move);
+  glfwSetMouseButtonCallback(mj_sim->window, mouse_button);
+  glfwSetScrollCallback(mj_sim->window, scroll);
 
   /** Initialize Dear Imgui */
 
@@ -249,20 +252,25 @@ void mujoco_create_window()
   ImGuiIO & io = ImGui::GetIO();
   ImFontConfig fontConfig;
   fontConfig.FontDataOwnedByAtlas = false;
-  io.FontDefault = io.Fonts->AddFontFromMemoryTTF(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 18.0f, &fontConfig);
+  ImVector<ImWchar> ranges;
+  ImFontGlyphRangesBuilder builder;
+  builder.AddText(u8"μ");
+  builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+  builder.BuildRanges(&ranges);
+  io.FontDefault =
+      io.Fonts->AddFontFromMemoryTTF(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 18.0f, &fontConfig, ranges.Data);
+  io.Fonts->Build();
 
   ImGui::StyleColorsLight();
   auto & style = ImGui::GetStyle();
   style.FrameRounding = 6.0f;
   auto & bgColor = style.Colors[ImGuiCol_WindowBg];
   bgColor.w = 0.5f;
-  ImGui_ImplGlfw_InitForOpenGL(window, true);
+  ImGui_ImplGlfw_InitForOpenGL(mj_sim->window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
-
-  client = std::make_unique<MujocoClient>();
 }
 
-bool mujoco_set_const(const std::vector<double> & qpos, const std::vector<double> & qvel)
+bool mujoco_set_const(mjModel * m, mjData * d, const std::vector<double> & qpos, const std::vector<double> & qvel)
 {
   if(qpos.size() != m->nq || qvel.size() != m->nv)
   {
@@ -281,210 +289,148 @@ bool mujoco_set_const(const std::vector<double> & qpos, const std::vector<double
   return true;
 }
 
-void mujoco_step()
-{
-  mj_step(m, d);
-}
-
-bool mujoco_render()
-{
-  // get framebuffer viewport
-  mjrRect viewport = {0, 0, 0, 0};
-  glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
-
-  // update scene and render
-  mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
-
-  for(const auto & g : client->geoms())
-  {
-    if(scn.ngeom < scn.maxgeom)
-    {
-      scn.geoms[scn.ngeom] = g;
-      scn.ngeom++;
-    }
-    else
-    {
-      static bool warned_once = false;
-      if(!warned_once)
-      {
-        mc_rtc::log::critical(
-            "Too many geometric objects in the scene, increase maxgeom in model, some elements will not be visible");
-        warned_once = true;
-      }
-      break;
-    }
-  }
-
-  mjr_render(viewport, &scn, &con);
-
-  // process pending GUI events, call GLFW callbacks
-  glfwPollEvents();
-
-  // update mc_rtc GUI client
-  client->update();
-
-  // Render ImGui
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
-  ImGuizmo::BeginFrame();
-  ImGuiIO & io = ImGui::GetIO();
-  ImGuizmo::AllowAxisFlip(false);
-  ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
-  client->draw2D(window);
-  client->draw3D();
-  ImGui::Render();
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-  // swap OpenGL buffers (blocking call due to v-sync)
-  glfwSwapBuffers(window);
-
-  return !glfwWindowShouldClose(window);
-}
-
-double mujoco_get_timestep()
-{
-  return m->opt.timestep;
-}
-
-void mujoco_get_root_pos(Eigen::Vector3d & pos)
+void mujoco_get_root_pos(const mjData & d, Eigen::Vector3d & pos)
 {
   pos.setZero();
-  pos[0] = d->qpos[0];
-  pos[1] = d->qpos[1];
-  pos[2] = d->qpos[2];
+  pos[0] = d.qpos[0];
+  pos[1] = d.qpos[1];
+  pos[2] = d.qpos[2];
 }
 
-void mujoco_get_root_orient(Eigen::Quaterniond & quat)
+void mujoco_get_root_orient(const mjData & d, Eigen::Quaterniond & quat)
 {
   quat.coeffs().setZero();
-  quat.w() = d->qpos[3];
-  quat.x() = d->qpos[4];
-  quat.y() = d->qpos[5];
-  quat.z() = d->qpos[6];
+  quat.w() = d.qpos[3];
+  quat.x() = d.qpos[4];
+  quat.y() = d.qpos[5];
+  quat.z() = d.qpos[6];
   quat = quat.inverse(); // mc-rtc convention
 }
 
-void mujoco_get_root_lin_vel(Eigen::Vector3d & linvel)
+void mujoco_get_root_lin_vel(const mjData & d, Eigen::Vector3d & linvel)
 {
   linvel.setZero();
-  linvel[0] = d->qvel[0];
-  linvel[1] = d->qvel[1];
-  linvel[2] = d->qvel[2];
+  linvel[0] = d.qvel[0];
+  linvel[1] = d.qvel[1];
+  linvel[2] = d.qvel[2];
 }
 
-void mujoco_get_root_ang_vel(Eigen::Vector3d & angvel)
+void mujoco_get_root_ang_vel(const mjData & d, Eigen::Vector3d & angvel)
 {
   angvel.setZero();
-  angvel[0] = d->qvel[3];
-  angvel[1] = d->qvel[4];
-  angvel[2] = d->qvel[5];
+  angvel[0] = d.qvel[3];
+  angvel[1] = d.qvel[4];
+  angvel[2] = d.qvel[5];
 }
 
-void mujoco_get_root_lin_acc(Eigen::Vector3d & linacc)
+void mujoco_get_root_lin_acc(const mjData & d, Eigen::Vector3d & linacc)
 {
   linacc.setZero();
-  linacc[0] = d->qacc[0];
-  linacc[1] = d->qacc[1];
-  linacc[2] = d->qacc[2];
+  linacc[0] = d.qacc[0];
+  linacc[1] = d.qacc[1];
+  linacc[2] = d.qacc[2];
 }
 
-void mujoco_get_root_ang_acc(Eigen::Vector3d & angacc)
+void mujoco_get_root_ang_acc(const mjData & d, Eigen::Vector3d & angacc)
 {
   angacc.setZero();
-  angacc[0] = d->qacc[3];
-  angacc[1] = d->qacc[4];
-  angacc[2] = d->qacc[5];
+  angacc[0] = d.qacc[3];
+  angacc[1] = d.qacc[4];
+  angacc[2] = d.qacc[5];
 }
 
-void mujoco_get_joint_pos(std::vector<double> & qpos)
+void mujoco_get_joint_pos(const mjModel & m, const mjData & d, std::vector<double> & qpos)
 {
   // NOTE: a jointpos sensor will return the same data as d->qpos.
   unsigned int index_ = 0;
-  for(unsigned int i = 0; i < m->njnt; ++i)
+  for(unsigned int i = 0; i < m.njnt; ++i)
   {
-    if(m->jnt_type[i] != mjJNT_FREE)
+    if(m.jnt_type[i] != mjJNT_FREE)
     {
-      qpos[index_] = d->qpos[m->jnt_qposadr[i]];
+      qpos[index_] = d.qpos[m.jnt_qposadr[i]];
       index_++;
     }
   }
 }
 
-void mujoco_get_joint_vel(std::vector<double> & qvel)
+void mujoco_get_joint_vel(const mjModel & m, const mjData & d, std::vector<double> & qvel)
 {
   // NOTE: a jointvel sensor will return the same data as d->qvel.
   unsigned int index_ = 0;
-  for(unsigned int i = 0; i < m->njnt; ++i)
+  for(unsigned int i = 0; i < m.njnt; ++i)
   {
-    if(m->jnt_type[i] != mjJNT_FREE)
+    if(m.jnt_type[i] != mjJNT_FREE)
     {
-      qvel[index_] = d->qvel[m->jnt_dofadr[i]];
+      qvel[index_] = d.qvel[m.jnt_dofadr[i]];
       index_++;
     }
   }
 }
 
-void mujoco_get_joint_qfrc(std::vector<double> & qfrc)
+void mujoco_get_joint_qfrc(const mjModel & m, const mjData & d, std::vector<double> & qfrc)
 {
   qfrc.clear();
-  for (unsigned int i = 0; i < m->nv; ++i)
+  for(unsigned int i = 0; i < m.nv; ++i)
   {
-    if (m->jnt_type[m->dof_jntid[i]] != mjJNT_FREE)
+    if(m.jnt_type[m.dof_jntid[i]] != mjJNT_FREE)
     {
-      qfrc.push_back(d->qfrc_actuator[i]);
+      qfrc.push_back(d.qfrc_actuator[i]);
     }
   }
 }
 
-bool mujoco_get_sensordata(std::vector<double> & read, const std::string & sensor_name)
+bool mujoco_get_sensordata(const mjModel & m,
+                           const mjData & d,
+                           std::vector<double> & read,
+                           const std::string & sensor_name)
 {
   read.clear();
-  for(unsigned int i = 0; i < m->nsensor; ++i)
+  for(unsigned int i = 0; i < m.nsensor; ++i)
   {
-    if(mj_id2name(m, mjOBJ_SENSOR, i) == sensor_name)
+    if(mj_id2name(&m, mjOBJ_SENSOR, i) == sensor_name)
     {
-      for(unsigned int j = 0; j < m->sensor_dim[i]; ++j)
+      for(unsigned int j = 0; j < m.sensor_dim[i]; ++j)
       {
-        read.push_back(d->sensordata[m->sensor_adr[i] + j]);
+        read.push_back(d.sensordata[m.sensor_adr[i] + j]);
       }
+      break;
     }
   }
   return (read.size() ? true : false);
 }
 
-void mujoco_get_joints(std::vector<std::string> & names, std::vector<int> & ids)
+void mujoco_get_joints(const mjModel & m, std::vector<std::string> & names, std::vector<int> & ids)
 {
   names.clear();
   ids.clear();
-  for(size_t i = 0; i < m->njnt; ++i)
+  for(size_t i = 0; i < m.njnt; ++i)
   {
-    if(m->jnt_type[i] != mjJNT_FREE)
+    if(m.jnt_type[i] != mjJNT_FREE)
     {
-      names.push_back(mj_id2name(m, mjOBJ_JOINT, i));
+      names.push_back(mj_id2name(&m, mjOBJ_JOINT, i));
       ids.push_back(i);
     }
   }
 }
 
-void mujoco_get_motors(std::vector<std::string> & names, std::vector<int> & ids)
+void mujoco_get_motors(const mjModel & m, std::vector<std::string> & names, std::vector<int> & ids)
 {
   names.clear();
   ids.clear();
-  for(size_t i = 0; i < m->nu; ++i)
+  for(size_t i = 0; i < m.nu; ++i)
   {
-    unsigned int jnt_id = m->actuator_trnid[2 * i];
-    names.push_back(mj_id2name(m, mjOBJ_JOINT, jnt_id));
+    unsigned int jnt_id = m.actuator_trnid[2 * i];
+    names.push_back(mj_id2name(&m, mjOBJ_JOINT, jnt_id));
     ids.push_back(jnt_id);
   }
 }
 
-bool mujoco_set_ctrl(const std::vector<double> & ctrl)
+bool mujoco_set_ctrl(const mjModel & m, mjData & d, const std::vector<double> & ctrl)
 {
-  mju_zero(d->ctrl, m->nu);
-  if(ctrl.size() != m->nu)
+  mju_zero(d.ctrl, m.nu);
+  if(ctrl.size() != m.nu)
   {
-    std::cerr << "Invalid size of control signal(" << ctrl.size() << ", expected " << m->nu << ")." << std::endl;
+    std::cerr << "Invalid size of control signal(" << ctrl.size() << ", expected " << m.nu << ")." << std::endl;
     return false;
   }
   // TODO: Check if mapping is correct.
@@ -492,34 +438,36 @@ bool mujoco_set_ctrl(const std::vector<double> & ctrl)
 
   for(const auto i : ctrl)
   {
-    double ratio = m->actuator_gear[6 * index];
-    d->ctrl[index] = i / ratio;
+    double ratio = m.actuator_gear[6 * index];
+    d.ctrl[index] = i / ratio;
     index++;
   }
   return true;
 }
 
-void mujoco_cleanup()
+void mujoco_cleanup(MjSimImpl * mj_sim)
 {
-  // Close the window
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplGlfw_Shutdown();
-  ImGui::DestroyContext();
+  if(mj_sim->config.with_visualization)
+  {
+    // Close the window
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
-  glfwDestroyWindow(window);
+    glfwDestroyWindow(mj_sim->window);
+  }
 
   // free visualization storage
-  mjv_freeScene(&scn);
-  mjr_freeContext(&con);
+  mjv_freeScene(&mj_sim->scene);
+  mjr_freeContext(&mj_sim->context);
 
   // free MuJoCo model and data, deactivate
-  mj_deleteData(d);
-  mj_deleteModel(m);
-  mj_deactivate();
+  mj_deleteData(mj_sim->data);
+  mj_deleteModel(mj_sim->model);
 
-  mujoco_initialized = false;
-  glfw_initialized = false;
-  // FIXME Segfault?
+  // FIXME glfwTerminate will segfault so we never de-init glfw
+  // Ref: http://www.mujoco.org/forum/index.php?threads/segmentation-fault-for-record-on-ubuntu-16-04.3516/#post-4205
+  // glfw_initialized = false;
   // glfwTerminate();
 }
 
