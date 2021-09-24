@@ -5,6 +5,8 @@ namespace bfs = boost::filesystem;
 
 #include <mc_rtc/logging.h>
 
+#include "mj_sim_impl.h"
+
 namespace mc_mujoco
 {
 
@@ -329,10 +331,85 @@ static void merge_mujoco_model(const std::string & robot, const std::string & xm
   // FIXME Not handled but easy to do based on contact: equality/tendon/keyframe
 }
 
-std::string merge_mujoco_models(const std::vector<std::string> & robots, const std::vector<std::string> & xmlFiles)
+static void get_joint_names(const pugi::xml_node & in, const std::string & prefix, std::vector<std::string> & joints)
 {
+  for(const auto & j : in.children("joint"))
+  {
+    auto type_attr = j.attribute("type");
+    std::string type = type_attr ? type_attr.value() : "hinge";
+    if(type != "free")
+    {
+      std::string name = j.attribute("name").value();
+      if(prefix.size())
+      {
+        name = fmt::format("{}_{}", prefix, name);
+      }
+      joints.push_back(name);
+    }
+  }
+  for(const auto & c : in.children("body"))
+  {
+    get_joint_names(c, prefix, joints);
+  }
+}
+
+static void get_motor_names(const pugi::xml_node & in,
+                            const std::string & prefix,
+                            const std::vector<std::string> & joints,
+                            std::vector<std::string> & motors)
+{
+  std::unordered_map<std::string, std::string> joint_to_motor;
+  for(const auto & m : in.children("motor"))
+  {
+    std::string name = m.attribute("name").value();
+    std::string joint = m.attribute("joint").value();
+    if(prefix.size())
+    {
+      name = fmt::format("{}_{}", prefix, name);
+      joint = fmt::format("{}_{}", prefix, joint);
+    }
+    joint_to_motor[joint] = name;
+  }
+  for(const auto & j : joints)
+  {
+    auto it = joint_to_motor.find(j);
+    if(it == joint_to_motor.end())
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>(
+          "[mc_mujoco] Joint {} is not actuated in the Mujoco model and it should be", j);
+    }
+    motors.push_back(it->second);
+  }
+}
+
+static MjRobot mj_robot_from_xml(const std::string & name, const std::string & xmlFile, const std::string & prefix = "")
+{
+  MjRobot out;
+  out.name = name;
+  out.prefix = prefix;
+  pugi::xml_document in;
+  if(!in.load_file(xmlFile.c_str()))
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("Failed to load {}", xmlFile);
+  }
+  auto root = in.child("mujoco");
+  if(!root)
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("No mujoco root node in {}", xmlFile);
+  }
+  get_joint_names(root.child("worldbody"), prefix, out.mj_jnt_names);
+  get_motor_names(root.child("actuator"), prefix, out.mj_jnt_names, out.mj_mot_names);
+  return out;
+}
+
+std::string merge_mujoco_models(const std::vector<std::string> & robots,
+                                const std::vector<std::string> & xmlFiles,
+                                std::vector<MjRobot> & mjRobots)
+{
+  mjRobots.clear();
   if(xmlFiles.size() == 1)
   {
+    mjRobots.push_back(mj_robot_from_xml(robots[0], xmlFiles[0]));
     return xmlFiles[0];
   }
   std::string outFile = "/tmp/mc_mujoco.xml";
@@ -342,6 +419,7 @@ std::string merge_mujoco_models(const std::vector<std::string> & robots, const s
   for(size_t i = 0; i < robots.size(); ++i)
   {
     merge_mujoco_model(robots[i], xmlFiles[i], out);
+    mjRobots.push_back(mj_robot_from_xml(robots[i], xmlFiles[i], robots[i]));
   }
   {
     std::ofstream ofs(outFile);
