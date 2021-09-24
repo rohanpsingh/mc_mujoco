@@ -47,6 +47,10 @@ struct MjRobot
   std::vector<double> torques;
   /** Force sensors reading */
   std::map<std::string, sva::ForceVecd> wrenches;
+  /** Gyro readings */
+  std::map<std::string, Eigen::Vector3d> gyros;
+  /** Accelerometer readings */
+  std::map<std::string, Eigen::Vector3d> accelerometers;
 
   /** Proportional gains for low-level PD control */
   std::vector<double> kp = {};
@@ -63,6 +67,14 @@ struct MjRobot
   std::vector<int> mj_jnt_ids;
   /** MuJoCo joint to rjo index */
   std::vector<int> mj_jnt_to_rjo;
+  /** Correspondance from mc_rtc force sensor's name to MuJoCo force sensor id, -1 if absent */
+  std::unordered_map<std::string, int> mc_fs_to_mj_fsensor_id;
+  /** Correspondance from mc_rtc force sensor's name to MuJoCo torque sensor id, -1 if absent */
+  std::unordered_map<std::string, int> mc_fs_to_mj_tsensor_id;
+  /** Correspondance from mc-rtc body sensor's name to MuJoCo gyro sensor id, -1 if absent */
+  std::unordered_map<std::string, int> mc_bs_to_mj_gyro_id;
+  /** Correspondance from mc-rtc body sensor's name to MuJoCo accelerometer sensor id, -1 if absent */
+  std::unordered_map<std::string, int> mc_bs_to_mj_accelerometer_id;
 
   /** Transform from index in mj_mot_names to index in mbc, -1 if not in mbc */
   std::vector<int> mj_to_mbc;
@@ -94,6 +106,19 @@ struct MjRobot
 
   /** Load PD gains from a file */
   bool loadGain(const std::string & path_to_pd, const std::vector<std::string> & joints);
+
+  /** From a name returns the prefixed name in MuJoCo */
+  inline std::string prefixed(const std::string & name) const noexcept
+  {
+    if(prefix.size())
+    {
+      return fmt::format("{}_{}", prefix, name);
+    }
+    else
+    {
+      return name;
+    }
+  }
 };
 
 struct MjSimImpl

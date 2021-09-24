@@ -284,26 +284,6 @@ bool mujoco_set_const(mjModel * m, mjData * d, const std::vector<double> & qpos,
   return true;
 }
 
-bool mujoco_get_sensordata(const mjModel & m,
-                           const mjData & d,
-                           std::vector<double> & read,
-                           const std::string & sensor_name)
-{
-  read.clear();
-  for(unsigned int i = 0; i < m.nsensor; ++i)
-  {
-    if(mj_id2name(&m, mjOBJ_SENSOR, i) == sensor_name)
-    {
-      for(unsigned int j = 0; j < m.sensor_dim[i]; ++j)
-      {
-        read.push_back(d.sensordata[m.sensor_adr[i] + j]);
-      }
-      break;
-    }
-  }
-  return (read.size() ? true : false);
-}
-
 void mujoco_cleanup(MjSimImpl * mj_sim)
 {
   if(mj_sim->config.with_visualization)
@@ -328,6 +308,22 @@ void mujoco_cleanup(MjSimImpl * mj_sim)
   // Ref: http://www.mujoco.org/forum/index.php?threads/segmentation-fault-for-record-on-ubuntu-16-04.3516/#post-4205
   // glfw_initialized = false;
   // glfwTerminate();
+}
+
+int mujoco_get_sensor_id(const mjModel & m, const std::string & name, mjtSensor type)
+{
+  auto id = mj_name2id(&m, mjOBJ_SENSOR, name.c_str());
+  return (id != -1 && m.sensor_type[id] == type) ? id : -1;
+}
+
+void mujoco_get_sensordata(const mjModel & model, const mjData & data, int sensor_id, double * sensor_reading)
+{
+  if(sensor_id == -1)
+  {
+    return;
+  }
+  std::memcpy(sensor_reading, &data.sensordata[model.sensor_adr[sensor_id]],
+              model.sensor_dim[sensor_id] * sizeof(double));
 }
 
 } // namespace mc_mujoco

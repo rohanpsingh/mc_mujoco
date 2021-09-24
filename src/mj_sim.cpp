@@ -244,9 +244,34 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   mj_ctrl = mj_prev_ctrl_q;
   mj_next_ctrl_q = mj_prev_ctrl_q;
   mj_next_ctrl_alpha = mj_prev_ctrl_alpha;
+  auto init_sensor_id = [&](const char * mj_name, const char * mc_name, const std::string & sensor_name,
+                            const char * suffix, mjtSensor type, std::unordered_map<std::string, int> & mapping) {
+    auto mj_sensor = prefixed(fmt::format("{}_{}", sensor_name, suffix));
+    auto sensor_id = mujoco_get_sensor_id(*model, mj_sensor, type);
+    if(sensor_id == -1)
+    {
+      mc_rtc::log::error("[mc_mujoco] No MuJoCo {} for {} {} in {}, expected to find a {} named {}", mj_name,
+                         sensor_name, mc_name, name, mj_name, mj_sensor);
+    }
+    mapping[sensor_name] = sensor_id;
+  };
   for(const auto & fs : robot.module().forceSensors())
   {
     wrenches[fs.name()] = sva::ForceVecd(Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
+    init_sensor_id("force sensor", "force sensor", fs.name(), "fsensor", mjSENS_FORCE, mc_fs_to_mj_fsensor_id);
+    init_sensor_id("torque sensor", "force sensor", fs.name(), "tsensor", mjSENS_TORQUE, mc_fs_to_mj_tsensor_id);
+  }
+  for(const auto & bs : robot.bodySensors())
+  {
+    if(bs.name() == "FloatingBase")
+    {
+      continue;
+    }
+    gyros[bs.name()] = Eigen::Vector3d::Zero();
+    accelerometers[bs.name()] = Eigen::Vector3d::Zero();
+    init_sensor_id("gyro sensor", "body sensor", bs.name(), "gyro", mjSENS_GYRO, mc_bs_to_mj_gyro_id);
+    init_sensor_id("accelerometer sensor", "body sensor", bs.name(), "accelerometer", mjSENS_ACCELEROMETER,
+                   mc_bs_to_mj_accelerometer_id);
   }
 }
 
@@ -336,18 +361,6 @@ void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model
   }
   auto & robot = gc->controller().robots().robot(name);
 
-  // Returns the prefixed name of a sensor
-  auto prefixed = [&](const std::string & name) {
-    if(prefix.size())
-    {
-      return fmt::format("{}_{}", prefix, name);
-    }
-    else
-    {
-      return name;
-    }
-  };
-
   // Body sensor updates
   root_pos = Eigen::Map<Eigen::Vector3d>(&data->qpos[root_qpos_idx]);
   root_ori.w() = data->qpos[root_qpos_idx + 3];
@@ -369,46 +382,41 @@ void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model
     // FIXME Not implemented in mc_rtc
     // gc->setSensorAngularAccelerations(name, {{"FloatingBase", root_angacc}});
   }
+  // FIXME REMOVE?
   gc->setSensorPosition(name, root_pos);
   gc->setSensorOrientation(name, root_ori);
   gc->setSensorLinearVelocity(name, root_linvel);
   gc->setSensorAngularVelocity(name, root_angvel);
   gc->setSensorLinearAcceleration(name, root_linacc);
-  // FIXME Not implemented in mc_rtc
-  // gc->setSensorAngularAcceleration(name, root_linacc);
-  // set angular velocity
-  std::vector<double> _gyro;
-  mujoco_get_sensordata(*model, *data, _gyro, prefixed("root_gyro"));
-  if(_gyro.size() != 3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] gyro read failed.");
-  gc->setSensorAngularVelocities(name, {{"Accelerometer", Eigen::Vector3d(_gyro.data())}});
 
-  // set linear acceleration
-  std::vector<double> _accel;
-  mujoco_get_sensordata(*model, *data, _accel, prefixed("root_accel"));
-  if(_accel.size() != 3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] accel read failed.");
-  gc->setSensorLinearAccelerations(name, {{"Accelerometer", Eigen::Vector3d(_accel.data())}});
+  // Gyro update
+  for(auto & gyro : gyros)
+  {
+    mujoco_get_sensordata(*model, *data, mc_bs_to_mj_gyro_id[gyro.first], gyro.second.data());
+  }
+  gc->setSensorAngularVelocities(name, gyros);
+
+  // Accelerometers update
+  for(auto & accelerometer : accelerometers)
+  {
+    mujoco_get_sensordata(*model, *data, mc_bs_to_mj_accelerometer_id[accelerometer.first],
+                          accelerometer.second.data());
+  }
+  gc->setSensorLinearAccelerations(name, accelerometers);
+
+  // Force sensor update
+  for(auto & fs : wrenches)
+  {
+    mujoco_get_sensordata(*model, *data, mc_fs_to_mj_fsensor_id[fs.first], fs.second.force().data());
+    mujoco_get_sensordata(*model, *data, mc_fs_to_mj_tsensor_id[fs.first], fs.second.couple().data());
+    fs.second *= -1;
+  }
+  gc->setWrenches(name, wrenches);
 
   // Joint sensor updates
   gc->setEncoderValues(name, encoders);
   gc->setEncoderVelocities(name, alphas);
   gc->setJointTorques(name, torques);
-
-  // Force sensors
-  std::vector<double> _fsensor, _tsensor;
-  auto getWrench = [&](const std::string & mc_sensor, const std::string & mj_fsensor, const std::string & mj_tsensor) {
-    if(mujoco_get_sensordata(*model, *data, _fsensor, prefixed(mj_fsensor))
-       && mujoco_get_sensordata(*model, *data, _tsensor, prefixed(mj_tsensor)))
-    {
-      auto & w = wrenches[mc_sensor];
-      w.force() = -1 * Eigen::Map<Eigen::Vector3d>(_fsensor.data());
-      w.couple() = -1 * Eigen::Map<Eigen::Vector3d>(_tsensor.data());
-    }
-  };
-  getWrench("RightFootForceSensor", "rf_fsensor", "rf_tsensor");
-  getWrench("LeftFootForceSensor", "lf_fsensor", "lf_tsensor");
-  getWrench("RightHandForceSensor", "rh_fsensor", "rh_tsensor");
-  getWrench("LeftHandForceSensor", "lh_fsensor", "lh_tsensor");
-  gc->setWrenches(wrenches);
 }
 
 void MjSimImpl::updateData()

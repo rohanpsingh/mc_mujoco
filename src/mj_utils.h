@@ -39,13 +39,11 @@ void mujoco_create_window(MjSimImpl * mj_sim);
 /*! Sets initial qpos and qvel in mjData */
 bool mujoco_set_const(mjModel * m, mjData * d, const std::vector<double> & qpos, const std::vector<double> & qvel);
 
-/*! Generic function to read sensor meansurements.
- * Returns false if sensor name is not present in model.
- */
-bool mujoco_get_sensordata(const mjModel & m,
-                           const mjData & d,
-                           std::vector<double> & read,
-                           const std::string & sensor_name);
+/** Returns a sensor id from name, -1 if the type does not match or the sensor does not exist */
+int mujoco_get_sensor_id(const mjModel & m, const std::string & name, mjtSensor type);
+
+/** Reads a MuJoCo sensor into the provided data pointer, the data must have the correct size for the sensor type */
+void mujoco_get_sensordata(const mjModel & model, const mjData & data, int sensor_id, double * sensor_reading);
 
 /*! Cleanup. */
 void mujoco_cleanup(MjSimImpl * mj_sim);
