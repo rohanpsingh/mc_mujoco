@@ -382,12 +382,6 @@ void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model
     // FIXME Not implemented in mc_rtc
     // gc->setSensorAngularAccelerations(name, {{"FloatingBase", root_angacc}});
   }
-  // FIXME REMOVE?
-  gc->setSensorPosition(name, root_pos);
-  gc->setSensorOrientation(name, root_ori);
-  gc->setSensorLinearVelocity(name, root_linvel);
-  gc->setSensorAngularVelocity(name, root_angvel);
-  gc->setSensorLinearAcceleration(name, root_linacc);
 
   // Gyro update
   for(auto & gyro : gyros)
