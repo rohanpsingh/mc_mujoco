@@ -139,7 +139,10 @@ void scroll(GLFWwindow * window, double xoffset, double yoffset)
  * Mujoco utility functions
  ******************************************************************************/
 
-bool mujoco_init(MjSimImpl * mj_sim, const char * file_input, bool init_glfw)
+bool mujoco_init(MjSimImpl * mj_sim,
+                 const std::vector<std::string> & robots,
+                 const std::vector<std::string> & xmlFiles,
+                 bool init_glfw)
 {
   // Initialize MuJoCo
   if(!mujoco_initialized)
@@ -158,9 +161,9 @@ bool mujoco_init(MjSimImpl * mj_sim, const char * file_input, bool init_glfw)
   }
 
   // Load the model;
-  const char * modelfile = file_input;
+  std::string model = merge_mujoco_models(robots, xmlFiles);
   char error[1000] = "Could not load XML model";
-  mj_sim->model = mj_loadXML(modelfile, 0, error, 1000);
+  mj_sim->model = mj_loadXML(model.c_str(), 0, error, 1000);
   if(!mj_sim->model)
   {
     std::cerr << error << std::endl;

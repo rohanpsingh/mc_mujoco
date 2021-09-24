@@ -50,6 +50,7 @@ else()
 endif()
 
 add_subdirectory(cmake)
+add_subdirectory(ext/pugixml)
 add_subdirectory(src)
 
 enable_testing()

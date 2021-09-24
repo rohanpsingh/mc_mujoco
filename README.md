@@ -36,4 +36,6 @@ $ ./src/mc_mujoco
 This package includes code from:
 - [imgui v1.84.2](https://github.com/ocornut/imgui/)
 - [implot v0.11](https://github.com/epezent/implot)
+- [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo)
+- [pugixml v1.11.4](https://github.com/zeux/pugixml)
 - [Roboto font](https://github.com/googlefonts/roboto)

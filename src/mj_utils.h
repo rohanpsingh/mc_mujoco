@@ -11,8 +11,26 @@
 namespace mc_mujoco
 {
 
+/** Merge multiple mujoco models into one
+ *
+ * For each merged model a prefix is added to every named entities in the model
+ *
+ * Warnings are displayed when some global parameters conflict, in such cases, the value from the first model where the
+ * parameter appeared will prevail
+ *
+ * \param robots Prefix applied to each model
+ *
+ * \param xmlFiles Individual models
+ *
+ * \returns The path to the generated model
+ */
+std::string merge_mujoco_models(const std::vector<std::string> & robots, const std::vector<std::string> & xmlFiles);
+
 /*! Load XML model and initialize */
-bool mujoco_init(MjSimImpl * mj_sim, const char * modelfile, bool init_glfw);
+bool mujoco_init(MjSimImpl * mj_sim,
+                 const std::vector<std::string> & robots,
+                 const std::vector<std::string> & xmlFiles,
+                 bool init_glfw);
 
 /*! Create GLFW window */
 void mujoco_create_window(MjSimImpl * mj_sim);

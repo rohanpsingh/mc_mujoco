@@ -101,8 +101,7 @@ bool MjSimImpl::loadGain(const std::string & path_to_pd, const std::vector<std::
 MjSimImpl::MjSimImpl(const MjConfiguration & config)
 : controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config)
 {
-  const auto & robot_name = controller->robot().module().name;
-  auto get_robot_cfg_path = [&]() -> std::string {
+  auto get_robot_cfg_path = [&](const std::string & robot_name) -> std::string {
     if(bfs::exists(bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")))
     {
       return (bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")).string();
@@ -117,37 +116,42 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     }
   };
 
-  std::string xmlPath = "";
-  std::string pdGains = "";
-  const auto & robot_cfg_path = get_robot_cfg_path();
-  if(robot_cfg_path.size())
+  std::vector<std::string> mujRobots;
+  std::vector<std::string> xmlFiles;
+  std::vector<std::string> pdGainsFiles;
+  for(const auto & r : controller->robots())
   {
-    auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
-    if(!robot_cfg.has("xmlModelPath") || !robot_cfg.has("pdGainsPath"))
+    const auto & robot_cfg_path = get_robot_cfg_path(r.module().name);
+    if(robot_cfg_path.size())
     {
-      mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath or pdGainsPath in {}", robot_cfg_path);
+      auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
+      if(!robot_cfg.has("xmlModelPath") || !robot_cfg.has("pdGainsPath"))
+      {
+        mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath or pdGainsPath in {}", robot_cfg_path);
+      }
+      mujRobots.push_back(r.name());
+      xmlFiles.push_back(static_cast<std::string>(robot_cfg("xmlModelPath")));
+      pdGainsFiles.push_back(static_cast<std::string>(robot_cfg("pdGainsPath")));
+      if(!bfs::exists(xmlFiles.back()))
+      {
+        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {}",
+                                                         xmlFiles.back());
+      }
+      if(!bfs::exists(pdGainsFiles.back()))
+      {
+        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file cannot be found at {}",
+                                                         pdGainsFiles.back());
+      }
     }
-    xmlPath = static_cast<std::string>(robot_cfg("xmlModelPath"));
-    pdGains = static_cast<std::string>(robot_cfg("pdGainsPath"));
-  }
-  else
-  {
-    auto mj_c = controller->configuration().config("MUJOCO", mc_rtc::Configuration{});
-    mj_c("xmlModelPath", xmlPath);
-    mj_c("pdGainsPath", pdGains);
   }
 
-  if(!bfs::exists(xmlPath))
+  if(!xmlFiles.size())
   {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {}", xmlPath);
-  }
-  if(!bfs::exists(pdGains))
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file cannot be found at {}", pdGains);
+    mc_rtc::log::error_and_throw<std::runtime_error>("No Mujoco model associated to any robots in the controller");
   }
 
   // initial mujoco here and load XML model
-  bool initialized = mujoco_init(this, xmlPath.c_str(), config.with_visualization);
+  bool initialized = mujoco_init(this, mujRobots, xmlFiles, config.with_visualization);
   if(!initialized)
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Initialized failed.");
@@ -155,7 +159,7 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
 
   // read PD gains from file
   const std::vector<std::string> rjo = controller->ref_joint_order();
-  if(!loadGain(pdGains, rjo))
+  if(!loadGain(pdGainsFiles[0], rjo))
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains load failed.");
   }
