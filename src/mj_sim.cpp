@@ -200,6 +200,9 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   mj_to_mbc.resize(0);
   mj_prev_ctrl_q.resize(0);
   mj_prev_ctrl_alpha.resize(0);
+  encoders = std::vector<double>(rjo.size(), 0.0);
+  alphas = std::vector<double>(rjo.size(), 0.0);
+  torques = std::vector<double>(rjo.size(), 0.0);
   for(const auto & mj_jn : mj_jnt_names)
   {
     const auto & jn = [&]() {
@@ -209,6 +212,13 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
       }
       return mj_jn;
     }();
+    auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
+    int rjo_idx = -1;
+    if(rjo_it != rjo.end())
+    {
+      rjo_idx = std::distance(rjo.begin(), rjo_it);
+    }
+    mj_jnt_to_rjo.push_back(rjo_idx);
     if(robot.hasJoint(jn))
     {
       auto jIndex = robot.jointIndexByName(jn);
@@ -220,16 +230,16 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
       }
       mj_prev_ctrl_q.push_back(robot.mbc().q[jIndex][0]);
       mj_prev_ctrl_alpha.push_back(robot.mbc().alpha[jIndex][0]);
-      encoders.push_back(mj_prev_ctrl_q.back());
-      alphas.push_back(mj_prev_ctrl_alpha.back());
+      if(rjo_idx != -1)
+      {
+        encoders[rjo_idx] = mj_prev_ctrl_q.back();
+        alphas[rjo_idx] = mj_prev_ctrl_q.back();
+      }
     }
     else
     {
       mj_to_mbc.push_back(-1);
-      encoders.push_back(0);
-      alphas.push_back(0);
     }
-    torques.push_back(0);
   }
   mj_ctrl = mj_prev_ctrl_q;
   mj_next_ctrl_q = mj_prev_ctrl_q;
@@ -305,12 +315,20 @@ void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model
 {
   for(size_t i = 0; i < mj_jnt_ids.size(); ++i)
   {
-    encoders[i] = data->qpos[model->jnt_qposadr[mj_jnt_ids[i]]];
-    alphas[i] = data->qvel[model->jnt_dofadr[mj_jnt_ids[i]]];
+    if(mj_jnt_to_rjo[i] == -1)
+    {
+      continue;
+    }
+    encoders[mj_jnt_to_rjo[i]] = data->qpos[model->jnt_qposadr[mj_jnt_ids[i]]];
+    alphas[mj_jnt_to_rjo[i]] = data->qvel[model->jnt_dofadr[mj_jnt_ids[i]]];
   }
   for(size_t i = 0; i < mj_mot_ids.size(); ++i)
   {
-    torques[i] = data->qfrc_actuator[mj_mot_ids[i]];
+    if(mj_jnt_to_rjo[i] == -1)
+    {
+      continue;
+    }
+    torques[mj_jnt_to_rjo[i]] = data->qfrc_actuator[mj_mot_ids[i]];
   }
   if(!gc)
   {

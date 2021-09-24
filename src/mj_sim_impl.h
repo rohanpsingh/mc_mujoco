@@ -61,6 +61,8 @@ struct MjRobot
   std::vector<std::string> mj_jnt_names;
   /** Correspondance from joint name to id inside MuJoCo */
   std::vector<int> mj_jnt_ids;
+  /** MuJoCo joint to rjo index */
+  std::vector<int> mj_jnt_to_rjo;
 
   /** Transform from index in mj_mot_names to index in mbc, -1 if not in mbc */
   std::vector<int> mj_to_mbc;
