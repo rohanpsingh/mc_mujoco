@@ -480,7 +480,7 @@ std::string merge_mujoco_models(const std::vector<std::string> & robots,
     mjRobots.push_back(mj_robot_from_xml(robots[0], xmlFiles[0]));
     return xmlFiles[0];
   }
-  std::string outFile = "/tmp/mc_mujoco.xml";
+  std::string outFile = (bfs::temp_directory_path() / bfs::unique_path("mc_mujoco_%%%%-%%%%-%%%%-%%%%.xml")).string();
   pugi::xml_document out_doc;
   auto out = out_doc.append_child("mujoco");
   out.append_attribute("model").set_value("mc_mujoco");
@@ -493,6 +493,7 @@ std::string merge_mujoco_models(const std::vector<std::string> & robots,
     std::ofstream ofs(outFile);
     out_doc.save(ofs, "    ");
   }
+  mc_rtc::log::info("[mc_mujoco] MuJoCo scene loaded from {}", outFile);
   return outFile;
 }
 
