@@ -44,6 +44,8 @@ int main(int argc, char * argv[])
       ("without-controller", po::bool_switch(), "Disable mc_rtc controller inside mc_mujoco")
       ("without-visualization", po::bool_switch(), "Disable mc_mujoco GUI")
       ("without-mc-rtc-gui", po::bool_switch(), "Disable mc_rtc GUI")
+      ("with-collisions", po::bool_switch(), "Visualize collisions model")
+      ("without-visuals", po::bool_switch(), "Disable visuals display")
       ("sync", po::bool_switch(&config.sync_real_time), "Synchronize mc_mujoco simulation time with real time");
     // clang-format on
     po::variables_map vm;
@@ -57,6 +59,8 @@ int main(int argc, char * argv[])
     config.with_controller = !vm["without-controller"].as<bool>();
     config.with_visualization = !vm["without-visualization"].as<bool>();
     config.with_mc_rtc_gui = !vm["without-mc-rtc-gui"].as<bool>();
+    config.visualize_visual = !vm["without-visuals"].as<bool>();
+    config.visualize_collisions = vm["with-collisions"].as<bool>();
   }
   mc_mujoco::MjSim mj_sim(config);
 

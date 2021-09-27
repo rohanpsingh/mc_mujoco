@@ -139,7 +139,7 @@ void scroll(GLFWwindow * window, double xoffset, double yoffset)
  * Mujoco utility functions
  ******************************************************************************/
 
-bool mujoco_init(MjSimImpl * mj_sim, const char * file_input, bool init_glfw)
+bool mujoco_init(MjSimImpl * mj_sim, const std::vector<std::string> & robots, const std::vector<std::string> & xmlFiles)
 {
   // Initialize MuJoCo
   if(!mujoco_initialized)
@@ -158,9 +158,9 @@ bool mujoco_init(MjSimImpl * mj_sim, const char * file_input, bool init_glfw)
   }
 
   // Load the model;
-  const char * modelfile = file_input;
+  std::string model = merge_mujoco_models(robots, xmlFiles, mj_sim->robots);
   char error[1000] = "Could not load XML model";
-  mj_sim->model = mj_loadXML(modelfile, 0, error, 1000);
+  mj_sim->model = mj_loadXML(model.c_str(), 0, error, 1000);
   if(!mj_sim->model)
   {
     std::cerr << error << std::endl;
@@ -170,26 +170,21 @@ bool mujoco_init(MjSimImpl * mj_sim, const char * file_input, bool init_glfw)
   // make data
   mj_sim->data = mj_makeData(mj_sim->model);
 
-  if(!init_glfw)
-  {
-    return true;
-  }
-
-  // Initialize GLFW
-  if(!glfw_initialized)
-  {
-    if(!glfwInit())
-    {
-      return false;
-    }
-    glfw_initialized = true;
-  }
-
   return true;
 }
 
 void mujoco_create_window(MjSimImpl * mj_sim)
 {
+  // Initialize GLFW
+  if(!glfw_initialized)
+  {
+    if(!glfwInit())
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] GLFW initialization failed");
+    }
+    glfw_initialized = true;
+  }
+
   // create window, make OpenGL context current, request v-sync
   mj_sim->window = glfwCreateWindow(1600, 900, "mc_mujoco", NULL, NULL);
   if(!mj_sim->window)
@@ -208,10 +203,10 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   mj_sim->camera.azimuth = -150.0f;
   mj_sim->camera.elevation = -20.0f;
   mjv_defaultOption(&mj_sim->options);
+  mj_sim->options.geomgroup[0] = mj_sim->config.visualize_collisions;
+  mj_sim->options.geomgroup[1] = mj_sim->config.visualize_visual;
   mjv_defaultScene(&mj_sim->scene);
   mjr_defaultContext(&mj_sim->context);
-  // set the geom group to false by default
-  mj_sim->options.geomgroup[0] = false;
 
   // create scene and context
   mjv_makeScene(mj_sim->model, &mj_sim->scene, 2000);
@@ -289,162 +284,6 @@ bool mujoco_set_const(mjModel * m, mjData * d, const std::vector<double> & qpos,
   return true;
 }
 
-void mujoco_get_root_pos(const mjData & d, Eigen::Vector3d & pos)
-{
-  pos.setZero();
-  pos[0] = d.qpos[0];
-  pos[1] = d.qpos[1];
-  pos[2] = d.qpos[2];
-}
-
-void mujoco_get_root_orient(const mjData & d, Eigen::Quaterniond & quat)
-{
-  quat.coeffs().setZero();
-  quat.w() = d.qpos[3];
-  quat.x() = d.qpos[4];
-  quat.y() = d.qpos[5];
-  quat.z() = d.qpos[6];
-  quat = quat.inverse(); // mc-rtc convention
-}
-
-void mujoco_get_root_lin_vel(const mjData & d, Eigen::Vector3d & linvel)
-{
-  linvel.setZero();
-  linvel[0] = d.qvel[0];
-  linvel[1] = d.qvel[1];
-  linvel[2] = d.qvel[2];
-}
-
-void mujoco_get_root_ang_vel(const mjData & d, Eigen::Vector3d & angvel)
-{
-  angvel.setZero();
-  angvel[0] = d.qvel[3];
-  angvel[1] = d.qvel[4];
-  angvel[2] = d.qvel[5];
-}
-
-void mujoco_get_root_lin_acc(const mjData & d, Eigen::Vector3d & linacc)
-{
-  linacc.setZero();
-  linacc[0] = d.qacc[0];
-  linacc[1] = d.qacc[1];
-  linacc[2] = d.qacc[2];
-}
-
-void mujoco_get_root_ang_acc(const mjData & d, Eigen::Vector3d & angacc)
-{
-  angacc.setZero();
-  angacc[0] = d.qacc[3];
-  angacc[1] = d.qacc[4];
-  angacc[2] = d.qacc[5];
-}
-
-void mujoco_get_joint_pos(const mjModel & m, const mjData & d, std::vector<double> & qpos)
-{
-  // NOTE: a jointpos sensor will return the same data as d->qpos.
-  unsigned int index_ = 0;
-  for(unsigned int i = 0; i < m.njnt; ++i)
-  {
-    if(m.jnt_type[i] != mjJNT_FREE)
-    {
-      qpos[index_] = d.qpos[m.jnt_qposadr[i]];
-      index_++;
-    }
-  }
-}
-
-void mujoco_get_joint_vel(const mjModel & m, const mjData & d, std::vector<double> & qvel)
-{
-  // NOTE: a jointvel sensor will return the same data as d->qvel.
-  unsigned int index_ = 0;
-  for(unsigned int i = 0; i < m.njnt; ++i)
-  {
-    if(m.jnt_type[i] != mjJNT_FREE)
-    {
-      qvel[index_] = d.qvel[m.jnt_dofadr[i]];
-      index_++;
-    }
-  }
-}
-
-void mujoco_get_joint_qfrc(const mjModel & m, const mjData & d, std::vector<double> & qfrc)
-{
-  qfrc.clear();
-  for(unsigned int i = 0; i < m.nv; ++i)
-  {
-    if(m.jnt_type[m.dof_jntid[i]] != mjJNT_FREE)
-    {
-      qfrc.push_back(d.qfrc_actuator[i]);
-    }
-  }
-}
-
-bool mujoco_get_sensordata(const mjModel & m,
-                           const mjData & d,
-                           std::vector<double> & read,
-                           const std::string & sensor_name)
-{
-  read.clear();
-  for(unsigned int i = 0; i < m.nsensor; ++i)
-  {
-    if(mj_id2name(&m, mjOBJ_SENSOR, i) == sensor_name)
-    {
-      for(unsigned int j = 0; j < m.sensor_dim[i]; ++j)
-      {
-        read.push_back(d.sensordata[m.sensor_adr[i] + j]);
-      }
-      break;
-    }
-  }
-  return (read.size() ? true : false);
-}
-
-void mujoco_get_joints(const mjModel & m, std::vector<std::string> & names, std::vector<int> & ids)
-{
-  names.clear();
-  ids.clear();
-  for(size_t i = 0; i < m.njnt; ++i)
-  {
-    if(m.jnt_type[i] != mjJNT_FREE)
-    {
-      names.push_back(mj_id2name(&m, mjOBJ_JOINT, i));
-      ids.push_back(i);
-    }
-  }
-}
-
-void mujoco_get_motors(const mjModel & m, std::vector<std::string> & names, std::vector<int> & ids)
-{
-  names.clear();
-  ids.clear();
-  for(size_t i = 0; i < m.nu; ++i)
-  {
-    unsigned int jnt_id = m.actuator_trnid[2 * i];
-    names.push_back(mj_id2name(&m, mjOBJ_JOINT, jnt_id));
-    ids.push_back(jnt_id);
-  }
-}
-
-bool mujoco_set_ctrl(const mjModel & m, mjData & d, const std::vector<double> & ctrl)
-{
-  mju_zero(d.ctrl, m.nu);
-  if(ctrl.size() != m.nu)
-  {
-    std::cerr << "Invalid size of control signal(" << ctrl.size() << ", expected " << m.nu << ")." << std::endl;
-    return false;
-  }
-  // TODO: Check if mapping is correct.
-  unsigned int index = 0;
-
-  for(const auto i : ctrl)
-  {
-    double ratio = m.actuator_gear[6 * index];
-    d.ctrl[index] = i / ratio;
-    index++;
-  }
-  return true;
-}
-
 void mujoco_cleanup(MjSimImpl * mj_sim)
 {
   if(mj_sim->config.with_visualization)
@@ -469,6 +308,22 @@ void mujoco_cleanup(MjSimImpl * mj_sim)
   // Ref: http://www.mujoco.org/forum/index.php?threads/segmentation-fault-for-record-on-ubuntu-16-04.3516/#post-4205
   // glfw_initialized = false;
   // glfwTerminate();
+}
+
+int mujoco_get_sensor_id(const mjModel & m, const std::string & name, mjtSensor type)
+{
+  auto id = mj_name2id(&m, mjOBJ_SENSOR, name.c_str());
+  return (id != -1 && m.sensor_type[id] == type) ? id : -1;
+}
+
+void mujoco_get_sensordata(const mjModel & model, const mjData & data, int sensor_id, double * sensor_reading)
+{
+  if(sensor_id == -1)
+  {
+    return;
+  }
+  std::memcpy(sensor_reading, &data.sensordata[model.sensor_adr[sensor_id]],
+              model.sensor_dim[sensor_id] * sizeof(double));
 }
 
 } // namespace mc_mujoco

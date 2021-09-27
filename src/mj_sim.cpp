@@ -23,7 +23,7 @@ namespace bfs = boost::filesystem;
 namespace mc_mujoco
 {
 
-double MjSimImpl::PD(double jnt_id, double q_ref, double q, double qdot_ref, double qdot)
+double MjRobot::PD(double jnt_id, double q_ref, double q, double qdot_ref, double qdot)
 {
   double p_error = q_ref - q;
   double v_error = qdot_ref - qdot;
@@ -32,13 +32,13 @@ double MjSimImpl::PD(double jnt_id, double q_ref, double q, double qdot_ref, dou
 }
 
 /* Load PD gains from file (taken from RobotHardware/robot.cpp) */
-bool MjSimImpl::loadGain(const std::string & path_to_pd, const std::vector<std::string> & joints)
+bool MjRobot::loadGain(const std::string & path_to_pd, const std::vector<std::string> & joints)
 {
   std::ifstream strm(path_to_pd.c_str());
   if(!strm.is_open())
   {
-    std::cerr << path_to_pd << " not found" << std::endl;
-    return false;
+    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Cannot open PD gains file for {} at {}", name,
+                                                     path_to_pd);
   }
 
   int num_joints = joints.size();
@@ -77,20 +77,19 @@ bool MjSimImpl::loadGain(const std::string & path_to_pd, const std::vector<std::
     {
       if(i < num_joints)
       {
-        std::cerr << "[mc_mujoco] loadGain error: size of gains reading from file (" << path_to_pd
-                  << ") does not match size of joints" << std::endl;
+        mc_rtc::log::error(
+            "[mc_mujoco] loadGain error: size of gains reading from file ({}) does not match size of joints",
+            path_to_pd);
       }
       break;
     }
   }
 
   strm.close();
-  // Print loaded gain
-  std::cerr << "[mc_mujoco] loadGain" << std::endl;
+  mc_rtc::log::info("[mc_mujoco] Gains for {}", name);
   for(unsigned int i = 0; i < num_joints; i++)
   {
-    std::cerr << "[mc_mujoco]   " << joints[i] << ", pgain = " << default_pgain[i] << ", dgain = " << default_dgain[i]
-              << std::endl;
+    mc_rtc::log::info("[mc_mujoco] {}, pgain = {}, dgain = {}", joints[i], default_pgain[i], default_dgain[i]);
     // push to kp and kd
     kp.push_back(default_pgain[i]);
     kd.push_back(default_dgain[i]);
@@ -101,8 +100,7 @@ bool MjSimImpl::loadGain(const std::string & path_to_pd, const std::vector<std::
 MjSimImpl::MjSimImpl(const MjConfiguration & config)
 : controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config)
 {
-  const auto & robot_name = controller->robot().module().name;
-  auto get_robot_cfg_path = [&]() -> std::string {
+  auto get_robot_cfg_path = [&](const std::string & robot_name) -> std::string {
     if(bfs::exists(bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")))
     {
       return (bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")).string();
@@ -117,47 +115,57 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     }
   };
 
-  std::string xmlPath = "";
-  std::string pdGains = "";
-  const auto & robot_cfg_path = get_robot_cfg_path();
-  if(robot_cfg_path.size())
+  std::vector<std::string> mujRobots;
+  std::vector<std::string> xmlFiles;
+  std::vector<std::string> pdGainsFiles;
+  for(const auto & r : controller->robots())
   {
-    auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
-    if(!robot_cfg.has("xmlModelPath") || !robot_cfg.has("pdGainsPath"))
+    const auto & robot_cfg_path = get_robot_cfg_path(r.module().name);
+    if(robot_cfg_path.size())
     {
-      mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath or pdGainsPath in {}", robot_cfg_path);
+      auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
+      if(!robot_cfg.has("xmlModelPath"))
+      {
+        mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath in {}", robot_cfg_path);
+      }
+      mujRobots.push_back(r.name());
+      xmlFiles.push_back(static_cast<std::string>(robot_cfg("xmlModelPath")));
+      pdGainsFiles.push_back(robot_cfg("pdGainsPath", std::string("")));
+      if(!bfs::exists(xmlFiles.back()))
+      {
+        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {}",
+                                                         xmlFiles.back());
+      }
     }
-    xmlPath = static_cast<std::string>(robot_cfg("xmlModelPath"));
-    pdGains = static_cast<std::string>(robot_cfg("pdGainsPath"));
-  }
-  else
-  {
-    auto mj_c = controller->configuration().config("MUJOCO", mc_rtc::Configuration{});
-    mj_c("xmlModelPath", xmlPath);
-    mj_c("pdGainsPath", pdGains);
   }
 
-  if(!bfs::exists(xmlPath))
+  if(!xmlFiles.size())
   {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {}", xmlPath);
-  }
-  if(!bfs::exists(pdGains))
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file cannot be found at {}", pdGains);
+    mc_rtc::log::error_and_throw<std::runtime_error>("No Mujoco model associated to any robots in the controller");
   }
 
   // initial mujoco here and load XML model
-  bool initialized = mujoco_init(this, xmlPath.c_str(), config.with_visualization);
+  bool initialized = mujoco_init(this, mujRobots, xmlFiles);
   if(!initialized)
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Initialized failed.");
   }
 
   // read PD gains from file
-  const std::vector<std::string> rjo = controller->ref_joint_order();
-  if(!loadGain(pdGains, rjo))
+  for(size_t i = 0; i < robots.size(); ++i)
   {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains load failed.");
+    auto & r = robots[i];
+    const auto & robot = controller->robot(r.name);
+    if(robot.mb().nrDof() == 0 || (robot.mb().nrDof() == 6 && robot.mb().joint(0).dof() == 6))
+    {
+      continue;
+    }
+    if(!bfs::exists(pdGainsFiles[i]))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file for {} cannot be found at {}", r.name,
+                                                       pdGainsFiles.back());
+    }
+    r.loadGain(pdGainsFiles[i], controller->robots().robot(r.name).module().ref_joint_order());
   }
 
   if(config.with_visualization)
@@ -176,19 +184,57 @@ void MjSimImpl::cleanup()
   mujoco_cleanup(this);
 }
 
-void MjSimImpl::startSimulation()
+void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
 {
-  // get names and ids of all joints
-  mujoco_get_joints(*model, mj_jnt_names, mj_jnt_ids);
-  // get names and ids of actuated joints
-  mujoco_get_motors(*model, mj_mot_names, mj_mot_ids);
-
+  for(const auto & j : mj_jnt_names)
+  {
+    mj_jnt_ids.push_back(mj_name2id(model, mjOBJ_JOINT, j.c_str()));
+  }
+  for(const auto & m : mj_mot_names)
+  {
+    if(m.size())
+    {
+      mj_mot_ids.push_back(mj_name2id(model, mjOBJ_ACTUATOR, m.c_str()));
+    }
+    else
+    {
+      mj_mot_ids.push_back(-1);
+    }
+  }
+  if(root_body.size())
+  {
+    root_body_id = mj_name2id(model, mjOBJ_BODY, root_body.c_str());
+  }
+  const auto & mbc = robot.mbc();
+  const auto & rjo = robot.module().ref_joint_order();
+  if(rjo.size() != mj_jnt_names.size())
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>(
+        "[mc_mujoco] Missmatch in model for {}, reference joint order has {} joints but MuJoCo models has {} joints",
+        name, rjo.size(), mj_jnt_names.size());
+  }
   mj_to_mbc.resize(0);
   mj_prev_ctrl_q.resize(0);
   mj_prev_ctrl_alpha.resize(0);
-  const auto & robot = controller->robot();
-  for(const auto & jn : mj_mot_names)
+  encoders = std::vector<double>(rjo.size(), 0.0);
+  alphas = std::vector<double>(rjo.size(), 0.0);
+  torques = std::vector<double>(rjo.size(), 0.0);
+  for(const auto & mj_jn : mj_jnt_names)
   {
+    const auto & jn = [&]() {
+      if(prefix.size())
+      {
+        return mj_jn.substr(prefix.size() + 1);
+      }
+      return mj_jn;
+    }();
+    auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
+    int rjo_idx = -1;
+    if(rjo_it != rjo.end())
+    {
+      rjo_idx = std::distance(rjo.begin(), rjo_it);
+    }
+    mj_jnt_to_rjo.push_back(rjo_idx);
     if(robot.hasJoint(jn))
     {
       auto jIndex = robot.jointIndexByName(jn);
@@ -200,6 +246,11 @@ void MjSimImpl::startSimulation()
       }
       mj_prev_ctrl_q.push_back(robot.mbc().q[jIndex][0]);
       mj_prev_ctrl_alpha.push_back(robot.mbc().alpha[jIndex][0]);
+      if(rjo_idx != -1)
+      {
+        encoders[rjo_idx] = mj_prev_ctrl_q.back();
+        alphas[rjo_idx] = mj_prev_ctrl_q.back();
+      }
     }
     else
     {
@@ -209,56 +260,89 @@ void MjSimImpl::startSimulation()
   mj_ctrl = mj_prev_ctrl_q;
   mj_next_ctrl_q = mj_prev_ctrl_q;
   mj_next_ctrl_alpha = mj_prev_ctrl_alpha;
-
-  // init attitude from mc-rtc
-  const auto q0 = robot.module().default_attitude();
-  std::vector<double> mj_qpos_init{q0[4], q0[5], q0[6], q0[0], q0[1], q0[2], q0[3]};
-  std::vector<double> mj_qvel_init{0, 0, 0, 0, 0, 0};
-
-  // init qpos and qvel from mc-rtc
-  {
-    auto & mbc = robot.mbc();
-    const auto & rjo = controller->ref_joint_order();
-    for(const auto & jn : rjo)
+  auto init_sensor_id = [&](const char * mj_name, const char * mc_name, const std::string & sensor_name,
+                            const char * suffix, mjtSensor type, std::unordered_map<std::string, int> & mapping) {
+    auto mj_sensor = prefixed(fmt::format("{}_{}", sensor_name, suffix));
+    auto sensor_id = mujoco_get_sensor_id(*model, mj_sensor, type);
+    if(sensor_id == -1)
     {
-      if(robot.hasJoint(jn))
-      {
-        for(auto & qj : mbc.q[robot.jointIndexByName(jn)])
-        {
-          encoders.push_back(qj);
-          if(std::find(mj_jnt_names.begin(), mj_jnt_names.end(), jn) != mj_jnt_names.end())
-          {
-            mj_qpos_init.push_back(qj);
-            mj_qvel_init.push_back(0);
-          }
-        }
-      }
-      else
-      {
-        // FIXME This assumes that a joint that is in ref_joint_order but missing from the robot is of size 1 (very
-        // likely to be true)
-        encoders.push_back(0);
-        mj_qpos_init.push_back(0);
-        mj_qvel_init.push_back(0);
-      }
+      mc_rtc::log::error("[mc_mujoco] No MuJoCo {} for {} {} in {}, expected to find a {} named {}", mj_name,
+                         sensor_name, mc_name, name, mj_name, mj_sensor);
     }
-  }
-  alphas.resize(encoders.size());
-  std::fill(alphas.begin(), alphas.end(), 0);
-
-  // sanity check
-  if(encoders.size() != mj_jnt_names.size())
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Num encoders size mismatch.");
-  }
-  // zero force/torque wrenches
+    mapping[sensor_name] = sensor_id;
+  };
   for(const auto & fs : robot.module().forceSensors())
   {
     wrenches[fs.name()] = sva::ForceVecd(Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
+    init_sensor_id("force sensor", "force sensor", fs.name(), "fsensor", mjSENS_FORCE, mc_fs_to_mj_fsensor_id);
+    init_sensor_id("torque sensor", "force sensor", fs.name(), "tsensor", mjSENS_TORQUE, mc_fs_to_mj_tsensor_id);
   }
+  for(const auto & bs : robot.bodySensors())
+  {
+    if(bs.name() == "FloatingBase" || bs.name().empty())
+    {
+      continue;
+    }
+    gyros[bs.name()] = Eigen::Vector3d::Zero();
+    accelerometers[bs.name()] = Eigen::Vector3d::Zero();
+    init_sensor_id("gyro sensor", "body sensor", bs.name(), "gyro", mjSENS_GYRO, mc_bs_to_mj_gyro_id);
+    init_sensor_id("accelerometer sensor", "body sensor", bs.name(), "accelerometer", mjSENS_ACCELEROMETER,
+                   mc_bs_to_mj_accelerometer_id);
+  }
+}
 
+void MjSimImpl::startSimulation()
+{
+  std::vector<double> qInit;
+  std::vector<double> alphaInit;
+  for(auto & r : robots)
+  {
+    const auto & robot = controller->robots().robot(r.name);
+    r.initialize(model, robot);
+    if(r.root_joint.size())
+    {
+      r.root_qpos_idx = qInit.size();
+      r.root_qvel_idx = alphaInit.size();
+      if(robot.mb().joint(0).dof() == 6)
+      {
+        const auto & t = robot.posW().translation();
+        for(size_t i = 0; i < 3; ++i)
+        {
+          qInit.push_back(t[i]);
+          // push linear/angular velocities
+          alphaInit.push_back(0);
+          alphaInit.push_back(0);
+        }
+        Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
+        qInit.push_back(q.w());
+        qInit.push_back(q.x());
+        qInit.push_back(q.y());
+        qInit.push_back(q.z());
+      }
+    }
+    else if(r.root_body_id != -1)
+    {
+      const auto & t = robot.posW().translation();
+      model->body_pos[3 * r.root_body_id + 0] = t.x();
+      model->body_pos[3 * r.root_body_id + 1] = t.y();
+      model->body_pos[3 * r.root_body_id + 2] = t.z();
+      Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
+      model->body_quat[4 * r.root_body_id + 0] = q.w();
+      model->body_quat[4 * r.root_body_id + 1] = q.x();
+      model->body_quat[4 * r.root_body_id + 2] = q.y();
+      model->body_quat[4 * r.root_body_id + 3] = q.z();
+    }
+    for(const auto & q : r.encoders)
+    {
+      qInit.push_back(q);
+    }
+    for(const auto & a : r.alphas)
+    {
+      alphaInit.push_back(a);
+    }
+  }
   // set initial qpos, qvel in mujoco
-  if(!mujoco_set_const(model, data, mj_qpos_init, mj_qvel_init))
+  if(!mujoco_set_const(model, data, qInit, alphaInit))
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
   }
@@ -275,94 +359,139 @@ void MjSimImpl::startSimulation()
   mc_rtc::log::info("[mc_mujoco] MC-RTC timestep: {}. MJ timestep: {}", controller->timestep(), simTimestep);
   mc_rtc::log::info("[mc_mujoco] Hence, Frameskip: {}", frameskip_);
 
-  controller->setEncoderValues(encoders);
-  controller->init(encoders);
+  for(const auto & r : robots)
+  {
+    controller->setEncoderValues(r.name, r.encoders);
+  }
+  controller->init(robots[0].encoders);
   controller->running = true;
+}
+
+void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model, mjData * data)
+{
+  for(size_t i = 0; i < mj_jnt_ids.size(); ++i)
+  {
+    if(mj_jnt_to_rjo[i] == -1)
+    {
+      continue;
+    }
+    encoders[mj_jnt_to_rjo[i]] = data->qpos[model->jnt_qposadr[mj_jnt_ids[i]]];
+    alphas[mj_jnt_to_rjo[i]] = data->qvel[model->jnt_dofadr[mj_jnt_ids[i]]];
+  }
+  for(size_t i = 0; i < mj_mot_ids.size(); ++i)
+  {
+    if(mj_jnt_to_rjo[i] == -1 || mj_mot_ids[i] == -1)
+    {
+      continue;
+    }
+    torques[mj_jnt_to_rjo[i]] = data->qfrc_actuator[mj_mot_ids[i]];
+  }
+  if(!gc)
+  {
+    return;
+  }
+  auto & robot = gc->controller().robots().robot(name);
+
+  // Body sensor updates
+  if(root_qpos_idx != -1)
+  {
+    root_pos = Eigen::Map<Eigen::Vector3d>(&data->qpos[root_qpos_idx]);
+    root_ori.w() = data->qpos[root_qpos_idx + 3];
+    root_ori.x() = data->qpos[root_qpos_idx + 4];
+    root_ori.y() = data->qpos[root_qpos_idx + 5];
+    root_ori.z() = data->qpos[root_qpos_idx + 6];
+    root_ori = root_ori.inverse();
+    root_linvel = Eigen::Map<Eigen::Vector3d>(&data->qvel[root_qvel_idx]);
+    root_angvel = Eigen::Map<Eigen::Vector3d>(&data->qvel[root_qvel_idx + 3]);
+    root_linacc = Eigen::Map<Eigen::Vector3d>(&data->qacc[root_qvel_idx]);
+    root_angacc = Eigen::Map<Eigen::Vector3d>(&data->qacc[root_qvel_idx + 3]);
+    if(robot.hasBodySensor("FloatingBase"))
+    {
+      gc->setSensorPositions(name, {{"FloatingBase", root_pos}});
+      gc->setSensorOrientations(name, {{"FloatingBase", root_ori}});
+      gc->setSensorLinearVelocities(name, {{"FloatingBase", root_linvel}});
+      gc->setSensorAngularVelocities(name, {{"FloatingBase", root_angvel}});
+      gc->setSensorLinearAccelerations(name, {{"FloatingBase", root_linacc}});
+      // FIXME Not implemented in mc_rtc
+      // gc->setSensorAngularAccelerations(name, {{"FloatingBase", root_angacc}});
+    }
+  }
+
+  // Gyro update
+  for(auto & gyro : gyros)
+  {
+    mujoco_get_sensordata(*model, *data, mc_bs_to_mj_gyro_id[gyro.first], gyro.second.data());
+  }
+  gc->setSensorAngularVelocities(name, gyros);
+
+  // Accelerometers update
+  for(auto & accelerometer : accelerometers)
+  {
+    mujoco_get_sensordata(*model, *data, mc_bs_to_mj_accelerometer_id[accelerometer.first],
+                          accelerometer.second.data());
+  }
+  gc->setSensorLinearAccelerations(name, accelerometers);
+
+  // Force sensor update
+  for(auto & fs : wrenches)
+  {
+    mujoco_get_sensordata(*model, *data, mc_fs_to_mj_fsensor_id[fs.first], fs.second.force().data());
+    mujoco_get_sensordata(*model, *data, mc_fs_to_mj_tsensor_id[fs.first], fs.second.couple().data());
+    fs.second *= -1;
+  }
+  gc->setWrenches(name, wrenches);
+
+  // Joint sensor updates
+  gc->setEncoderValues(name, encoders);
+  gc->setEncoderVelocities(name, alphas);
+  gc->setJointTorques(name, torques);
 }
 
 void MjSimImpl::updateData()
 {
-  encoders.resize(mj_jnt_names.size());
-  mujoco_get_joint_pos(*model, *data, encoders);
-
-  alphas.resize(mj_jnt_names.size());
-  mujoco_get_joint_vel(*model, *data, alphas);
-
-  if(!config.with_controller)
+  for(auto & r : robots)
   {
-    return;
+    r.updateSensors(controller.get(), model, data);
   }
-  auto & robot = controller->controller().robots().robot();
+}
 
-  /* True state of floating base */
-  if(robot.hasBodySensor("FloatingBase"))
+void MjRobot::updateControl(const mc_rbdyn::Robot & robot)
+{
+  mj_prev_ctrl_q = mj_next_ctrl_q;
+  mj_prev_ctrl_alpha = mj_next_ctrl_alpha;
+  size_t ctrl_idx = 0;
+  for(size_t i = 0; i < mj_to_mbc.size(); ++i)
   {
-    // set root position
-    mujoco_get_root_pos(*data, root_pos);
-    controller->setSensorPositions({{"FloatingBase", root_pos}});
-    // set root orientation
-    mujoco_get_root_orient(*data, root_orient);
-    controller->setSensorOrientations({{"FloatingBase", root_orient}});
-    // set linear velocity
-    mujoco_get_root_lin_vel(*data, root_linvel);
-    controller->setSensorLinearVelocities({{"FloatingBase", root_linvel}});
-    // set angular velocity
-    mujoco_get_root_ang_vel(*data, root_angvel);
-    controller->setSensorAngularVelocities({{"FloatingBase", root_angvel}});
-    // set linear acceleration
-    mujoco_get_root_lin_acc(*data, root_linacc);
-    controller->setSensorLinearAccelerations({{"FloatingBase", root_linacc}});
-    // set angular acceleration
-    mujoco_get_root_ang_acc(*data, root_angacc);
-    controller->setSensorAngularAccelerations({{"FloatingBase", root_angacc}});
-  }
-  controller->setSensorPosition(root_pos);
-  controller->setSensorOrientation(root_orient);
-  controller->setSensorLinearVelocity(root_linvel);
-  controller->setSensorAngularVelocity(root_angvel);
-  controller->setSensorLinearAcceleration(root_linacc);
-  controller->setSensorAngularAcceleration(root_linacc);
-
-  /* State from sensor data*/
-  // set angular velocity
-  std::vector<double> _gyro;
-  mujoco_get_sensordata(*model, *data, _gyro, "root_gyro");
-  if(_gyro.size() != 3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] gyro read failed.");
-  controller->setSensorAngularVelocities({{"Accelerometer", Eigen::Vector3d(_gyro.data())}});
-
-  // set linear acceleration
-  std::vector<double> _accel;
-  mujoco_get_sensordata(*model, *data, _accel, "root_accel");
-  if(_accel.size() != 3) mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] accel read failed.");
-  controller->setSensorLinearAccelerations({{"Accelerometer", Eigen::Vector3d(_accel.data())}});
-
-  // set encoders
-  controller->setEncoderValues(encoders);
-
-  // set velocities
-  controller->setEncoderVelocities(alphas);
-
-  // set joint torques
-  std::vector<double> qfrc;
-  mujoco_get_joint_qfrc(*model, *data, qfrc);
-  controller->setJointTorques(qfrc);
-
-  // Read force sensors
-  std::vector<double> _fsensor, _tsensor;
-  auto getWrench = [&](const std::string & mc_sensor, const std::string & mj_fsensor, const std::string & mj_tsensor) {
-    if(mujoco_get_sensordata(*model, *data, _fsensor, mj_fsensor)
-       && mujoco_get_sensordata(*model, *data, _tsensor, mj_tsensor))
+    auto jIndex = mj_to_mbc[i];
+    if(jIndex != -1)
     {
-      auto & w = wrenches[mc_sensor];
-      w.force() = -1 * Eigen::Map<Eigen::Vector3d>(_fsensor.data());
-      w.couple() = -1 * Eigen::Map<Eigen::Vector3d>(_tsensor.data());
+      mj_next_ctrl_q[ctrl_idx] = robot.mbc().q[jIndex][0];
+      mj_next_ctrl_alpha[ctrl_idx] = robot.mbc().alpha[jIndex][0];
+      ctrl_idx++;
     }
-  };
-  getWrench("RightFootForceSensor", "rf_fsensor", "rf_tsensor");
-  getWrench("LeftFootForceSensor", "lf_fsensor", "lf_tsensor");
-  getWrench("RightHandForceSensor", "rh_fsensor", "rh_tsensor");
-  getWrench("LeftHandForceSensor", "lh_fsensor", "lh_tsensor");
-  controller->setWrenches(wrenches);
+  }
+}
+
+void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_idx, size_t frameskip_)
+{
+  for(size_t i = 0; i < mj_ctrl.size(); ++i)
+  {
+    auto mot_id = mj_mot_ids[i];
+    if(mot_id == -1)
+    {
+      continue;
+    }
+    // compute desired q using interpolation
+    double q_ref = (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_;
+    q_ref += mj_prev_ctrl_q[i];
+    // compute desired alpha using interpolation
+    double alpha_ref = (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_;
+    alpha_ref += mj_prev_ctrl_alpha[i];
+    // compute desired torque using PD control
+    mj_ctrl[i] = PD(i, q_ref, encoders[i], alpha_ref, alphas[i]);
+    double ratio = model.actuator_gear[6 * mot_id];
+    data.ctrl[mot_id] = mj_ctrl[i] / ratio;
+  }
 }
 
 bool MjSimImpl::controlStep()
@@ -376,38 +505,18 @@ bool MjSimImpl::controlStep()
     {
       return true;
     }
-    // and get QP result
-    mj_prev_ctrl_q = mj_next_ctrl_q;
-    mj_prev_ctrl_alpha = mj_next_ctrl_alpha;
-    const auto & robot = controller->robot();
-    size_t ctrl_idx = 0;
-    for(size_t i = 0; i < mj_to_mbc.size(); ++i)
+    for(auto & r : robots)
     {
-      auto jIndex = mj_to_mbc[i];
-      if(jIndex != -1)
-      {
-        mj_next_ctrl_q[ctrl_idx] = robot.mbc().q[jIndex][0];
-        mj_next_ctrl_alpha[ctrl_idx] = robot.mbc().alpha[jIndex][0];
-        ctrl_idx++;
-      }
+      r.updateControl(controller->robots().robot(r.name));
     }
   }
   // On each control iter
-  for(size_t i = 0; i < mj_ctrl.size(); ++i)
+  for(auto & r : robots)
   {
-    auto jnt_idx = mj_mot_ids[i] - 1; // subtract 1 because mujoco counts from the "freejoint"
-    // compute desired q using interpolation
-    double q_ref = (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_;
-    q_ref += mj_prev_ctrl_q[i];
-    // compute desired alpha using interpolation
-    double alpha_ref = (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_;
-    alpha_ref += mj_prev_ctrl_alpha[i];
-    // compute desired torque using PD control
-    mj_ctrl[i] = PD(jnt_idx, q_ref, encoders[jnt_idx], alpha_ref, alphas[jnt_idx]);
+    r.sendControl(*model, *data, interp_idx, frameskip_);
   }
   iterCount_++;
-  // send control signal to mujoco
-  return !mujoco_set_ctrl(*model, *data, mj_ctrl);
+  return false;
 }
 
 void MjSimImpl::simStep()
