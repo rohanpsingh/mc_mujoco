@@ -192,7 +192,14 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   }
   for(const auto & m : mj_mot_names)
   {
-    mj_mot_ids.push_back(mj_name2id(model, mjOBJ_ACTUATOR, m.c_str()));
+    if(m.size())
+    {
+      mj_mot_ids.push_back(mj_name2id(model, mjOBJ_ACTUATOR, m.c_str()));
+    }
+    else
+    {
+      mj_mot_ids.push_back(-1);
+    }
   }
   if(root_body.size())
   {
@@ -272,7 +279,7 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   }
   for(const auto & bs : robot.bodySensors())
   {
-    if(bs.name() == "FloatingBase")
+    if(bs.name() == "FloatingBase" || bs.name().empty())
     {
       continue;
     }
@@ -373,7 +380,7 @@ void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model
   }
   for(size_t i = 0; i < mj_mot_ids.size(); ++i)
   {
-    if(mj_jnt_to_rjo[i] == -1)
+    if(mj_jnt_to_rjo[i] == -1 || mj_mot_ids[i] == -1)
     {
       continue;
     }
@@ -469,6 +476,11 @@ void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_id
 {
   for(size_t i = 0; i < mj_ctrl.size(); ++i)
   {
+    auto mot_id = mj_mot_ids[i];
+    if(mot_id == -1)
+    {
+      continue;
+    }
     // compute desired q using interpolation
     double q_ref = (interp_idx + 1) * (mj_next_ctrl_q[i] - mj_prev_ctrl_q[i]) / frameskip_;
     q_ref += mj_prev_ctrl_q[i];
@@ -477,8 +489,8 @@ void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_id
     alpha_ref += mj_prev_ctrl_alpha[i];
     // compute desired torque using PD control
     mj_ctrl[i] = PD(i, q_ref, encoders[i], alpha_ref, alphas[i]);
-    double ratio = model.actuator_gear[6 * mj_mot_ids[i]];
-    data.ctrl[mj_mot_ids[i]] = mj_ctrl[i] / ratio;
+    double ratio = model.actuator_gear[6 * mot_id];
+    data.ctrl[mot_id] = mj_ctrl[i] / ratio;
   }
 }
 

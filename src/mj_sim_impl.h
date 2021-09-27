@@ -63,7 +63,8 @@ struct MjRobot
   /** Derivative gains for low-level PD control */
   std::vector<double> kd = {};
 
-  /** Names of the motors inside MuJoCo */
+  /** Names of the motors inside MuJoCo corresponding to the joints in \ref mj_jnt_names the name is empty if the joint
+   * has no actuation in MuJoCo */
   std::vector<std::string> mj_mot_names;
   /** Correspondance from motor name to id inside MuJoCo */
   std::vector<int> mj_mot_ids;

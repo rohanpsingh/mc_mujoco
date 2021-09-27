@@ -389,10 +389,12 @@ static void get_motor_names(const pugi::xml_node & in,
     auto it = joint_to_motor.find(j);
     if(it == joint_to_motor.end())
     {
-      mc_rtc::log::error_and_throw<std::runtime_error>(
-          "[mc_mujoco] Joint {} is not actuated in the Mujoco model and it should be", j);
+      motors.push_back("");
     }
-    motors.push_back(it->second);
+    else
+    {
+      motors.push_back(it->second);
+    }
   }
 }
 
