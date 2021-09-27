@@ -10,6 +10,10 @@ struct MjConfiguration
 {
   /** If true, enable visualization */
   bool with_visualization = true;
+  /** If true, display the collision model by default */
+  bool visualize_collisions = false;
+  /** If true, display the visual model by default */
+  bool visualize_visual = true;
   /** If true, enable mc_rtc GUI inside MuJoCo simulation */
   bool with_mc_rtc_gui = true;
   /** If true, enable mc_rtc controller inside MuJoCo simulation */

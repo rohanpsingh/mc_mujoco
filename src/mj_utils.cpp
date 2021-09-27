@@ -203,10 +203,10 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   mj_sim->camera.azimuth = -150.0f;
   mj_sim->camera.elevation = -20.0f;
   mjv_defaultOption(&mj_sim->options);
+  mj_sim->options.geomgroup[0] = mj_sim->config.visualize_collisions;
+  mj_sim->options.geomgroup[1] = mj_sim->config.visualize_visual;
   mjv_defaultScene(&mj_sim->scene);
   mjr_defaultContext(&mj_sim->context);
-  // set the geom group to false by default
-  mj_sim->options.geomgroup[0] = false;
 
   // create scene and context
   mjv_makeScene(mj_sim->model, &mj_sim->scene, 2000);
