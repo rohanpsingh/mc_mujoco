@@ -331,25 +331,39 @@ static void merge_mujoco_model(const std::string & robot, const std::string & xm
   // FIXME Not handled but easy to do based on contact: equality/tendon/keyframe
 }
 
-static void get_joint_names(const pugi::xml_node & in, const std::string & prefix, std::vector<std::string> & joints)
+static void get_joint_names(const pugi::xml_node & in,
+                            const std::string & prefix,
+                            std::vector<std::string> & joints,
+                            std::string & free_joint)
 {
+  auto prefixed = [&prefix](const char * name) -> std::string {
+    if(prefix.size())
+    {
+      return fmt::format("{}_{}", prefix, name);
+    }
+    return name;
+  };
   for(const auto & j : in.children("joint"))
   {
     auto type_attr = j.attribute("type");
     std::string type = type_attr ? type_attr.value() : "hinge";
     if(type != "free")
     {
-      std::string name = j.attribute("name").value();
-      if(prefix.size())
-      {
-        name = fmt::format("{}_{}", prefix, name);
-      }
-      joints.push_back(name);
+      joints.push_back(prefixed(j.attribute("name").value()));
     }
+    else
+    {
+      free_joint = prefixed(j.attribute("name").value());
+    }
+  }
+  auto mj_free = in.child("freejoint");
+  if(mj_free)
+  {
+    free_joint = prefixed(mj_free.attribute("name").value());
   }
   for(const auto & c : in.children("body"))
   {
-    get_joint_names(c, prefix, joints);
+    get_joint_names(c, prefix, joints, free_joint);
   }
 }
 
@@ -397,7 +411,16 @@ static MjRobot mj_robot_from_xml(const std::string & name, const std::string & x
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("No mujoco root node in {}", xmlFile);
   }
-  get_joint_names(root.child("worldbody"), prefix, out.mj_jnt_names);
+  auto root_body = root.child("worldbody").child("body");
+  if(root_body)
+  {
+    out.root_body = root_body.attribute("name").value();
+    if(prefix.size())
+    {
+      out.root_body = fmt::format("{}_{}", prefix, out.root_body);
+    }
+  }
+  get_joint_names(root.child("worldbody"), prefix, out.mj_jnt_names, out.root_joint);
   get_motor_names(root.child("actuator"), prefix, out.mj_jnt_names, out.mj_mot_names);
   return out;
 }

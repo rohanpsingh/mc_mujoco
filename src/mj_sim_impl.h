@@ -23,10 +23,16 @@ struct MjRobot
   std::string name;
   /** Prefix in MuJoCo */
   std::string prefix;
-  /** Index of robot's root in qpos */
-  size_t root_qpos_idx = 0;
-  /** Index of robot's root in qvel */
-  size_t root_qvel_idx = 0;
+  /** Root body name in MuJoCo */
+  std::string root_body;
+  /** Root body id */
+  int root_body_id = -1;
+  /** Free joint in MuJoCo */
+  std::string root_joint;
+  /** Index of robot's root in qpos, -1 if fixed base */
+  int root_qpos_idx = -1;
+  /** Index of robot's root in qvel, -1 if fixed base */
+  int root_qvel_idx = -1;
   /** Position of FloatingBase sensor */
   Eigen::Vector3d root_pos;
   /** Orientation of FloatingBase sensor */

@@ -189,6 +189,10 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   {
     mj_mot_ids.push_back(mj_name2id(model, mjOBJ_ACTUATOR, m.c_str()));
   }
+  if(root_body.size())
+  {
+    root_body_id = mj_name2id(model, mjOBJ_BODY, root_body.c_str());
+  }
   const auto & mbc = robot.mbc();
   const auto & rjo = robot.module().ref_joint_order();
   if(rjo.size() != mj_jnt_names.size())
@@ -283,31 +287,46 @@ void MjSimImpl::startSimulation()
   {
     const auto & robot = controller->robots().robot(r.name);
     r.initialize(model, robot);
-    r.root_qpos_idx = qInit.size();
-    r.root_qvel_idx = alphaInit.size();
-    if(robot.mb().joint(0).dof() == 6)
+    if(r.root_joint.size())
+    {
+      r.root_qpos_idx = qInit.size();
+      r.root_qvel_idx = alphaInit.size();
+      if(robot.mb().joint(0).dof() == 6)
+      {
+        const auto & t = robot.posW().translation();
+        for(size_t i = 0; i < 3; ++i)
+        {
+          qInit.push_back(t[i]);
+          // push linear/angular velocities
+          alphaInit.push_back(0);
+          alphaInit.push_back(0);
+        }
+        Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
+        qInit.push_back(q.w());
+        qInit.push_back(q.x());
+        qInit.push_back(q.y());
+        qInit.push_back(q.z());
+      }
+    }
+    else if(r.root_body_id != -1)
     {
       const auto & t = robot.posW().translation();
-      for(size_t i = 0; i < 3; ++i)
-      {
-        qInit.push_back(t[i]);
-        // push linear/angular velocities
-        alphaInit.push_back(0);
-        alphaInit.push_back(0);
-      }
+      model->body_pos[3 * r.root_body_id + 0] = t.x();
+      model->body_pos[3 * r.root_body_id + 1] = t.y();
+      model->body_pos[3 * r.root_body_id + 2] = t.z();
       Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
-      qInit.push_back(q.w());
-      qInit.push_back(q.x());
-      qInit.push_back(q.y());
-      qInit.push_back(q.z());
-      for(const auto & q : r.encoders)
-      {
-        qInit.push_back(q);
-      }
-      for(const auto & a : r.alphas)
-      {
-        alphaInit.push_back(a);
-      }
+      model->body_quat[4 * r.root_body_id + 0] = q.w();
+      model->body_quat[4 * r.root_body_id + 1] = q.x();
+      model->body_quat[4 * r.root_body_id + 2] = q.y();
+      model->body_quat[4 * r.root_body_id + 3] = q.z();
+    }
+    for(const auto & q : r.encoders)
+    {
+      qInit.push_back(q);
+    }
+    for(const auto & a : r.alphas)
+    {
+      alphaInit.push_back(a);
     }
   }
   // set initial qpos, qvel in mujoco
@@ -362,25 +381,28 @@ void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model
   auto & robot = gc->controller().robots().robot(name);
 
   // Body sensor updates
-  root_pos = Eigen::Map<Eigen::Vector3d>(&data->qpos[root_qpos_idx]);
-  root_ori.w() = data->qpos[root_qpos_idx + 3];
-  root_ori.x() = data->qpos[root_qpos_idx + 4];
-  root_ori.y() = data->qpos[root_qpos_idx + 5];
-  root_ori.z() = data->qpos[root_qpos_idx + 6];
-  root_ori = root_ori.inverse();
-  root_linvel = Eigen::Map<Eigen::Vector3d>(&data->qvel[root_qvel_idx]);
-  root_angvel = Eigen::Map<Eigen::Vector3d>(&data->qvel[root_qvel_idx + 3]);
-  root_linacc = Eigen::Map<Eigen::Vector3d>(&data->qacc[root_qvel_idx]);
-  root_angacc = Eigen::Map<Eigen::Vector3d>(&data->qacc[root_qvel_idx + 3]);
-  if(robot.hasBodySensor("FloatingBase"))
+  if(root_qpos_idx != -1)
   {
-    gc->setSensorPositions(name, {{"FloatingBase", root_pos}});
-    gc->setSensorOrientations(name, {{"FloatingBase", root_ori}});
-    gc->setSensorLinearVelocities(name, {{"FloatingBase", root_linvel}});
-    gc->setSensorAngularVelocities(name, {{"FloatingBase", root_angvel}});
-    gc->setSensorLinearAccelerations(name, {{"FloatingBase", root_linacc}});
-    // FIXME Not implemented in mc_rtc
-    // gc->setSensorAngularAccelerations(name, {{"FloatingBase", root_angacc}});
+    root_pos = Eigen::Map<Eigen::Vector3d>(&data->qpos[root_qpos_idx]);
+    root_ori.w() = data->qpos[root_qpos_idx + 3];
+    root_ori.x() = data->qpos[root_qpos_idx + 4];
+    root_ori.y() = data->qpos[root_qpos_idx + 5];
+    root_ori.z() = data->qpos[root_qpos_idx + 6];
+    root_ori = root_ori.inverse();
+    root_linvel = Eigen::Map<Eigen::Vector3d>(&data->qvel[root_qvel_idx]);
+    root_angvel = Eigen::Map<Eigen::Vector3d>(&data->qvel[root_qvel_idx + 3]);
+    root_linacc = Eigen::Map<Eigen::Vector3d>(&data->qacc[root_qvel_idx]);
+    root_angacc = Eigen::Map<Eigen::Vector3d>(&data->qacc[root_qvel_idx + 3]);
+    if(robot.hasBodySensor("FloatingBase"))
+    {
+      gc->setSensorPositions(name, {{"FloatingBase", root_pos}});
+      gc->setSensorOrientations(name, {{"FloatingBase", root_ori}});
+      gc->setSensorLinearVelocities(name, {{"FloatingBase", root_linvel}});
+      gc->setSensorAngularVelocities(name, {{"FloatingBase", root_angvel}});
+      gc->setSensorLinearAccelerations(name, {{"FloatingBase", root_linacc}});
+      // FIXME Not implemented in mc_rtc
+      // gc->setSensorAngularAccelerations(name, {{"FloatingBase", root_angacc}});
+    }
   }
 
   // Gyro update
