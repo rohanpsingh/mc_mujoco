@@ -124,22 +124,17 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     if(robot_cfg_path.size())
     {
       auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
-      if(!robot_cfg.has("xmlModelPath") || !robot_cfg.has("pdGainsPath"))
+      if(!robot_cfg.has("xmlModelPath"))
       {
-        mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath or pdGainsPath in {}", robot_cfg_path);
+        mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath in {}", robot_cfg_path);
       }
       mujRobots.push_back(r.name());
       xmlFiles.push_back(static_cast<std::string>(robot_cfg("xmlModelPath")));
-      pdGainsFiles.push_back(static_cast<std::string>(robot_cfg("pdGainsPath")));
+      pdGainsFiles.push_back(robot_cfg("pdGainsPath", std::string("")));
       if(!bfs::exists(xmlFiles.back()))
       {
         mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {}",
                                                          xmlFiles.back());
-      }
-      if(!bfs::exists(pdGainsFiles.back()))
-      {
-        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file cannot be found at {}",
-                                                         pdGainsFiles.back());
       }
     }
   }
@@ -160,6 +155,16 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   for(size_t i = 0; i < robots.size(); ++i)
   {
     auto & r = robots[i];
+    const auto & robot = controller->robot(r.name);
+    if(robot.mb().nrDof() == 0 || (robot.mb().nrDof() == 6 && robot.mb().joint(0).dof() == 6))
+    {
+      continue;
+    }
+    if(!bfs::exists(pdGainsFiles[i]))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file for {} cannot be found at {}", r.name,
+                                                       pdGainsFiles.back());
+    }
     r.loadGain(pdGainsFiles[i], controller->robots().robot(r.name).module().ref_joint_order());
   }
 
