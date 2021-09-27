@@ -212,6 +212,40 @@ static void merge_mujoco_contact(const pugi::xml_node & in, pugi::xml_node & out
   copy_and_add_prefix(in, out, "exclude", robot, {"name", "body1", "body2"});
 }
 
+static void merge_mujoco_equality(const pugi::xml_node & in, pugi::xml_node & out, const std::string & robot)
+{
+  copy_and_add_prefix(in, out, "connect", robot, {"name", "class", "body1", "body2"});
+  copy_and_add_prefix(in, out, "weld", robot, {"name", "class", "body1", "body2"});
+  copy_and_add_prefix(in, out, "joint", robot, {"name", "class", "joint1", "joint2"});
+  copy_and_add_prefix(in, out, "tendon", robot, {"name", "class", "tendon1", "tendon2"});
+  copy_and_add_prefix(in, out, "distance", robot, {"name", "class", "geom1", "geom2"});
+}
+
+static void merge_mujoco_tendon(const pugi::xml_node & in, pugi::xml_node & out, const std::string & robot)
+{
+  copy_and_add_prefix(in, out, "spatial", robot, {"name", "class", "material"});
+  for(auto & spatial : out.children("spatial"))
+  {
+    for(auto & site : spatial.children("site"))
+    {
+      add_prefix(robot, site, "site");
+    }
+    for(auto & site : spatial.children("geom"))
+    {
+      add_prefix(robot, site, "geom");
+      add_prefix(robot, site, "sidesite");
+    }
+  }
+  copy_and_add_prefix(in, out, "fixed", robot, {"name", "class", "material"});
+  for(auto & fixed : out.children("fixed"))
+  {
+    for(auto & joint : fixed.children("joint"))
+    {
+      add_prefix(robot, joint, "joint");
+    }
+  }
+}
+
 static void merge_mujoco_actuator(const pugi::xml_node & in, pugi::xml_node & out, const std::string & robot)
 {
   for(const auto & c : in.children())
@@ -323,12 +357,21 @@ static void merge_mujoco_model(const std::string & robot, const std::string & xm
     auto sensor_out = get_child_or_create(out, "sensor");
     merge_mujoco_sensor(root.child("sensor"), sensor_out, robot);
   }
+  /** Merge equality */
+  {
+    auto equality_out = get_child_or_create(out, "equality");
+    merge_mujoco_equality(root.child("equality"), equality_out, robot);
+  }
+  /** Merge tendon */
+  {
+    auto tendon_out = get_child_or_create(out, "tendon");
+    merge_mujoco_tendon(root.child("tendon"), tendon_out, robot);
+  }
   /** Merge worldbody */
   {
     auto worldbody_out = get_child_or_create(out, "worldbody");
     merge_mujoco_worldbody(root.child("worldbody"), worldbody_out, robot);
   }
-  // FIXME Not handled but easy to do based on contact: equality/tendon/keyframe
 }
 
 static void get_joint_names(const pugi::xml_node & in,
