@@ -521,6 +521,11 @@ bool MjSimImpl::controlStep()
 
 void MjSimImpl::simStep()
 {
+  // clear old perturbations, apply new
+  mju_zero(data->xfrc_applied, 6*model->nbody);
+  mjv_applyPerturbPose(model, data, &pert, 0);  // move mocap bodies only
+  mjv_applyPerturbForce(model, data, &pert);
+
   // take one step in simulation
   // model.opt.timestep will be used here
   mj_step(model, data);
@@ -567,28 +572,29 @@ bool MjSimImpl::stepSimulation()
   return done;
 }
 
-bool MjSimImpl::render()
+void MjSimImpl::updateScene()
 {
-  if(!config.with_visualization)
-  {
-    return true;
-  }
-  // get framebuffer viewport
-  mjrRect viewport = {0, 0, 0, 0};
-  glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
-
   // update scene and render
-  mjv_updateScene(model, data, &options, NULL, &camera, mjCAT_ALL, &scene);
+  mjv_updateScene(model, data, &options, &pert, &camera, mjCAT_ALL, &scene);
 
   if(client)
   {
     client->updateScene(scene);
   }
 
-  mjr_render(viewport, &scene, &context);
-
   // process pending GUI events, call GLFW callbacks
   glfwPollEvents();
+}
+
+bool MjSimImpl::render()
+{
+  if(!config.with_visualization)
+  {
+    return true;
+  }
+
+  // mj render
+  mjr_render(uistate.rect[0], &scene, &context);
 
   // Render ImGui
   ImGui_ImplOpenGL3_NewFrame();
@@ -678,6 +684,11 @@ bool MjSim::stepSimulation()
 void MjSim::stopSimulation()
 {
   impl->stopSimulation();
+}
+
+void MjSim::updateScene()
+{
+  impl->updateScene();
 }
 
 bool MjSim::render()

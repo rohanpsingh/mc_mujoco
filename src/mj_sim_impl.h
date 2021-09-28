@@ -159,15 +159,14 @@ public:
   /** Visualization scene */
   mjvScene scene;
 
+  /** Mouse perturbations */
+  mjvPerturb pert;
+
   /** GPU context */
   mjrContext context;
 
-  /* Mouse interaction */
-  bool button_left = false;
-  bool button_middle = false;
-  bool button_right = false;
-  double lastx = 0;
-  double lasty = 0;
+  /** Keyboard and mouse states */
+  mjuiState uistate;
 
   /** Start of the previous iteration */
   clock::time_point mj_sim_start_t;
@@ -204,6 +203,8 @@ public:
   void simStep();
 
   bool stepSimulation();
+
+  void updateScene();
 
   bool render();
 

@@ -68,6 +68,7 @@ int main(int argc, char * argv[])
 
   while(render_state)
   {
+    mj_sim.updateScene();
     render_state = mj_sim.render();
   }
 
