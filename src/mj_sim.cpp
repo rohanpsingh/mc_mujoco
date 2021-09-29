@@ -332,13 +332,10 @@ void MjSimImpl::startSimulation()
       model->body_quat[4 * r.root_body_id + 2] = q.y();
       model->body_quat[4 * r.root_body_id + 3] = q.z();
     }
-    for(const auto & q : r.encoders)
+    for(size_t i = 0; i < r.mj_jnt_names.size(); ++i)
     {
-      qInit.push_back(q);
-    }
-    for(const auto & a : r.alphas)
-    {
-      alphaInit.push_back(a);
+      qInit.push_back(r.encoders[r.mj_jnt_to_rjo[i]]);
+      alphaInit.push_back(r.alphas[r.mj_jnt_to_rjo[i]]);
     }
   }
   // set initial qpos, qvel in mujoco
@@ -477,7 +474,8 @@ void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_id
   for(size_t i = 0; i < mj_ctrl.size(); ++i)
   {
     auto mot_id = mj_mot_ids[i];
-    if(mot_id == -1)
+    auto rjo_id = mj_jnt_to_rjo[i];
+    if(mot_id == -1 || rjo_id == -1)
     {
       continue;
     }
@@ -488,7 +486,7 @@ void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_id
     double alpha_ref = (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_;
     alpha_ref += mj_prev_ctrl_alpha[i];
     // compute desired torque using PD control
-    mj_ctrl[i] = PD(i, q_ref, encoders[i], alpha_ref, alphas[i]);
+    mj_ctrl[i] = PD(i, q_ref, encoders[rjo_id], alpha_ref, alphas[rjo_id]);
     double ratio = model.actuator_gear[6 * mot_id];
     data.ctrl[mot_id] = mj_ctrl[i] / ratio;
   }
@@ -522,8 +520,8 @@ bool MjSimImpl::controlStep()
 void MjSimImpl::simStep()
 {
   // clear old perturbations, apply new
-  mju_zero(data->xfrc_applied, 6*model->nbody);
-  mjv_applyPerturbPose(model, data, &pert, 0);  // move mocap bodies only
+  mju_zero(data->xfrc_applied, 6 * model->nbody);
+  mjv_applyPerturbPose(model, data, &pert, 0); // move mocap bodies only
   mjv_applyPerturbForce(model, data, &pert);
 
   // take one step in simulation
