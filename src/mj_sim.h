@@ -37,6 +37,9 @@ public:
   /*! Stop the simulation */
   void stopSimulation();
 
+  /*! Prepare to render */
+  void updateScene();
+
   /*! Update the GUI, no-op if visualization is disabled
    *
    * \returns False if the application should quit

@@ -1,5 +1,6 @@
 #include "glfw3.h"
 #include "mujoco.h"
+#include "uitools.h"
 
 #include "mj_utils.h"
 
@@ -30,109 +31,178 @@ static bool mujoco_initialized = false;
  * Callbacks for GLFWwindow
  ******************************************************************************/
 
-// keyboard callback
-void keyboard(GLFWwindow * window, int key, int scancode, int act, int mods)
+// set window layout
+void uiLayout(mjuiState * state)
 {
-  auto mj_sim = static_cast<MjSimImpl *>(glfwGetWindowUserPointer(window));
-  auto & opt = mj_sim->options;
+  auto mj_sim = static_cast<MjSimImpl *>(state->userdata);
+
+  mjrRect* rect = state->rect;
+  // set number of rectangles
+  state->nrect = 1;
+  // rect 0: entire framebuffer
+  rect[0].left = 0;
+  rect[0].bottom = 0;
+  glfwGetFramebufferSize(mj_sim->window, &rect[0].width, &rect[0].height);
+}
+
+// handle UI event
+void uiEvent(mjuiState * state)
+{
+  auto mj_sim = static_cast<MjSimImpl *>(state->userdata);
+
   if(ImGui::GetIO().WantCaptureKeyboard)
   {
     return;
   }
-  // C: show contacts
-  if(act == GLFW_PRESS)
-  {
-    if(key == GLFW_KEY_C)
-    {
-      opt.flags[mjVIS_CONTACTPOINT] = !opt.flags[mjVIS_CONTACTPOINT];
-    }
-    if(key == GLFW_KEY_F)
-    {
-      opt.flags[mjVIS_CONTACTFORCE] = !opt.flags[mjVIS_CONTACTFORCE];
-    }
-    if(key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
-    {
-      int group = key - GLFW_KEY_0;
-      opt.geomgroup[group] = !opt.geomgroup[group];
-    }
-  }
-}
-
-// mouse button callback
-void mouse_button(GLFWwindow * window, int button, int act, int mods)
-{
   if(ImGui::GetIO().WantCaptureMouse)
   {
     return;
   }
-  auto mj_sim = static_cast<MjSimImpl *>(glfwGetWindowUserPointer(window));
-  auto & button_left = mj_sim->button_left;
-  auto & button_middle = mj_sim->button_middle;
-  auto & button_right = mj_sim->button_right;
-  auto & lastx = mj_sim->lastx;
-  auto & lasty = mj_sim->lasty;
-  // update button state
-  button_left = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
-  button_middle = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
-  button_right = (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
-
-  // update mouse position
-  glfwGetCursorPos(window, &lastx, &lasty);
-}
-
-// mouse move callback
-void mouse_move(GLFWwindow * window, double xpos, double ypos)
-{
-  if(ImGui::GetIO().WantCaptureMouse)
+  if( state->type==mjEVENT_KEY && state->key!=0 )
   {
+    // C: show contact points
+    if(state->key == GLFW_KEY_C)
+    {
+      mj_sim->options.flags[mjVIS_CONTACTPOINT] = !mj_sim->options.flags[mjVIS_CONTACTPOINT];
+    }
+    // F: show contact forces
+    if(state->key == GLFW_KEY_F)
+    {
+      mj_sim->options.flags[mjVIS_CONTACTFORCE] = !mj_sim->options.flags[mjVIS_CONTACTFORCE];
+    }
+    // 0-9: Toggle visiblity of geom groups
+    if(state->key >= GLFW_KEY_0 && state->key <= GLFW_KEY_9)
+    {
+      int group = state->key - GLFW_KEY_0;
+      mj_sim->options.geomgroup[group] = !mj_sim->options.geomgroup[group];
+    }
     return;
   }
-  auto mj_sim = static_cast<MjSimImpl *>(glfwGetWindowUserPointer(window));
-  auto & button_left = mj_sim->button_left;
-  auto & button_middle = mj_sim->button_middle;
-  auto & button_right = mj_sim->button_right;
-  auto & lastx = mj_sim->lastx;
-  auto & lasty = mj_sim->lasty;
-  // no buttons down: nothing to do
-  if(!button_left && !button_middle && !button_right) return;
 
-  // compute mouse displacement, save
-  double dx = xpos - lastx;
-  double dy = ypos - lasty;
-  lastx = xpos;
-  lasty = ypos;
-
-  // get current window size
-  int width, height;
-  glfwGetWindowSize(window, &width, &height);
-
-  // get shift key state
-  bool mod_shift =
-      (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
-
-  // determine action based on mouse button
-  mjtMouse action;
-  if(button_right)
-    action = mod_shift ? mjMOUSE_MOVE_H : mjMOUSE_MOVE_V;
-  else if(button_left)
-    action = mod_shift ? mjMOUSE_ROTATE_H : mjMOUSE_ROTATE_V;
-  else
-    action = mjMOUSE_ZOOM;
-
-  // move camera
-  mjv_moveCamera(mj_sim->model, action, dx / height, dy / height, &mj_sim->scene, &mj_sim->camera);
-}
-
-// scroll callback
-void scroll(GLFWwindow * window, double xoffset, double yoffset)
-{
-  if(ImGui::GetIO().WantCaptureMouse)
+  // 3D scroll
+  if( state->type==mjEVENT_SCROLL && state->mouserect==0 && mj_sim->model )
   {
+    // emulate vertical mouse motion = 5% of window height
+    mjv_moveCamera(mj_sim->model, mjMOUSE_ZOOM, 0, -0.05*state->sy, &mj_sim->scene, &mj_sim->camera);
     return;
   }
-  auto mj_sim = static_cast<MjSimImpl *>(glfwGetWindowUserPointer(window));
-  // emulate vertical mouse motion = 5% of window height
-  mjv_moveCamera(mj_sim->model, mjMOUSE_ZOOM, 0, -0.05 * yoffset, &mj_sim->scene, &mj_sim->camera);
+
+  // 3D press
+  if( state->type==mjEVENT_PRESS && state->mouserect==0 && mj_sim->model )
+  {
+      // set perturbation
+      int newperturb = 0;
+      if( state->control && mj_sim->pert.select>0 )
+      {
+	  // right: translate;  left: rotate
+	  if( state->right )
+	      newperturb = mjPERT_TRANSLATE;
+	  else if( state->left )
+	      newperturb = mjPERT_ROTATE;
+
+	  // perturbation onset: reset reference
+	  if( newperturb && !mj_sim->pert.active )
+	      mjv_initPerturb(mj_sim->model, mj_sim->data, &mj_sim->scene, &mj_sim->pert);
+      }
+      mj_sim->pert.active = newperturb;
+
+      // handle double-click
+      if( state->doubleclick )
+      {
+	  // determine selection mode
+	  int selmode;
+	  if( state->button==mjBUTTON_LEFT )
+	      selmode = 1;
+	  else if( state->control )
+	      selmode = 3;
+	  else
+	      selmode = 2;
+
+	  // find geom and 3D click point, get corresponding body
+	  mjrRect r = state->rect[0];
+	  mjtNum selpnt[3];
+	  int selgeom, selskin;
+	  int selbody = mjv_select(mj_sim->model, mj_sim->data, &mj_sim->options,
+				   (mjtNum)r.width/(mjtNum)r.height,
+				   (mjtNum)(state->x-r.left)/(mjtNum)r.width,
+				   (mjtNum)(state->y-r.bottom)/(mjtNum)r.height,
+				   &mj_sim->scene, selpnt, &selgeom, &selskin);
+
+	  // set lookat point, start tracking is requested
+	  if( selmode==2 || selmode==3 )
+	  {
+	      // copy selpnt if anything clicked
+	      if( selbody>=0 )
+		  mju_copy3(mj_sim->camera.lookat, selpnt);
+
+	      // switch to tracking camera if dynamic body clicked
+	      if( selmode==3 && selbody>0 )
+	      {
+		  // mujoco camera
+		  mj_sim->camera.type = mjCAMERA_TRACKING;
+		  mj_sim->camera.trackbodyid = selbody;
+		  mj_sim->camera.fixedcamid = -1;
+	      }
+	  }
+
+	  // set body selection
+	  else
+	  {
+	      if( selbody>=0 )
+	      {
+
+		  // record selection
+		  mj_sim->pert.select = selbody;
+		  mj_sim->pert.skinselect = selskin;
+
+		  // compute localpos
+		  mjtNum tmp[3];
+		  mju_sub3(tmp, selpnt, mj_sim->data->xpos+3*mj_sim->pert.select);
+		  mju_mulMatTVec(mj_sim->pert.localpos, mj_sim->data->xmat+9*mj_sim->pert.select, tmp, 3, 3);
+	      }
+	      else
+	      {
+		  mj_sim->pert.select = 0;
+		  mj_sim->pert.skinselect = -1;
+	      }
+	  }
+
+	  // stop perturbation on select
+	  mj_sim->pert.active = 0;
+      }
+      return;
+  }
+
+  // 3D release
+  if( state->type==mjEVENT_RELEASE && state->dragrect==0 && mj_sim->model )
+  {
+      // stop perturbation
+      mj_sim->pert.active = 0;
+      return;
+  }
+
+  // 3D move
+  if( state->type==mjEVENT_MOVE && state->dragrect==0 && mj_sim->model )
+  {
+      // determine action based on mouse button
+      mjtMouse action;
+      if( state->right )
+	  action = state->shift ? mjMOUSE_MOVE_H : mjMOUSE_MOVE_V;
+      else if( state->left )
+	  action = state->shift ? mjMOUSE_ROTATE_H : mjMOUSE_ROTATE_V;
+      else
+	  action = mjMOUSE_ZOOM;
+
+      // move perturb or camera
+      mjrRect r = state->rect[0];
+      if( mj_sim->pert.active )
+	  mjv_movePerturb(mj_sim->model, mj_sim->data, action, state->dx/r.height, -state->dy/r.height,
+			  &mj_sim->scene, &mj_sim->pert);
+      else
+	  mjv_moveCamera(mj_sim->model, action, state->dx/r.height, -state->dy/r.height,
+			 &mj_sim->scene, &mj_sim->camera);
+      return;
+  }
 }
 
 /*******************************************************************************
@@ -212,11 +282,10 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   mjv_makeScene(mj_sim->model, &mj_sim->scene, 2000);
   mjr_makeContext(mj_sim->model, &mj_sim->context, mjFONTSCALE_150);
 
-  // install GLFW mouse and keyboard callbacks
-  glfwSetKeyCallback(mj_sim->window, keyboard);
-  glfwSetCursorPosCallback(mj_sim->window, mouse_move);
-  glfwSetMouseButtonCallback(mj_sim->window, mouse_button);
-  glfwSetScrollCallback(mj_sim->window, scroll);
+  // install GLFW event callback
+  mj_sim->uistate.userdata = static_cast<void *>(mj_sim);
+  uiSetCallback(mj_sim->window, &mj_sim->uistate, uiEvent, uiLayout);
+  uiLayout(&mj_sim->uistate);
 
   /** Initialize Dear Imgui */
 
