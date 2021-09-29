@@ -10,7 +10,6 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-std::mutex mtx;
 bool render_state = true;
 
 void simulate(mc_mujoco::MjSim & mj_sim)
@@ -18,10 +17,7 @@ void simulate(mc_mujoco::MjSim & mj_sim)
   bool done = false;
   while(!done && render_state)
   {
-    std::this_thread::sleep_for(std::chrono::microseconds(1));
-    mtx.lock();
     mj_sim.stepSimulation();
-    mtx.unlock();
   }
 }
 
@@ -71,10 +67,7 @@ int main(int argc, char * argv[])
 
   while(render_state)
   {
-    mtx.lock();
     mj_sim.updateScene();
-    mtx.unlock();
-
     render_state = mj_sim.render();
   }
 

@@ -549,7 +549,11 @@ bool MjSimImpl::stepSimulation()
   }
   mj_sim_start_t = start_step;
   auto do_step = [this, &start_step]() {
-    simStep();
+    {
+      std::lock_guard<std::mutex> lock(rendering_mutex_);
+      simStep();
+    }
+    rendering_cv_.notify_one();
     updateData();
     return controlStep();
   };
@@ -573,6 +577,8 @@ bool MjSimImpl::stepSimulation()
 void MjSimImpl::updateScene()
 {
   // update scene and render
+  std::unique_lock<std::mutex> lock(rendering_mutex_);
+  rendering_cv_.wait(lock);
   mjv_updateScene(model, data, &options, &pert, &camera, mjCAT_ALL, &scene);
 
   if(client)

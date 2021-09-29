@@ -6,6 +6,8 @@
 
 #include "mujoco.h"
 
+#include <condition_variable>
+
 namespace mc_mujoco
 {
 
@@ -188,6 +190,12 @@ private:
 
   /** Number of steps left to play in step by step mode */
   size_t rem_steps = 0;
+
+  /** Mutex used in rendering */
+  std::mutex rendering_mutex_;
+
+  /** Condition variable used to communicate between the physics and the rendered */
+  std::condition_variable rendering_cv_;
 
 public:
   MjSimImpl(const MjConfiguration & config);
