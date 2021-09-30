@@ -36,7 +36,7 @@ void uiLayout(mjuiState * state)
 {
   auto mj_sim = static_cast<MjSimImpl *>(state->userdata);
 
-  mjrRect* rect = state->rect;
+  mjrRect * rect = state->rect;
   // set number of rectangles
   state->nrect = 1;
   // rect 0: entire framebuffer
@@ -58,7 +58,7 @@ void uiEvent(mjuiState * state)
   {
     return;
   }
-  if( state->type==mjEVENT_KEY && state->key!=0 )
+  if(state->type == mjEVENT_KEY && state->key != 0)
   {
     // C: show contact points
     if(state->key == GLFW_KEY_C)
@@ -80,128 +80,126 @@ void uiEvent(mjuiState * state)
   }
 
   // 3D scroll
-  if( state->type==mjEVENT_SCROLL && state->mouserect==0 && mj_sim->model )
+  if(state->type == mjEVENT_SCROLL && state->mouserect == 0 && mj_sim->model)
   {
     // emulate vertical mouse motion = 5% of window height
-    mjv_moveCamera(mj_sim->model, mjMOUSE_ZOOM, 0, -0.05*state->sy, &mj_sim->scene, &mj_sim->camera);
+    mjv_moveCamera(mj_sim->model, mjMOUSE_ZOOM, 0, -0.05 * state->sy, &mj_sim->scene, &mj_sim->camera);
     return;
   }
 
   // 3D press
-  if( state->type==mjEVENT_PRESS && state->mouserect==0 && mj_sim->model )
+  if(state->type == mjEVENT_PRESS && state->mouserect == 0 && mj_sim->model)
   {
-      // set perturbation
-      int newperturb = 0;
-      if( state->control && mj_sim->pert.select>0 )
+    // set perturbation
+    int newperturb = 0;
+    if(state->control && mj_sim->pert.select > 0)
+    {
+      // right: translate;  left: rotate
+      if(state->right)
+        newperturb = mjPERT_TRANSLATE;
+      else if(state->left)
+        newperturb = mjPERT_ROTATE;
+
+      // perturbation onset: reset reference
+      if(newperturb && !mj_sim->pert.active)
+        mjv_initPerturb(mj_sim->model, mj_sim->data, &mj_sim->scene, &mj_sim->pert);
+    }
+    mj_sim->pert.active = newperturb;
+
+    // handle double-click
+    if(state->doubleclick)
+    {
+      // determine selection mode
+      int selmode;
+      if(state->button == mjBUTTON_LEFT)
+        selmode = 1;
+      else if(state->control)
+        selmode = 3;
+      else
+        selmode = 2;
+
+      // find geom and 3D click point, get corresponding body
+      mjrRect r = state->rect[0];
+      mjtNum selpnt[3];
+      int selgeom, selskin;
+      int selbody =
+          mjv_select(mj_sim->model, mj_sim->data, &mj_sim->options, (mjtNum)r.width / (mjtNum)r.height,
+                     (mjtNum)(state->x - r.left) / (mjtNum)r.width, (mjtNum)(state->y - r.bottom) / (mjtNum)r.height,
+                     &mj_sim->scene, selpnt, &selgeom, &selskin);
+
+      // set lookat point, start tracking is requested
+      if(selmode == 2 || selmode == 3)
       {
-	  // right: translate;  left: rotate
-	  if( state->right )
-	      newperturb = mjPERT_TRANSLATE;
-	  else if( state->left )
-	      newperturb = mjPERT_ROTATE;
+        // copy selpnt if anything clicked
+        if(selbody >= 0) mju_copy3(mj_sim->camera.lookat, selpnt);
 
-	  // perturbation onset: reset reference
-	  if( newperturb && !mj_sim->pert.active )
-	      mjv_initPerturb(mj_sim->model, mj_sim->data, &mj_sim->scene, &mj_sim->pert);
+        // switch to tracking camera if dynamic body clicked
+        if(selmode == 3 && selbody > 0)
+        {
+          // mujoco camera
+          mj_sim->camera.type = mjCAMERA_TRACKING;
+          mj_sim->camera.trackbodyid = selbody;
+          mj_sim->camera.fixedcamid = -1;
+        }
       }
-      mj_sim->pert.active = newperturb;
 
-      // handle double-click
-      if( state->doubleclick )
+      // set body selection
+      else
       {
-	  // determine selection mode
-	  int selmode;
-	  if( state->button==mjBUTTON_LEFT )
-	      selmode = 1;
-	  else if( state->control )
-	      selmode = 3;
-	  else
-	      selmode = 2;
+        if(selbody >= 0)
+        {
 
-	  // find geom and 3D click point, get corresponding body
-	  mjrRect r = state->rect[0];
-	  mjtNum selpnt[3];
-	  int selgeom, selskin;
-	  int selbody = mjv_select(mj_sim->model, mj_sim->data, &mj_sim->options,
-				   (mjtNum)r.width/(mjtNum)r.height,
-				   (mjtNum)(state->x-r.left)/(mjtNum)r.width,
-				   (mjtNum)(state->y-r.bottom)/(mjtNum)r.height,
-				   &mj_sim->scene, selpnt, &selgeom, &selskin);
+          // record selection
+          mj_sim->pert.select = selbody;
+          mj_sim->pert.skinselect = selskin;
 
-	  // set lookat point, start tracking is requested
-	  if( selmode==2 || selmode==3 )
-	  {
-	      // copy selpnt if anything clicked
-	      if( selbody>=0 )
-		  mju_copy3(mj_sim->camera.lookat, selpnt);
-
-	      // switch to tracking camera if dynamic body clicked
-	      if( selmode==3 && selbody>0 )
-	      {
-		  // mujoco camera
-		  mj_sim->camera.type = mjCAMERA_TRACKING;
-		  mj_sim->camera.trackbodyid = selbody;
-		  mj_sim->camera.fixedcamid = -1;
-	      }
-	  }
-
-	  // set body selection
-	  else
-	  {
-	      if( selbody>=0 )
-	      {
-
-		  // record selection
-		  mj_sim->pert.select = selbody;
-		  mj_sim->pert.skinselect = selskin;
-
-		  // compute localpos
-		  mjtNum tmp[3];
-		  mju_sub3(tmp, selpnt, mj_sim->data->xpos+3*mj_sim->pert.select);
-		  mju_mulMatTVec(mj_sim->pert.localpos, mj_sim->data->xmat+9*mj_sim->pert.select, tmp, 3, 3);
-	      }
-	      else
-	      {
-		  mj_sim->pert.select = 0;
-		  mj_sim->pert.skinselect = -1;
-	      }
-	  }
-
-	  // stop perturbation on select
-	  mj_sim->pert.active = 0;
+          // compute localpos
+          mjtNum tmp[3];
+          mju_sub3(tmp, selpnt, mj_sim->data->xpos + 3 * mj_sim->pert.select);
+          mju_mulMatTVec(mj_sim->pert.localpos, mj_sim->data->xmat + 9 * mj_sim->pert.select, tmp, 3, 3);
+        }
+        else
+        {
+          mj_sim->pert.select = 0;
+          mj_sim->pert.skinselect = -1;
+        }
       }
-      return;
+
+      // stop perturbation on select
+      mj_sim->pert.active = 0;
+    }
+    return;
   }
 
   // 3D release
-  if( state->type==mjEVENT_RELEASE && state->dragrect==0 && mj_sim->model )
+  if(state->type == mjEVENT_RELEASE && state->dragrect == 0 && mj_sim->model)
   {
-      // stop perturbation
-      mj_sim->pert.active = 0;
-      return;
+    // stop perturbation
+    mj_sim->pert.active = 0;
+    return;
   }
 
   // 3D move
-  if( state->type==mjEVENT_MOVE && state->dragrect==0 && mj_sim->model )
+  if(state->type == mjEVENT_MOVE && state->dragrect == 0 && mj_sim->model)
   {
-      // determine action based on mouse button
-      mjtMouse action;
-      if( state->right )
-	  action = state->shift ? mjMOUSE_MOVE_H : mjMOUSE_MOVE_V;
-      else if( state->left )
-	  action = state->shift ? mjMOUSE_ROTATE_H : mjMOUSE_ROTATE_V;
-      else
-	  action = mjMOUSE_ZOOM;
+    // determine action based on mouse button
+    mjtMouse action;
+    if(state->right)
+      action = state->shift ? mjMOUSE_MOVE_H : mjMOUSE_MOVE_V;
+    else if(state->left)
+      action = state->shift ? mjMOUSE_ROTATE_H : mjMOUSE_ROTATE_V;
+    else
+      action = mjMOUSE_ZOOM;
 
-      // move perturb or camera
-      mjrRect r = state->rect[0];
-      if( mj_sim->pert.active )
-	  mjv_movePerturb(mj_sim->model, mj_sim->data, action, state->dx/r.height, -state->dy/r.height,
-			  &mj_sim->scene, &mj_sim->pert);
-      else
-	  mjv_moveCamera(mj_sim->model, action, state->dx/r.height, -state->dy/r.height,
-			 &mj_sim->scene, &mj_sim->camera);
-      return;
+    // move perturb or camera
+    mjrRect r = state->rect[0];
+    if(mj_sim->pert.active)
+      mjv_movePerturb(mj_sim->model, mj_sim->data, action, state->dx / r.height, -state->dy / r.height, &mj_sim->scene,
+                      &mj_sim->pert);
+    else
+      mjv_moveCamera(mj_sim->model, action, state->dx / r.height, -state->dy / r.height, &mj_sim->scene,
+                     &mj_sim->camera);
+    return;
   }
 }
 
