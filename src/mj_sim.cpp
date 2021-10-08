@@ -20,6 +20,8 @@
 #include <boost/filesystem.hpp>
 namespace bfs = boost::filesystem;
 
+#include <mc_rtc/version.h>
+
 namespace mc_mujoco
 {
 
@@ -118,8 +120,14 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   std::vector<std::string> mujRobots;
   std::vector<std::string> xmlFiles;
   std::vector<std::string> pdGainsFiles;
+#if MC_RTC_VERSION_MAJOR > 1
+  for(const auto & r_ptr : controller->robots())
+  {
+    const auto & r = *r_ptr;
+#else
   for(const auto & r : controller->robots())
   {
+#endif
     const auto & robot_cfg_path = get_robot_cfg_path(r.module().name);
     if(robot_cfg_path.size())
     {
