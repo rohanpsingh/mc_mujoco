@@ -235,6 +235,22 @@ bool mujoco_init(MjSimImpl * mj_sim, const std::vector<std::string> & robots, co
     return false;
   }
 
+  // disable all floors (if any) except ground_floor
+  for (auto robot : robots)
+  {
+    if (robot=="ground")
+    {
+      continue;
+    }
+    std::string floor = robot + "_floor";
+    int floor_id = mj_name2id(mj_sim->model, mjOBJ_GEOM, floor.c_str());
+    if (floor_id != -1)
+    {
+      mj_sim->model->geom_conaffinity[floor_id] = 0;
+      mj_sim->model->geom_contype[floor_id] = 0;
+    }
+  }
+
   // make data
   mj_sim->data = mj_makeData(mj_sim->model);
 
