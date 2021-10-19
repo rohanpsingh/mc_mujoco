@@ -628,7 +628,7 @@ bool MjSimImpl::render()
     auto width = io.DisplaySize.x - 2 * right_margin;
     auto height = io.DisplaySize.y - 2 * top_margin;
     ImGui::SetNextWindowPos({0.8f * width - right_margin, top_margin}, ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize({0.2f * width, 0.2f * height}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize({0.2f * width, 0.3f * height}, ImGuiCond_FirstUseEver);
     ImGui::Begin("mc_mujoco");
     size_t nsamples = std::min(mj_sim_dt.size(), iterCount_);
     mj_sim_dt_average = 0;
@@ -664,6 +664,31 @@ bool MjSimImpl::render()
       doNStepsButton(10, false);
       doNStepsButton(50, false);
       doNStepsButton(100, true);
+    }
+    auto flag_to_gui = [&](const char * label, mjtVisFlag flag) {
+      bool show = options.flags[flag];
+      if(ImGui::Checkbox(label, &show))
+      {
+        options.flags[flag] = show;
+      }
+    };
+    flag_to_gui("Show contact points [C]", mjVIS_CONTACTPOINT);
+    flag_to_gui("Show contact forces [F]", mjVIS_CONTACTFORCE);
+    auto group_to_checkbox = [&](size_t group, bool last) {
+      bool show = options.geomgroup[group];
+      if(ImGui::Checkbox(fmt::format("{}", group).c_str(), &show))
+      {
+        options.geomgroup[group] = show;
+      }
+      if(!last)
+      {
+        ImGui::SameLine();
+      }
+    };
+    ImGui::Text("%s", fmt::format("Visible layers [0-{}]", mjNGROUP).c_str());
+    for(size_t i = 0; i < mjNGROUP; ++i)
+    {
+      group_to_checkbox(i, i == mjNGROUP - 1);
     }
     ImGui::End();
   }
