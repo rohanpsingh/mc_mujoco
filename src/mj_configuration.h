@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 namespace mc_mujoco
@@ -11,9 +12,9 @@ struct MjConfiguration
   /** If true, enable visualization */
   bool with_visualization = true;
   /** If true, display the collision model by default */
-  bool visualize_collisions = false;
+  std::optional<bool> visualize_collisions;
   /** If true, display the visual model by default */
-  bool visualize_visual = true;
+  std::optional<bool> visualize_visual;
   /** If true, enable mc_rtc GUI inside MuJoCo simulation */
   bool with_mc_rtc_gui = true;
   /** If true, enable mc_rtc controller inside MuJoCo simulation */

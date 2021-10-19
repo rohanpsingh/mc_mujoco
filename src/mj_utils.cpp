@@ -17,6 +17,9 @@
 
 #include "Robot_Regular_ttf.h"
 
+#include <boost/filesystem.hpp>
+namespace bfs = boost::filesystem;
+
 namespace mc_mujoco
 {
 
@@ -50,11 +53,11 @@ void uiEvent(mjuiState * state)
 {
   auto mj_sim = static_cast<MjSimImpl *>(state->userdata);
 
-  if(ImGui::GetIO().WantCaptureKeyboard)
+  if(state->type == mjEVENT_KEY && ImGui::GetIO().WantCaptureKeyboard)
   {
     return;
   }
-  if(ImGui::GetIO().WantCaptureMouse)
+  if(state->type != mjEVENT_KEY && ImGui::GetIO().WantCaptureMouse)
   {
     return;
   }
@@ -70,11 +73,16 @@ void uiEvent(mjuiState * state)
     {
       mj_sim->options.flags[mjVIS_CONTACTFORCE] = !mj_sim->options.flags[mjVIS_CONTACTFORCE];
     }
-    // 0-9: Toggle visiblity of geom groups
-    if(state->key >= GLFW_KEY_0 && state->key <= GLFW_KEY_9)
+    // 0-mjNGROUP: Toggle visiblity of geom groups
+    if(state->key >= GLFW_KEY_0 && state->key < (GLFW_KEY_0 + mjNGROUP))
     {
       int group = state->key - GLFW_KEY_0;
       mj_sim->options.geomgroup[group] = !mj_sim->options.geomgroup[group];
+    }
+    // Ctrl+S save the visualization state
+    if(state->key == GLFW_KEY_S && state->control)
+    {
+      mj_sim->saveGUISettings();
     }
     return;
   }
@@ -209,6 +217,7 @@ void uiEvent(mjuiState * state)
 
 bool mujoco_init(MjSimImpl * mj_sim, const std::vector<std::string> & robots, const std::vector<std::string> & xmlFiles)
 {
+#if mjVERSION_HEADER <= 200
   // Initialize MuJoCo
   if(!mujoco_initialized)
   {
@@ -224,6 +233,7 @@ bool mujoco_init(MjSimImpl * mj_sim, const std::vector<std::string> & robots, co
     mj_activate(key_buf.c_str());
     mujoco_initialized = true;
   }
+#endif
 
   // Load the model;
   std::string model = merge_mujoco_models(robots, xmlFiles, mj_sim->robots);
@@ -264,15 +274,28 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   glfwSetWindowUserPointer(mj_sim->window, static_cast<void *>(mj_sim));
 
   // initialize visualization data structures
-  mj_sim->camera.lookat[0] = 0.0f;
-  mj_sim->camera.lookat[1] = 0.0f;
-  mj_sim->camera.lookat[2] = 0.75f;
-  mj_sim->camera.distance = 6.0f;
-  mj_sim->camera.azimuth = -150.0f;
-  mj_sim->camera.elevation = -20.0f;
+  auto config = [&]() -> mc_rtc::Configuration {
+    auto path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
+    if(bfs::exists(path))
+    {
+      return {path};
+    }
+    return {};
+  }();
+  auto camera = config("camera", mc_rtc::Configuration{});
+  auto lookat = camera("lookat", std::array<double, 3>{0.0, 0.0, 0.75});
+  mj_sim->camera.lookat[0] = static_cast<float>(lookat[0]);
+  mj_sim->camera.lookat[1] = static_cast<float>(lookat[1]);
+  mj_sim->camera.lookat[2] = static_cast<float>(lookat[2]);
+  mj_sim->camera.distance = static_cast<float>(camera("distance", 6.0));
+  mj_sim->camera.azimuth = static_cast<float>(camera("azimuth", -150.0));
+  mj_sim->camera.elevation = static_cast<float>(camera("elevation", -20.0));
   mjv_defaultOption(&mj_sim->options);
-  mj_sim->options.geomgroup[0] = mj_sim->config.visualize_collisions;
-  mj_sim->options.geomgroup[1] = mj_sim->config.visualize_visual;
+  auto visualize = config("visualize", mc_rtc::Configuration{});
+  mj_sim->options.geomgroup[0] = mj_sim->config.visualize_collisions.value_or(visualize("collisions", false));
+  mj_sim->options.geomgroup[1] = mj_sim->config.visualize_visual.value_or(visualize("visuals", true));
+  mj_sim->options.flags[mjVIS_CONTACTPOINT] = visualize("contact-points", false);
+  mj_sim->options.flags[mjVIS_CONTACTFORCE] = visualize("contact-forces", false);
   mjv_defaultScene(&mj_sim->scene);
   mjr_defaultContext(&mj_sim->context);
 

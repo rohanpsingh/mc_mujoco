@@ -58,8 +58,14 @@ int main(int argc, char * argv[])
     config.with_controller = !vm["without-controller"].as<bool>();
     config.with_visualization = !vm["without-visualization"].as<bool>();
     config.with_mc_rtc_gui = !vm["without-mc-rtc-gui"].as<bool>();
-    config.visualize_visual = !vm["without-visuals"].as<bool>();
-    config.visualize_collisions = vm["with-collisions"].as<bool>();
+    if(!vm["without-visuals"].defaulted())
+    {
+      config.visualize_visual = !vm["without-visuals"].as<bool>();
+    }
+    if(!vm["with-collisions"].defaulted())
+    {
+      config.visualize_collisions = vm["with-collisions"].as<bool>();
+    }
   }
   mc_mujoco::MjSim mj_sim(config);
 

@@ -628,8 +628,8 @@ bool MjSimImpl::render()
     auto width = io.DisplaySize.x - 2 * right_margin;
     auto height = io.DisplaySize.y - 2 * top_margin;
     ImGui::SetNextWindowPos({0.8f * width - right_margin, top_margin}, ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize({0.2f * width, 0.2f * height}, ImGuiCond_FirstUseEver);
-    ImGui::Begin("mc_mujoco");
+    ImGui::SetNextWindowSize({0.2f * width, 0.3f * height}, ImGuiCond_FirstUseEver);
+    ImGui::Begin(fmt::format("mc_mujoco (MuJoCo {})", mj_version()).c_str());
     size_t nsamples = std::min(mj_sim_dt.size(), iterCount_);
     mj_sim_dt_average = 0;
     for(size_t i = 0; i < nsamples; ++i)
@@ -665,6 +665,31 @@ bool MjSimImpl::render()
       doNStepsButton(50, false);
       doNStepsButton(100, true);
     }
+    auto flag_to_gui = [&](const char * label, mjtVisFlag flag) {
+      bool show = options.flags[flag];
+      if(ImGui::Checkbox(label, &show))
+      {
+        options.flags[flag] = show;
+      }
+    };
+    flag_to_gui("Show contact points [C]", mjVIS_CONTACTPOINT);
+    flag_to_gui("Show contact forces [F]", mjVIS_CONTACTFORCE);
+    auto group_to_checkbox = [&](size_t group, bool last) {
+      bool show = options.geomgroup[group];
+      if(ImGui::Checkbox(fmt::format("{}", group).c_str(), &show))
+      {
+        options.geomgroup[group] = show;
+      }
+      if(!last)
+      {
+        ImGui::SameLine();
+      }
+    };
+    ImGui::Text("%s", fmt::format("Visible layers [0-{}]", mjNGROUP).c_str());
+    for(size_t i = 0; i < mjNGROUP; ++i)
+    {
+      group_to_checkbox(i, i == mjNGROUP - 1);
+    }
     ImGui::End();
   }
   ImGui::Render();
@@ -677,6 +702,38 @@ bool MjSimImpl::render()
 }
 
 void MjSimImpl::stopSimulation() {}
+
+void MjSimImpl::saveGUISettings()
+{
+  auto user_path = bfs::path(USER_FOLDER);
+  if(!bfs::exists(user_path))
+  {
+    if(!bfs::create_directories(user_path))
+    {
+      mc_rtc::log::critical("Failed to create the user directory: {}. GUI configuration will not be saved",
+                            user_path.string());
+      return;
+    }
+  }
+  mc_rtc::Configuration config;
+  auto camera_c = config.add("camera");
+  auto lookat = camera_c.array("lookat", 3);
+  for(size_t i = 0; i < 3; ++i)
+  {
+    lookat.push(camera.lookat[i]);
+  }
+  camera_c.add("distance", camera.distance);
+  camera_c.add("azimuth", camera.azimuth);
+  camera_c.add("elevation", camera.elevation);
+  auto visualize_c = config.add("visualize");
+  visualize_c.add("collisions", static_cast<bool>(options.geomgroup[0]));
+  visualize_c.add("visuals", static_cast<bool>(options.geomgroup[1]));
+  visualize_c.add("contact-points", static_cast<bool>(options.flags[mjVIS_CONTACTPOINT]));
+  visualize_c.add("contact-forces", static_cast<bool>(options.flags[mjVIS_CONTACTFORCE]));
+  auto path_out = (user_path / "mc_mujoco.yaml").string();
+  config.save(path_out);
+  mc_rtc::log::success("[mc_mujoco] Configuration saved to {}", path_out);
+}
 
 MjSim::MjSim(const MjConfiguration & config) : impl(new MjSimImpl(config))
 {

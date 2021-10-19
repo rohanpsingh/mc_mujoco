@@ -217,6 +217,8 @@ public:
   bool render();
 
   void stopSimulation();
+
+  void saveGUISettings();
 };
 
 } // namespace mc_mujoco

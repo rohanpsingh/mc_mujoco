@@ -1,13 +1,5 @@
 # [WIP] Mujoco interface for mc-rtc
 
-Add this to your mc-rtc configuration yaml:
-
-```yaml
-MUJOCO:
-  xmlModelPath: "<path_to_your_xml_model>"
-  pdGainsPath: "<path_to_your_pdgains>"
-```
-
 ### Usage
 
 Assuming that you have mujoco installed under `${HOME}/.mujoco/mujoco200`,
@@ -32,7 +24,8 @@ $ ./src/mc_mujoco
 
 ### GUI
 
-**Apply external force**  
+**Apply external force**
+
 An object is selected by left-double-click. The user can then apply forces and torques on the selected object by holding Ctrl and dragging the mouse.
 
 ### Credits
