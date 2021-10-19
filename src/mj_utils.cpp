@@ -209,6 +209,7 @@ void uiEvent(mjuiState * state)
 
 bool mujoco_init(MjSimImpl * mj_sim, const std::vector<std::string> & robots, const std::vector<std::string> & xmlFiles)
 {
+#if mjVERSION_HEADER <= 200
   // Initialize MuJoCo
   if(!mujoco_initialized)
   {
@@ -224,6 +225,7 @@ bool mujoco_init(MjSimImpl * mj_sim, const std::vector<std::string> & robots, co
     mj_activate(key_buf.c_str());
     mujoco_initialized = true;
   }
+#endif
 
   // Load the model;
   std::string model = merge_mujoco_models(robots, xmlFiles, mj_sim->robots);
