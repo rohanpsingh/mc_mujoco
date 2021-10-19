@@ -50,11 +50,11 @@ void uiEvent(mjuiState * state)
 {
   auto mj_sim = static_cast<MjSimImpl *>(state->userdata);
 
-  if(ImGui::GetIO().WantCaptureKeyboard)
+  if(state->type == mjEVENT_KEY && ImGui::GetIO().WantCaptureKeyboard)
   {
     return;
   }
-  if(ImGui::GetIO().WantCaptureMouse)
+  if(state->type != mjEVENT_KEY && ImGui::GetIO().WantCaptureMouse)
   {
     return;
   }
