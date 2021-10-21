@@ -547,6 +547,8 @@ bool MjSimImpl::stepSimulation()
     controller->run();
     controller->running = true;
     mj_sim_start_t = start_step;
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    rendering_cv_.notify_one();
     return false;
   }
   if(iterCount_ > 0)
