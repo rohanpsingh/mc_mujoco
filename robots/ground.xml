@@ -6,6 +6,8 @@
         <material name="matgeom" texture="texgeom" texuniform="true" rgba="0.8 0.6 .4 1"/>
     </asset>
     <worldbody>
+      <body name="base_link">
         <geom name="floor" pos="0 0 0" size="0 0 .25" type="plane" material="matplane" condim="3"/>
+      </body>
     </worldbody>
 </mujoco>
