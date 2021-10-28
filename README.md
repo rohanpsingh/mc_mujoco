@@ -1,4 +1,4 @@
-# [WIP] Mujoco interface for mc-rtc
+# Mujoco interface for mc-rtc
 
 ### Usage
 
@@ -8,7 +8,7 @@ Assuming that you have mujoco installed under `${HOME}/.mujoco/mujoco200`,
 $ git clone --recursive git@github.com:rohanpsingh/mc_mujoco.git
 $ cd mc_mujoco
 $ mkdir build && cd build
-$ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=$HOME/.mujoco/mujoco200
+$ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=$HOME/.mujoco/mujoco210
 $ make
 ```
 
