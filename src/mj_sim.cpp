@@ -767,4 +767,9 @@ bool MjSim::render()
   return impl->render();
 }
 
+mc_control::MCGlobalController * MjSim::controller() noexcept
+{
+  return impl->get_controller();
+}
+
 } // namespace mc_mujoco

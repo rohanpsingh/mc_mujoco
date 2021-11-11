@@ -1,4 +1,13 @@
 @PACKAGE_INIT@
 
+find_package(mc_rtc REQUIRED)
+
+set(OpenGL_GL_PREFERENCE "GLVND")
+find_package(OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
+
 set(MC_MUJOCO_SHARE_DESTINATION "@MC_MUJOCO_SHARE_DESTINATION@")
 set(MC_MUJOCO_USER_DESTINATION "@MC_MUJOCO_USER_DESTINATION@")
+
+include("${CMAKE_CURRENT_LIST_DIR}/mc_mujocoTargets.cmake")
+check_required_components(mc_mujoco)

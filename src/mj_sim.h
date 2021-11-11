@@ -46,6 +46,12 @@ public:
    */
   bool render();
 
+  /** The underlying global controller instance in the simulation
+   *
+   * nullptr if with_controller was false in MjConfiguration
+   */
+  mc_control::MCGlobalController * controller() noexcept;
+
 private:
   std::unique_ptr<MjSimImpl> impl;
 };
