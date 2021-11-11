@@ -219,6 +219,11 @@ public:
   void stopSimulation();
 
   void saveGUISettings();
+
+  inline mc_control::MCGlobalController * get_controller() noexcept
+  {
+    return controller.get();
+  }
 };
 
 } // namespace mc_mujoco
