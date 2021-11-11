@@ -384,11 +384,11 @@ void mujoco_cleanup(MjSimImpl * mj_sim)
     ImGui::DestroyContext();
 
     glfwDestroyWindow(mj_sim->window);
-  }
 
-  // free visualization storage
-  mjv_freeScene(&mj_sim->scene);
-  mjr_freeContext(&mj_sim->context);
+    // free visualization storage
+    mjv_freeScene(&mj_sim->scene);
+    mjr_freeContext(&mj_sim->context);
+  }
 
   // free MuJoCo model and data, deactivate
   mj_deleteData(mj_sim->data);
