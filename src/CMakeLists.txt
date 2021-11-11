@@ -65,8 +65,9 @@ add_library(mc_mujoco_lib STATIC ${mc_mujoco_lib_SRC} ${imgui_SRC} ${implot_SRC}
 target_include_directories(mc_mujoco_lib PUBLIC $<BUILD_INTERFACE:${MUJOCO_INCLUDE_DIR}>$<INSTALL_INTERFACE:include>)
 target_include_directories(mc_mujoco_lib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 target_include_directories(mc_mujoco_lib PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}")
-target_link_libraries(mc_mujoco_lib PUBLIC ${LIB_MUJOCO} ${GLFW} GLEW::GLEW OpenGL::GL mc_rtc::mc_control mc_rtc::mc_control_client ${CMAKE_DL_LIBS})
-target_link_libraries(mc_mujoco_lib PRIVATE pugixml)
+target_link_libraries(mc_mujoco_lib PUBLIC mc_rtc::mc_control mc_rtc::mc_control_client ${CMAKE_DL_LIBS})
+target_link_libraries(mc_mujoco_lib PRIVATE ${LIB_MUJOCO} ${GLFW} GLEW::GLEW OpenGL::GL $<BUILD_INTERFACE:pugixml>)
+set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
 
 find_package(Boost REQUIRED COMPONENTS program_options)
 
@@ -78,3 +79,15 @@ install(TARGETS mc_mujoco
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
 
+install(FILES mj_sim.h mj_configuration.h DESTINATION include/mc_mujoco)
+
+install(TARGETS mc_mujoco_lib
+  EXPORT mc_mujocoTargets
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
+
+install(EXPORT mc_mujocoTargets
+  FILE mc_mujocoTargets.cmake
+  NAMESPACE mc_mujoco::
+  DESTINATION lib/cmake/mc_mujoco)
