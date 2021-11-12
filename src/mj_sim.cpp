@@ -389,7 +389,7 @@ void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model
     {
       continue;
     }
-    torques[mj_jnt_to_rjo[i]] = data->qfrc_actuator[mj_mot_ids[i]];
+    torques[mj_jnt_to_rjo[i]] = data->qfrc_actuator[model->jnt_dofadr[mj_jnt_ids[i]]];
   }
   if(!gc)
   {
