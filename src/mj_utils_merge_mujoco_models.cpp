@@ -275,7 +275,7 @@ static void merge_mujoco_worldbody(const pugi::xml_node & in, pugi::xml_node & o
   for(const auto & c : in.children())
   {
     auto out_c = out.append_copy(c);
-    add_prefix_recursively(robot, out_c, {"name", "childclasss", "class", "material", "hfield", "mesh", "target"});
+    add_prefix_recursively(robot, out_c, {"name", "childclass", "class", "material", "hfield", "mesh", "target"});
   }
 }
 
