@@ -163,8 +163,10 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   for(size_t i = 0; i < robots.size(); ++i)
   {
     auto & r = robots[i];
+    bool has_motor =
+        std::any_of(r.mj_mot_names.begin(), r.mj_mot_names.end(), [](const std::string & m) { return m.size() != 0; });
     const auto & robot = controller->robot(r.name);
-    if(robot.mb().nrDof() == 0 || (robot.mb().nrDof() == 6 && robot.mb().joint(0).dof() == 6))
+    if(robot.mb().nrDof() == 0 || (robot.mb().nrDof() == 6 && robot.mb().joint(0).dof() == 6) || !has_motor)
     {
       continue;
     }
@@ -198,17 +200,22 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   {
     mj_jnt_ids.push_back(mj_name2id(model, mjOBJ_JOINT, j.c_str()));
   }
-  for(const auto & m : mj_mot_names)
-  {
-    if(m.size())
+  auto fill_acuator_ids = [&](const std::vector<std::string> & names, std::vector<int> & ids) {
+    for(const auto & n : names)
     {
-      mj_mot_ids.push_back(mj_name2id(model, mjOBJ_ACTUATOR, m.c_str()));
+      if(n.size())
+      {
+        ids.push_back(mj_name2id(model, mjOBJ_ACTUATOR, n.c_str()));
+      }
+      else
+      {
+        ids.push_back(-1);
+      }
     }
-    else
-    {
-      mj_mot_ids.push_back(-1);
-    }
-  }
+  };
+  fill_acuator_ids(mj_mot_names, mj_mot_ids);
+  fill_acuator_ids(mj_pos_act_names, mj_pos_act_ids);
+  fill_acuator_ids(mj_vel_act_names, mj_vel_act_ids);
   if(root_body.size())
   {
     root_body_id = mj_name2id(model, mjOBJ_BODY, root_body.c_str());
@@ -393,7 +400,7 @@ void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model
   }
   for(size_t i = 0; i < mj_mot_ids.size(); ++i)
   {
-    if(mj_jnt_to_rjo[i] == -1 || mj_mot_ids[i] == -1)
+    if(mj_jnt_to_rjo[i] == -1)
     {
       continue;
     }
@@ -490,8 +497,10 @@ void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_id
   for(size_t i = 0; i < mj_ctrl.size(); ++i)
   {
     auto mot_id = mj_mot_ids[i];
+    auto pos_act_id = mj_pos_act_ids[i];
+    auto vel_act_id = mj_vel_act_ids[i];
     auto rjo_id = mj_jnt_to_rjo[i];
-    if(mot_id == -1 || rjo_id == -1)
+    if(rjo_id == -1)
     {
       continue;
     }
@@ -501,10 +510,21 @@ void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_id
     // compute desired alpha using interpolation
     double alpha_ref = (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_;
     alpha_ref += mj_prev_ctrl_alpha[i];
-    // compute desired torque using PD control
-    mj_ctrl[i] = PD(i, q_ref, encoders[rjo_id], alpha_ref, alphas[rjo_id]);
-    double ratio = model.actuator_gear[6 * mot_id];
-    data.ctrl[mot_id] = mj_ctrl[i] / ratio;
+    if(mot_id != -1)
+    {
+      // compute desired torque using PD control
+      mj_ctrl[i] = PD(i, q_ref, encoders[rjo_id], alpha_ref, alphas[rjo_id]);
+      double ratio = model.actuator_gear[6 * mot_id];
+      data.ctrl[mot_id] = mj_ctrl[i] / ratio;
+    }
+    if(pos_act_id != -1)
+    {
+      data.ctrl[pos_act_id] = q_ref;
+    }
+    if(vel_act_id != -1)
+    {
+      data.ctrl[vel_act_id] = alpha_ref;
+    }
   }
 }
 

@@ -275,7 +275,7 @@ static void merge_mujoco_worldbody(const pugi::xml_node & in, pugi::xml_node & o
   for(const auto & c : in.children())
   {
     auto out_c = out.append_copy(c);
-    add_prefix_recursively(robot, out_c, {"name", "childclasss", "class", "material", "hfield", "mesh", "target"});
+    add_prefix_recursively(robot, out_c, {"name", "childclass", "class", "material", "hfield", "mesh", "target"});
   }
 }
 
@@ -413,32 +413,39 @@ static void get_joint_names(const pugi::xml_node & in,
 static void get_motor_names(const pugi::xml_node & in,
                             const std::string & prefix,
                             const std::vector<std::string> & joints,
-                            std::vector<std::string> & motors)
+                            std::vector<std::string> & motors,
+                            std::vector<std::string> & pos_acts,
+                            std::vector<std::string> & vel_acts)
 {
-  std::unordered_map<std::string, std::string> joint_to_motor;
-  for(const auto & m : in.children("motor"))
-  {
-    std::string name = m.attribute("name").value();
-    std::string joint = m.attribute("joint").value();
-    if(prefix.size())
+  auto joint_to_act = [&](const char * type, std::vector<std::string> & acts) {
+    std::unordered_map<std::string, std::string> joint_to_act;
+    for(const auto & m : in.children(type))
     {
-      name = fmt::format("{}_{}", prefix, name);
-      joint = fmt::format("{}_{}", prefix, joint);
+      std::string name = m.attribute("name").value();
+      std::string joint = m.attribute("joint").value();
+      if(prefix.size())
+      {
+        name = fmt::format("{}_{}", prefix, name);
+        joint = fmt::format("{}_{}", prefix, joint);
+      }
+      joint_to_act[joint] = name;
     }
-    joint_to_motor[joint] = name;
-  }
-  for(const auto & j : joints)
-  {
-    auto it = joint_to_motor.find(j);
-    if(it == joint_to_motor.end())
+    for(const auto & j : joints)
     {
-      motors.push_back("");
+      auto it = joint_to_act.find(j);
+      if(it == joint_to_act.end())
+      {
+        acts.push_back("");
+      }
+      else
+      {
+        acts.push_back(it->second);
+      }
     }
-    else
-    {
-      motors.push_back(it->second);
-    }
-  }
+  };
+  joint_to_act("motor", motors);
+  joint_to_act("position", pos_acts);
+  joint_to_act("velocity", vel_acts);
 }
 
 static MjRobot mj_robot_from_xml(const std::string & name, const std::string & xmlFile, const std::string & prefix = "")
@@ -466,7 +473,8 @@ static MjRobot mj_robot_from_xml(const std::string & name, const std::string & x
     }
   }
   get_joint_names(root.child("worldbody"), prefix, out.mj_jnt_names, out.root_joint);
-  get_motor_names(root.child("actuator"), prefix, out.mj_jnt_names, out.mj_mot_names);
+  get_motor_names(root.child("actuator"), prefix, out.mj_jnt_names, out.mj_mot_names, out.mj_pos_act_names,
+                  out.mj_vel_act_names);
   return out;
 }
 

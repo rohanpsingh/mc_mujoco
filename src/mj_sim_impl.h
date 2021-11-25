@@ -66,10 +66,18 @@ struct MjRobot
   std::vector<double> kd = {};
 
   /** Names of the motors inside MuJoCo corresponding to the joints in \ref mj_jnt_names the name is empty if the joint
-   * has no actuation in MuJoCo */
+   * has no motor actuation in MuJoCo */
   std::vector<std::string> mj_mot_names;
   /** Correspondance from motor name to id inside MuJoCo */
   std::vector<int> mj_mot_ids;
+  /** Names of the position actuators inside MuJoCo */
+  std::vector<std::string> mj_pos_act_names;
+  /** Corresppondance from position actuator to id inside MuJoCo */
+  std::vector<int> mj_pos_act_ids;
+  /** Names of the velocity actuators inside MuJoCo */
+  std::vector<std::string> mj_vel_act_names;
+  /** Corresppondance from velocity actuator to id inside MuJoCo */
+  std::vector<int> mj_vel_act_ids;
   /** Names of the joints inside MuJoCo */
   std::vector<std::string> mj_jnt_names;
   /** Correspondance from joint name to id inside MuJoCo */
