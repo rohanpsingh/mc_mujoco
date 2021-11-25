@@ -213,6 +213,40 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   {
     root_body_id = mj_name2id(model, mjOBJ_BODY, root_body.c_str());
   }
+  auto init_sensor_id = [&](const char * mj_name, const char * mc_name, const std::string & sensor_name,
+                            const char * suffix, mjtSensor type, std::unordered_map<std::string, int> & mapping) {
+    auto mj_sensor = prefixed(fmt::format("{}_{}", sensor_name, suffix));
+    auto sensor_id = mujoco_get_sensor_id(*model, mj_sensor, type);
+    if(sensor_id == -1)
+    {
+      mc_rtc::log::error("[mc_mujoco] No MuJoCo {} for {} {} in {}, expected to find a {} named {}", mj_name,
+                         sensor_name, mc_name, name, mj_name, mj_sensor);
+    }
+    mapping[sensor_name] = sensor_id;
+  };
+  for(const auto & fs : robot.module().forceSensors())
+  {
+    wrenches[fs.name()] = sva::ForceVecd(Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
+    init_sensor_id("force sensor", "force sensor", fs.name(), "fsensor", mjSENS_FORCE, mc_fs_to_mj_fsensor_id);
+    init_sensor_id("torque sensor", "force sensor", fs.name(), "tsensor", mjSENS_TORQUE, mc_fs_to_mj_tsensor_id);
+  }
+  for(const auto & bs : robot.bodySensors())
+  {
+    if(bs.name() == "FloatingBase" || bs.name().empty())
+    {
+      continue;
+    }
+    gyros[bs.name()] = Eigen::Vector3d::Zero();
+    accelerometers[bs.name()] = Eigen::Vector3d::Zero();
+    init_sensor_id("gyro sensor", "body sensor", bs.name(), "gyro", mjSENS_GYRO, mc_bs_to_mj_gyro_id);
+    init_sensor_id("accelerometer sensor", "body sensor", bs.name(), "accelerometer", mjSENS_ACCELEROMETER,
+                   mc_bs_to_mj_accelerometer_id);
+  }
+  reset(robot);
+}
+
+void MjRobot::reset(const mc_rbdyn::Robot & robot)
+{
   const auto & mbc = robot.mbc();
   const auto & rjo = robot.module().ref_joint_order();
   if(rjo.size() != mj_jnt_names.size())
@@ -224,6 +258,8 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   mj_to_mbc.resize(0);
   mj_prev_ctrl_q.resize(0);
   mj_prev_ctrl_alpha.resize(0);
+  mj_jnt_to_rjo.resize(0);
+  mj_to_mbc.resize(0);
   encoders = std::vector<double>(rjo.size(), 0.0);
   alphas = std::vector<double>(rjo.size(), 0.0);
   torques = std::vector<double>(rjo.size(), 0.0);
@@ -257,7 +293,7 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
       if(rjo_idx != -1)
       {
         encoders[rjo_idx] = mj_prev_ctrl_q.back();
-        alphas[rjo_idx] = mj_prev_ctrl_q.back();
+        alphas[rjo_idx] = mj_prev_ctrl_alpha.back();
       }
     }
     else
@@ -268,41 +304,12 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   mj_ctrl = mj_prev_ctrl_q;
   mj_next_ctrl_q = mj_prev_ctrl_q;
   mj_next_ctrl_alpha = mj_prev_ctrl_alpha;
-  auto init_sensor_id = [&](const char * mj_name, const char * mc_name, const std::string & sensor_name,
-                            const char * suffix, mjtSensor type, std::unordered_map<std::string, int> & mapping) {
-    auto mj_sensor = prefixed(fmt::format("{}_{}", sensor_name, suffix));
-    auto sensor_id = mujoco_get_sensor_id(*model, mj_sensor, type);
-    if(sensor_id == -1)
-    {
-      mc_rtc::log::error("[mc_mujoco] No MuJoCo {} for {} {} in {}, expected to find a {} named {}", mj_name,
-                         sensor_name, mc_name, name, mj_name, mj_sensor);
-    }
-    mapping[sensor_name] = sensor_id;
-  };
-  for(const auto & fs : robot.module().forceSensors())
-  {
-    wrenches[fs.name()] = sva::ForceVecd(Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
-    init_sensor_id("force sensor", "force sensor", fs.name(), "fsensor", mjSENS_FORCE, mc_fs_to_mj_fsensor_id);
-    init_sensor_id("torque sensor", "force sensor", fs.name(), "tsensor", mjSENS_TORQUE, mc_fs_to_mj_tsensor_id);
-  }
-  for(const auto & bs : robot.bodySensors())
-  {
-    if(bs.name() == "FloatingBase" || bs.name().empty())
-    {
-      continue;
-    }
-    gyros[bs.name()] = Eigen::Vector3d::Zero();
-    accelerometers[bs.name()] = Eigen::Vector3d::Zero();
-    init_sensor_id("gyro sensor", "body sensor", bs.name(), "gyro", mjSENS_GYRO, mc_bs_to_mj_gyro_id);
-    init_sensor_id("accelerometer sensor", "body sensor", bs.name(), "accelerometer", mjSENS_ACCELEROMETER,
-                   mc_bs_to_mj_accelerometer_id);
-  }
 }
 
 void MjSimImpl::startSimulation()
 {
-  std::vector<double> qInit;
-  std::vector<double> alphaInit;
+  qInit.resize(0);
+  alphaInit.resize(0);
   for(auto & r : robots)
   {
     const auto & robot = controller->robots().robot(r.name);
@@ -351,6 +358,7 @@ void MjSimImpl::startSimulation()
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
   }
+  mj_forward(model, data);
 
   if(!config.with_controller)
   {
@@ -537,15 +545,42 @@ void MjSimImpl::simStep()
   mj_step(model, data);
 }
 
+void MjSimImpl::resetSimulation()
+{
+  iterCount_ = 0;
+  reset_simulation_ = false;
+  if(controller)
+  {
+    controller->reset();
+  }
+  for(auto & robot : robots)
+  {
+    robot.reset(controller->robot(robot.name));
+  }
+  mj_resetData(model, data);
+  if(!mujoco_set_const(model, data, qInit, alphaInit))
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
+  }
+  mj_forward(model, data);
+}
+
 bool MjSimImpl::stepSimulation()
 {
+  if(reset_simulation_)
+  {
+    resetSimulation();
+  }
   auto start_step = clock::now();
   // Only run the GUI update if the simulation is paused
-  if(config.step_by_step && rem_steps == 0 && controller)
+  if(config.step_by_step && rem_steps == 0)
   {
-    controller->running = false;
-    controller->run();
-    controller->running = true;
+    if(controller)
+    {
+      controller->running = false;
+      controller->run();
+      controller->running = true;
+    }
     mj_sim_start_t = start_step;
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     rendering_cv_.notify_one();
@@ -692,6 +727,10 @@ bool MjSimImpl::render()
     {
       group_to_checkbox(i, i == mjNGROUP - 1);
     }
+    if(ImGui::Button("Reset simulation"))
+    {
+      reset_simulation_ = true;
+    }
     ImGui::End();
   }
   ImGui::Render();
@@ -760,6 +799,11 @@ void MjSim::stopSimulation()
 void MjSim::updateScene()
 {
   impl->updateScene();
+}
+
+void MjSim::resetSimulation()
+{
+  impl->resetSimulation();
 }
 
 bool MjSim::render()

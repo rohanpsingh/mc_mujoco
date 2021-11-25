@@ -28,6 +28,9 @@ public:
   /*! \brief Destructor */
   ~MjSim();
 
+  /** Reset the simulation and controller to the initial state */
+  void resetSimulation();
+
   /** Plays one step of physics simulation, should be called as often as possible
    *
    * \returns True if the controller fails and the simulation should stop

@@ -61,12 +61,12 @@ configure_file(config.in.h "${CMAKE_CURRENT_BINARY_DIR}/include/config.h")
 
 file(COPY "${MUJOCO_INCLUDE_DIR}/glfw3.h" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/GLFW/")
 
-add_library(mc_mujoco_lib STATIC ${mc_mujoco_lib_SRC} ${imgui_SRC} ${implot_SRC} ${ImGuizmo_SRC} ${mc_rtc-imgui-SRC} ${mc_rtc-imgui-HDR})
+add_library(mc_mujoco_lib STATIC ${mc_mujoco_lib_SRC} ${imgui_SRC} ${implot_SRC} ${ImGuizmo_SRC} ${mc_rtc-imgui-SRC} ${mc_rtc-imgui-HDR} $<TARGET_OBJECTS:pugixml>)
 target_include_directories(mc_mujoco_lib PUBLIC $<BUILD_INTERFACE:${MUJOCO_INCLUDE_DIR}>$<INSTALL_INTERFACE:include>)
 target_include_directories(mc_mujoco_lib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
-target_include_directories(mc_mujoco_lib PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}")
+target_include_directories(mc_mujoco_lib PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}" "${PROJECT_SOURCE_DIR}/ext/pugixml")
 target_link_libraries(mc_mujoco_lib PUBLIC mc_rtc::mc_control mc_rtc::mc_control_client ${CMAKE_DL_LIBS})
-target_link_libraries(mc_mujoco_lib PRIVATE ${LIB_MUJOCO} ${GLFW} GLEW::GLEW OpenGL::GL $<BUILD_INTERFACE:pugixml>)
+target_link_libraries(mc_mujoco_lib PRIVATE ${LIB_MUJOCO} ${GLFW} GLEW::GLEW OpenGL::GL)
 set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
 
 find_package(Boost REQUIRED COMPONENTS program_options)

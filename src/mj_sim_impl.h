@@ -101,6 +101,9 @@ struct MjRobot
   /** Initialize some data after the simulation has started */
   void initialize(mjModel * model, const mc_rbdyn::Robot & robot);
 
+  /** Reset the state based on the mc_rtc robot state */
+  void reset(const mc_rbdyn::Robot & robot);
+
   /** Update sensors based on model and data */
   void updateSensors(mc_control::MCGlobalController * gc, mjModel * model, mjData * data);
 
@@ -149,6 +152,12 @@ public:
   /** MuJoCo data */
   mjData * data = nullptr;
 
+  /** Initial state */
+  std::vector<double> qInit;
+
+  /** Initial velocity */
+  std::vector<double> alphaInit;
+
   /** GLFW window, might be null if the visualization is disabled */
   GLFWwindow * window = nullptr;
 
@@ -191,6 +200,9 @@ private:
   /** Number of steps left to play in step by step mode */
   size_t rem_steps = 0;
 
+  /** True if the simulation should be reset on the next step */
+  bool reset_simulation_ = false;
+
   /** Mutex used in rendering */
   std::mutex rendering_mutex_;
 
@@ -217,6 +229,8 @@ public:
   bool render();
 
   void stopSimulation();
+
+  void resetSimulation();
 
   void saveGUISettings();
 
