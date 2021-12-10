@@ -315,51 +315,54 @@ void MjRobot::reset(const mc_rbdyn::Robot & robot)
   mj_next_ctrl_alpha = mj_prev_ctrl_alpha;
 }
 
-void MjSimImpl::startSimulation()
+void MjSimImpl::setSimulationInitialState()
 {
-  qInit.resize(0);
-  alphaInit.resize(0);
-  for(auto & r : robots)
+  if(controller)
   {
-    const auto & robot = controller->robots().robot(r.name);
-    r.initialize(model, robot);
-    if(r.root_joint.size())
+    qInit.resize(0);
+    alphaInit.resize(0);
+    for(auto & r : robots)
     {
-      r.root_qpos_idx = qInit.size();
-      r.root_qvel_idx = alphaInit.size();
-      if(robot.mb().joint(0).dof() == 6)
+      const auto & robot = controller->robots().robot(r.name);
+      r.initialize(model, robot);
+      if(r.root_joint.size())
+      {
+        r.root_qpos_idx = qInit.size();
+        r.root_qvel_idx = alphaInit.size();
+        if(robot.mb().joint(0).dof() == 6)
+        {
+          const auto & t = robot.posW().translation();
+          for(size_t i = 0; i < 3; ++i)
+          {
+            qInit.push_back(t[i]);
+            // push linear/angular velocities
+            alphaInit.push_back(0);
+            alphaInit.push_back(0);
+          }
+          Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
+          qInit.push_back(q.w());
+          qInit.push_back(q.x());
+          qInit.push_back(q.y());
+          qInit.push_back(q.z());
+        }
+      }
+      else if(r.root_body_id != -1)
       {
         const auto & t = robot.posW().translation();
-        for(size_t i = 0; i < 3; ++i)
-        {
-          qInit.push_back(t[i]);
-          // push linear/angular velocities
-          alphaInit.push_back(0);
-          alphaInit.push_back(0);
-        }
+        model->body_pos[3 * r.root_body_id + 0] = t.x();
+        model->body_pos[3 * r.root_body_id + 1] = t.y();
+        model->body_pos[3 * r.root_body_id + 2] = t.z();
         Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
-        qInit.push_back(q.w());
-        qInit.push_back(q.x());
-        qInit.push_back(q.y());
-        qInit.push_back(q.z());
+        model->body_quat[4 * r.root_body_id + 0] = q.w();
+        model->body_quat[4 * r.root_body_id + 1] = q.x();
+        model->body_quat[4 * r.root_body_id + 2] = q.y();
+        model->body_quat[4 * r.root_body_id + 3] = q.z();
       }
-    }
-    else if(r.root_body_id != -1)
-    {
-      const auto & t = robot.posW().translation();
-      model->body_pos[3 * r.root_body_id + 0] = t.x();
-      model->body_pos[3 * r.root_body_id + 1] = t.y();
-      model->body_pos[3 * r.root_body_id + 2] = t.z();
-      Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
-      model->body_quat[4 * r.root_body_id + 0] = q.w();
-      model->body_quat[4 * r.root_body_id + 1] = q.x();
-      model->body_quat[4 * r.root_body_id + 2] = q.y();
-      model->body_quat[4 * r.root_body_id + 3] = q.z();
-    }
-    for(size_t i = 0; i < r.mj_jnt_names.size(); ++i)
-    {
-      qInit.push_back(r.encoders[r.mj_jnt_to_rjo[i]]);
-      alphaInit.push_back(r.alphas[r.mj_jnt_to_rjo[i]]);
+      for(size_t i = 0; i < r.mj_jnt_names.size(); ++i)
+      {
+        qInit.push_back(r.encoders[r.mj_jnt_to_rjo[i]]);
+        alphaInit.push_back(r.alphas[r.mj_jnt_to_rjo[i]]);
+      }
     }
   }
   // set initial qpos, qvel in mujoco
@@ -368,7 +371,11 @@ void MjSimImpl::startSimulation()
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
   }
   mj_forward(model, data);
+}
 
+void MjSimImpl::startSimulation()
+{
+  setSimulationInitialState();
   if(!config.with_controller)
   {
     controller.reset();
@@ -567,31 +574,28 @@ void MjSimImpl::simStep()
   mj_step(model, data);
 }
 
-void MjSimImpl::resetSimulation()
+void MjSimImpl::resetSimulation(const std::map<std::string, std::vector<double>> & reset_qs,
+                                const std::map<std::string, sva::PTransformd> & reset_pos)
 {
   iterCount_ = 0;
   reset_simulation_ = false;
   if(controller)
   {
-    controller->reset();
-  }
-  for(auto & robot : robots)
-  {
-    robot.reset(controller->robot(robot.name));
+    controller->reset(reset_qs, reset_pos);
+    for(auto & robot : robots)
+    {
+      robot.reset(controller->robot(robot.name));
+    }
   }
   mj_resetData(model, data);
-  if(!mujoco_set_const(model, data, qInit, alphaInit))
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
-  }
-  mj_forward(model, data);
+  setSimulationInitialState();
 }
 
 bool MjSimImpl::stepSimulation()
 {
   if(reset_simulation_)
   {
-    resetSimulation();
+    resetSimulation({}, {});
   }
   auto start_step = clock::now();
   // Only run the GUI update if the simulation is paused
@@ -823,9 +827,10 @@ void MjSim::updateScene()
   impl->updateScene();
 }
 
-void MjSim::resetSimulation()
+void MjSim::resetSimulation(const std::map<std::string, std::vector<double>> & reset_qs,
+                            const std::map<std::string, sva::PTransformd> & reset_pos)
 {
-  impl->resetSimulation();
+  impl->resetSimulation(reset_qs, reset_pos);
 }
 
 bool MjSim::render()
