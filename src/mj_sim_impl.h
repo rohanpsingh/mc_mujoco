@@ -214,9 +214,6 @@ private:
   /** Mutex used in rendering */
   std::mutex rendering_mutex_;
 
-  /** Condition variable used to communicate between the physics and the rendered */
-  std::condition_variable rendering_cv_;
-
 public:
   MjSimImpl(const MjConfiguration & config);
 
