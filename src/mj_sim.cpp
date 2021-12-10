@@ -196,11 +196,13 @@ void MjSimImpl::cleanup()
 
 void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
 {
+  mj_jnt_ids.resize(0);
   for(const auto & j : mj_jnt_names)
   {
     mj_jnt_ids.push_back(mj_name2id(model, mjOBJ_JOINT, j.c_str()));
   }
   auto fill_acuator_ids = [&](const std::vector<std::string> & names, std::vector<int> & ids) {
+    ids.resize(0);
     for(const auto & n : names)
     {
       if(n.size())
