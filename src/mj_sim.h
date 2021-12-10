@@ -28,8 +28,9 @@ public:
   /*! \brief Destructor */
   ~MjSim();
 
-  /** Reset the simulation and controller to the initial state */
-  void resetSimulation();
+  /** Reset the simulation and controller to the given state */
+  void resetSimulation(const std::map<std::string, std::vector<double>> & reset_qs = {},
+                       const std::map<std::string, sva::PTransformd> & reset_pos = {});
 
   /** Plays one step of physics simulation, should be called as often as possible
    *

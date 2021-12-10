@@ -238,7 +238,10 @@ public:
 
   void stopSimulation();
 
-  void resetSimulation();
+  void resetSimulation(const std::map<std::string, std::vector<double>> & reset_qs,
+                       const std::map<std::string, sva::PTransformd> & reset_pos);
+
+  void setSimulationInitialState();
 
   void saveGUISettings();
 
