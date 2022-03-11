@@ -1,28 +1,3 @@
-// https://github.com/CedricGuillemet/ImGuizmo
-// v 1.84 WIP
-//
-// The MIT License(MIT)
-//
-// Copyright(c) 2021 Cedric Guillemet
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files(the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions :
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-//
 #pragma once
 
 #include <stdint.h>     // intptr_t
@@ -2604,7 +2579,7 @@ typedef float GLfloat;
 #ifndef IMAPP_IMPL
 #define GLEXTERN extern
 #else
-#define GLEXTERN 
+#define GLEXTERN
 #endif
 #ifdef _WIN32
 GLEXTERN void(APIENTRY* glActiveTexture) (GLenum texture);
@@ -2729,7 +2704,7 @@ namespace ImApp
 #if defined(_MSC_VER) && _MSC_VER < 1400
                 0,0,148,0,0x001c0000,{ 0 },0,0,0,0,0,0,0,0,0,{ 0 },0,32,config.mWidth,config.mHeight,0,0,      // Visual C++ 6.0
 #else
-                0,0,156,0,0x001c0000,{ 0 },0,0,0,0,0,{ 0 },0,32,static_cast<DWORD>(config.mWidth), static_cast<DWORD>(config.mHeight),{ 0 }, 0,           // Visuatl Studio 2005
+                0,0,156,0,0x001c0000,{ 0 },0,0,0,0,0,{ 0 },0,32,static_cast<DWORD>(config.mWidth), static_cast<DWORD>(config.mHeight),{ 0 }, 0,           // Visual Studio 2005
 #endif
 #if(WINVER >= 0x0400)
                 0,0,0,0,0,0,
@@ -2906,7 +2881,7 @@ namespace ImApp
       int WindowInit(WININFO* info)
       {
          unsigned int    PixelFormat;
-         
+
          DWORD            dwExStyle, dwStyle;
          DEVMODE            dmScreenSettings;
          RECT            rec;
@@ -2952,7 +2927,7 @@ namespace ImApp
             //dwStyle = WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_OVERLAPPED;
             dwStyle = WS_VISIBLE | WS_OVERLAPPEDWINDOW | WS_POPUP;
          }
-         
+
          rec.left = 0;
          rec.top = 0;
          rec.right = mConfig.mWidth;
@@ -2964,7 +2939,7 @@ namespace ImApp
             (GetSystemMetrics(SM_CYSCREEN) - rec.bottom + rec.top) >> 1,
             rec.right - rec.left, rec.bottom - rec.top,
             0, 0, info->hInstance, 0);
-            
+
          if (!info->hWnd)
             return(0);
 
@@ -3176,7 +3151,7 @@ namespace ImApp
          return 0;
       }
       // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-      // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
+      // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so.
       // If text or lines are blurry when integrating ImGui in your engine: in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
       static void ImGui_RenderDrawLists(ImDrawData* draw_data)
       {
@@ -3478,7 +3453,8 @@ namespace ImApp
          io.KeyMap[ImGuiKey_Y] = 'Y';
          io.KeyMap[ImGuiKey_Z] = 'Z';
 
-         io.ImeWindowHandle = this->wininfo.hWnd;
+        // Edit: not in imgui
+         //io.ImeWindowHandle = this->wininfo.hWnd;
          //io.RenderDrawListsFn = ImGui_RenderDrawLists;       // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
          /*
          io.SetClipboardTextFn = ImGui_SetClipboardText;
