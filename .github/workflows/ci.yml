@@ -55,10 +55,10 @@ jobs:
         set -e
         mkdir -p /opt
         cd /opt
-        wget --quiet https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz
-        tar xzf mujoco210-linux-x86_64.tar.gz
-        mv mujoco210 mujoco
-        rm -rf mujoco210-linux-x86_64.tar.gz
+        wget --quiet https://github.com/deepmind/mujoco/releases/download/2.1.1/mujoco-2.1.1-linux-x86_64.tar.gz
+        tar xzf mujoco-2.1.1-linux-x86_64.tar.gz
+        mv mujoco-2.1.1 mujoco
+        rm -rf *.tar.gz
         echo "MUJOCO_ROOT_DIR=/opt/mujoco" >> $GITHUB_ENV
     - name: Build and test
       uses: jrl-umi3218/github-actions/build-cmake-project@master
