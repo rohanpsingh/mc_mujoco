@@ -17,17 +17,25 @@ endif()
 find_package(mc_rtc REQUIRED)
 
 option(USE_GL "Use Mujoco with OpenGL" ON)
-set(MUJOCO_SRC_DIR "${MUJOCO_ROOT_DIR}/bin")
+set(MUJOCO_BIN_DIR "${MUJOCO_ROOT_DIR}/bin")
 set(MUJOCO_INCLUDE_DIR "${MUJOCO_ROOT_DIR}/include")
+set(MUJOCO_LIB_DIR "${MUJOCO_ROOT_DIR}/lib")
+set(MUJOCO_SAMPLE_DIR "${MUJOCO_ROOT_DIR}/sample")
 message("${MUJOCO_INCLUDE_DIR}")
-message(STATUS "MuJoCo path: " ${MUJOCO_SRC_DIR})
+message(STATUS "MuJoCo root dir: " ${MUJOCO_ROOT_DIR})
 
 # find glfw library
 find_library(GLFW
   NAMES libglfw.so.3
-  PATHS ${MUJOCO_SRC_DIR}
+  PATHS ${MUJOCO_BIN_DIR}
   NO_DEFAULT_PATH)
-message(STATUS "GLFW lib found at: " ${GLFW})
+if(NOT GLFW)
+  set(BUILD_STATIC ON CACHE BOOL "" FORCE)
+  add_subdirectory(ext/glfw EXCLUDE_FROM_ALL)
+else()
+  message(STATUS "GLFW lib found at: " ${GLFW})
+  file(COPY "${MUJOCO_INCLUDE_DIR}/glfw3.h" DESTINATION "${PROJECT_BINARY_DIR}/src/include/GLFW/")
+endif()
 
 set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
@@ -35,9 +43,9 @@ find_package(GLEW REQUIRED)
 
 # find mujoco library
 if(USE_GL)
-  file(GLOB LIB_MUJOCO ${MUJOCO_SRC_DIR}/libmujoco[0-9][0-9][0-9].so)
+  file(GLOB LIB_MUJOCO ${MUJOCO_BIN_DIR}/libmujoco[0-9][0-9][0-9].so ${MUJOCO_LIB_DIR}/libmujoco.so.*)
 else()
-  file(GLOB LIB_MUJOCO ${MUJOCO_SRC_DIR}/libmujoco[0-9][0-9][0-9]nogl.so)
+  file(GLOB LIB_MUJOCO ${MUJOCO_BIN_DIR}/libmujoco[0-9][0-9][0-9]nogl.so ${MUJOCO_LIB_DIR}/libmujoco_nogl.so.*)
 endif()
 message(STATUS "MuJoCo lib found at: " ${LIB_MUJOCO})
 

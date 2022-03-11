@@ -1,3 +1,15 @@
+if(EXISTS ${MUJOCO_INCLUDE_DIR}/uitools.c)
+  set(uitools_SRC
+    ${MUJOCO_INCLUDE_DIR}/uitools.c
+    ${MUJOCO_INCLUDE_DIR}/uitools.h
+  )
+else()
+  set(uitools_SRC
+    ${MUJOCO_SAMPLE_DIR}/uitools.c
+    ${MUJOCO_SAMPLE_DIR}/uitools.h
+  )
+endif()
+
 set(mc_mujoco_lib_SRC
   mj_configuration.h
   mj_sim.cpp
@@ -6,8 +18,7 @@ set(mc_mujoco_lib_SRC
   mj_sim.h
   mj_sim_impl.h
   mj_utils.h
-  ${MUJOCO_INCLUDE_DIR}/uitools.c
-  ${MUJOCO_INCLUDE_DIR}/uitools.h
+  ${uitools_SRC}
   MujocoClient.cpp
   MujocoClient.h
   widgets/Arrow.h
@@ -59,14 +70,18 @@ add_subdirectory("${mc_rtc-imgui_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/mc_rtc-imgui
 
 configure_file(config.in.h "${CMAKE_CURRENT_BINARY_DIR}/include/config.h")
 
-file(COPY "${MUJOCO_INCLUDE_DIR}/glfw3.h" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/include/GLFW/")
-
 add_library(mc_mujoco_lib STATIC ${mc_mujoco_lib_SRC} ${imgui_SRC} ${implot_SRC} ${ImGuizmo_SRC} ${mc_rtc-imgui-SRC} ${mc_rtc-imgui-HDR} $<TARGET_OBJECTS:pugixml>)
-target_include_directories(mc_mujoco_lib PUBLIC $<BUILD_INTERFACE:${MUJOCO_INCLUDE_DIR}>$<INSTALL_INTERFACE:include>)
+target_include_directories(mc_mujoco_lib PUBLIC $<BUILD_INTERFACE:${MUJOCO_INCLUDE_DIR}> $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}> $<INSTALL_INTERFACE:include>)
 target_include_directories(mc_mujoco_lib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 target_include_directories(mc_mujoco_lib PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}" "${PROJECT_SOURCE_DIR}/ext/pugixml")
 target_link_libraries(mc_mujoco_lib PUBLIC mc_rtc::mc_control mc_rtc::mc_control_client ${CMAKE_DL_LIBS})
-target_link_libraries(mc_mujoco_lib PRIVATE ${LIB_MUJOCO} ${GLFW} GLEW::GLEW OpenGL::GL)
+target_link_libraries(mc_mujoco_lib PRIVATE ${LIB_MUJOCO} GLEW::GLEW OpenGL::GL)
+if(GLFW)
+  target_link_libraries(mc_mujoco_lib PRIVATE ${GLFW})
+else()
+  target_include_directories(mc_mujoco_lib PRIVATE "${PROJECT_SOURCE_DIR}/ext/glfw/include/GLFW")
+  target_link_libraries(mc_mujoco_lib PRIVATE glfw)
+endif()
 set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
 
 find_package(Boost REQUIRED COMPONENTS program_options)
