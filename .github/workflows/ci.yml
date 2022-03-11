@@ -33,7 +33,7 @@ jobs:
         compiler: ${{ matrix.compiler }}
         build-type: ${{ matrix.build-type }}
         ubuntu: |
-          apt: libmc-rtc-dev libglew-dev libboost-program-options-dev
+          apt: libmc-rtc-dev libxi-dev libxcursor-dev libxkbcommon-dev libxinerama-dev libxrandr-dev libglew-dev libboost-program-options-dev
           apt-mirrors:
             mc-rtc:
               cloudsmith: mc-rtc/head
