@@ -689,7 +689,11 @@ bool MjSimImpl::render()
     auto height = io.DisplaySize.y - 2 * top_margin;
     ImGui::SetNextWindowPos({0.8f * width - right_margin, top_margin}, ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize({0.2f * width, 0.3f * height}, ImGuiCond_FirstUseEver);
+#if mjVERSION_HEADER <= 210
     ImGui::Begin(fmt::format("mc_mujoco (MuJoCo {})", mj_version()).c_str());
+#else
+    ImGui::Begin(fmt::format("mc_mujoco (MuJoCo {})", mj_versionString()).c_str());
+#endif
     size_t nsamples = std::min(mj_sim_dt.size(), iterCount_);
     mj_sim_dt_average = 0;
     for(size_t i = 0; i < nsamples; ++i)
