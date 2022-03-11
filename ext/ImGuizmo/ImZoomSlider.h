@@ -1,20 +1,20 @@
 // https://github.com/CedricGuillemet/ImGuizmo
-// ImZoomSlider v 1.0
+// v 1.84 WIP
 //
 // The MIT License(MIT)
-// 
-// Copyright(c) 2020 Cedric Guillemet
-// 
+//
+// Copyright(c) 2021 Cedric Guillemet
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files(the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions :
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
@@ -50,7 +50,7 @@ namespace ImZoomSlider
       static bool movingScrollBarSvg = false;
       static bool sizingRBarSvg = false;
       static bool sizingLBarSvg = false;
-      static ImGuiID editingId = -1;
+      static ImGuiID editingId = (ImGuiID)-1;
       static float scrollingSource = 0.f;
       static float saveViewLower;
       static float saveViewHigher;
@@ -172,7 +172,7 @@ namespace ImZoomSlider
          if (!io.MouseDown[0])
          {
             sizingRBarSvg = false;
-            editingId = -1;
+            editingId = (ImGuiID)-1;
          }
          else
          {
@@ -184,7 +184,7 @@ namespace ImZoomSlider
          if (!io.MouseDown[0])
          {
             sizingLBarSvg = false;
-            editingId = -1;
+            editingId = (ImGuiID)-1;
          }
          else
          {
@@ -198,7 +198,7 @@ namespace ImZoomSlider
             if (!io.MouseDown[0])
             {
                movingScrollBarSvg = false;
-               editingId = -1;
+               editingId = (ImGuiID)-1;
             }
             else
             {
