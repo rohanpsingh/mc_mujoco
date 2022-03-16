@@ -5,7 +5,7 @@
     </asset>
     <worldbody>
       <body name="base_link">
-        <geom name="floor" pos="0 0 0" size="0 0 .25" type="plane" material="matplane" condim="3"/>
+        <geom name="floor" pos="0 0 0" size="0 0 .25" type="plane" material="matplane" condim="3" group="1"/>
       </body>
     </worldbody>
 </mujoco>
