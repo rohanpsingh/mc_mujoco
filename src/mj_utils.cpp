@@ -94,16 +94,16 @@ void uiEvent(mjuiState * state)
     {
       if(mj_sim->config.step_by_step)
       {
-	mj_sim->rem_steps = 1;
+        mj_sim->rem_steps = 1;
       }
     }
     // E: visualize frames
     if(state->key == GLFW_KEY_E)
     {
       mj_sim->options.frame += 1;
-      if(mj_sim->options.frame==mjNFRAME)
+      if(mj_sim->options.frame == mjNFRAME)
       {
-	mj_sim->options.frame = 0;
+        mj_sim->options.frame = 0;
       }
     }
     // T: make transparent
