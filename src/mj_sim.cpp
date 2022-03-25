@@ -754,7 +754,7 @@ bool MjSimImpl::render()
     {
       group_to_checkbox(i, i == mjNGROUP - 1);
     }
-    if(ImGui::Button("Reset simulation"))
+    if(ImGui::Button("Reset simulation", ImVec2(-FLT_MIN, 0.0f)))
     {
       reset_simulation_ = true;
     }
