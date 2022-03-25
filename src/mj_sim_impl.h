@@ -196,6 +196,9 @@ public:
   /** Average of the last 1024 iterations */
   double mj_sim_dt_average;
 
+  /** Number of steps left to play in step by step mode */
+  size_t rem_steps = 0;
+
   /** Robots in simulation and mc_rtc */
   std::vector<MjRobot> robots;
 
@@ -204,9 +207,6 @@ private:
   size_t iterCount_ = 0;
   /** How often we run mc_rtc relative to MuJoCo physics */
   size_t frameskip_ = 1;
-
-  /** Number of steps left to play in step by step mode */
-  size_t rem_steps = 0;
 
   /** True if the simulation should be reset on the next step */
   bool reset_simulation_ = false;
