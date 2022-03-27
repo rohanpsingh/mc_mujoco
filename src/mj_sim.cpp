@@ -738,6 +738,7 @@ bool MjSimImpl::render()
     };
     flag_to_gui("Show contact points [C]", mjVIS_CONTACTPOINT);
     flag_to_gui("Show contact forces [F]", mjVIS_CONTACTFORCE);
+    flag_to_gui("Make Transparent [T]", mjVIS_TRANSPARENT);
     auto group_to_checkbox = [&](size_t group, bool last) {
       bool show = options.geomgroup[group];
       if(ImGui::Checkbox(fmt::format("{}", group).c_str(), &show))
@@ -754,7 +755,7 @@ bool MjSimImpl::render()
     {
       group_to_checkbox(i, i == mjNGROUP - 1);
     }
-    if(ImGui::Button("Reset simulation"))
+    if(ImGui::Button("Reset simulation", ImVec2(-FLT_MIN, 0.0f)))
     {
       reset_simulation_ = true;
     }

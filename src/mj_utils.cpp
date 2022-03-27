@@ -84,6 +84,33 @@ void uiEvent(mjuiState * state)
     {
       mj_sim->saveGUISettings();
     }
+    // SPACE: play/pause the simulation
+    if(state->key == GLFW_KEY_SPACE)
+    {
+      mj_sim->config.step_by_step = !mj_sim->config.step_by_step;
+    }
+    // RIGHT: advance simulation by one control step
+    if(state->key == GLFW_KEY_RIGHT)
+    {
+      if(mj_sim->config.step_by_step)
+      {
+        mj_sim->rem_steps = 1;
+      }
+    }
+    // E: visualize frames
+    if(state->key == GLFW_KEY_E)
+    {
+      mj_sim->options.frame += 1;
+      if(mj_sim->options.frame == mjNFRAME)
+      {
+        mj_sim->options.frame = 0;
+      }
+    }
+    // T: make transparent
+    if(state->key == GLFW_KEY_T)
+    {
+      mj_sim->options.flags[mjVIS_TRANSPARENT] = !mj_sim->options.flags[mjVIS_TRANSPARENT];
+    }
     return;
   }
 
