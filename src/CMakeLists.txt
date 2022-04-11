@@ -80,7 +80,7 @@ if(GLFW)
   target_link_libraries(mc_mujoco_lib PRIVATE ${GLFW})
 else()
   target_include_directories(mc_mujoco_lib PRIVATE "${PROJECT_SOURCE_DIR}/ext/glfw/include/GLFW")
-  target_link_libraries(mc_mujoco_lib PRIVATE glfw)
+  target_link_libraries(mc_mujoco_lib PRIVATE $<BUILD_INTERFACE:glfw>)
 endif()
 set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
 
