@@ -586,6 +586,7 @@ void MjSimImpl::resetSimulation(const std::map<std::string, std::vector<double>>
     {
       robot.reset(controller->robot(robot.name));
     }
+    controller->running = true;
   }
   mj_resetData(model, data);
   setSimulationInitialState();
