@@ -372,6 +372,7 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   io.FontDefault =
       io.Fonts->AddFontFromMemoryTTF(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 18.0f, &fontConfig, ranges.Data);
   io.Fonts->Build();
+  io.IniFilename = "/tmp/imgui.ini";
 
   ImGui::StyleColorsLight();
   auto & style = ImGui::GetStyle();
