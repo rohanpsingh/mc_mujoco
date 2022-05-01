@@ -636,7 +636,7 @@ bool MjSimImpl::stepSimulation()
   {
     // Doing 'frameskip_' steps of sim + control
     // (But controller.run() will execute only when interp_idx == 0)
-    for (unsigned int i; i < frameskip_; i++)
+    for(unsigned int i; i < frameskip_; i++)
     {
       done = do_step();
     }
