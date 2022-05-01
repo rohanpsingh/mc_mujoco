@@ -634,7 +634,12 @@ bool MjSimImpl::stepSimulation()
   }
   if(config.step_by_step && rem_steps > 0)
   {
-    done = do_step();
+    // Doing 'frameskip_' steps of sim + control
+    // (But controller.run() will execute only when interp_idx == 0)
+    for (unsigned int i; i < frameskip_; i++)
+    {
+      done = do_step();
+    }
     rem_steps--;
   }
   if(config.sync_real_time)
