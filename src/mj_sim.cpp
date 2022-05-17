@@ -93,6 +93,8 @@ bool MjRobot::loadGain(const std::string & path_to_pd, const std::vector<std::st
   {
     mc_rtc::log::info("[mc_mujoco] {}, pgain = {}, dgain = {}", joints[i], default_pgain[i], default_dgain[i]);
     // push to kp and kd
+    default_kp.push_back(default_pgain[i]);
+    default_kd.push_back(default_dgain[i]);
     kp.push_back(default_pgain[i]);
     kd.push_back(default_dgain[i]);
   }
@@ -313,6 +315,10 @@ void MjRobot::reset(const mc_rbdyn::Robot & robot)
   mj_ctrl = mj_prev_ctrl_q;
   mj_next_ctrl_q = mj_prev_ctrl_q;
   mj_next_ctrl_alpha = mj_prev_ctrl_alpha;
+
+  // reset the PD gains to default values
+  kp = default_kp;
+  kd = default_kd;
 }
 
 void MjSimImpl::setSimulationInitialState()
@@ -373,6 +379,29 @@ void MjSimImpl::setSimulationInitialState()
   mj_forward(model, data);
 }
 
+void MjSimImpl::makeDatastoreCalls()
+{
+  // make_call for setting pd gains
+  for(auto & r : robots)
+  {
+    controller->controller().datastore().make_call(
+        "set_pdgains::" + r.name, [this, &r](const std::vector<double> & p_vec, const std::vector<double> & d_vec) {
+          const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+          if(p_vec.size() != rjo.size())
+          {
+            return false;
+          }
+          if(d_vec.size() != rjo.size())
+          {
+            return false;
+          }
+          r.kp = p_vec;
+          r.kd = d_vec;
+          return true;
+        });
+  }
+}
+
 void MjSimImpl::startSimulation()
 {
   setSimulationInitialState();
@@ -381,6 +410,8 @@ void MjSimImpl::startSimulation()
     controller.reset();
     return;
   }
+
+  makeDatastoreCalls();
 
   // get sim timestep and set the frameskip parameter
   double simTimestep = model->opt.timestep;
@@ -590,6 +621,7 @@ void MjSimImpl::resetSimulation(const std::map<std::string, std::vector<double>>
   }
   mj_resetData(model, data);
   setSimulationInitialState();
+  makeDatastoreCalls();
 }
 
 bool MjSimImpl::stepSimulation()

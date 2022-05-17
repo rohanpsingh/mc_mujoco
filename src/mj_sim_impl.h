@@ -60,9 +60,13 @@ struct MjRobot
   /** Accelerometer readings */
   std::map<std::string, Eigen::Vector3d> accelerometers;
 
-  /** Proportional gains for low-level PD control */
+  /** Proportional gains for low-level PD control (read from file) */
+  std::vector<double> default_kp = {};
+  /** Derivative gains for low-level PD control (read from file) */
+  std::vector<double> default_kd = {};
+  /** Proportional gains for low-level PD control (used in PD loop) */
   std::vector<double> kp = {};
-  /** Derivative gains for low-level PD control */
+  /** Derivative gains for low-level PD control (used in PD loop) */
   std::vector<double> kd = {};
 
   /** Names of the motors inside MuJoCo corresponding to the joints in \ref mj_jnt_names the name is empty if the joint
@@ -218,6 +222,8 @@ public:
   MjSimImpl(const MjConfiguration & config);
 
   void cleanup();
+
+  void makeDatastoreCalls();
 
   void startSimulation();
 
