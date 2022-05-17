@@ -385,18 +385,34 @@ void MjSimImpl::makeDatastoreCalls()
   for(auto & r : robots)
   {
     controller->controller().datastore().make_call(
-        "set_pdgains::" + r.name, [this, &r](const std::vector<double> & p_vec, const std::vector<double> & d_vec) {
+        r.name + "::SetPDGains", [this, &r](const std::vector<double> & p_vec, const std::vector<double> & d_vec) {
           const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
           if(p_vec.size() != rjo.size())
           {
+            mc_rtc::log::error("[mc_mujoco] {}::SetPDGains failed. p_vec size({})!=ref_joint_order size({})", r.name,
+                               p_vec.size(), rjo.size());
             return false;
           }
           if(d_vec.size() != rjo.size())
           {
+            mc_rtc::log::error("[mc_mujoco] {}::SetPDGains failed. d_vec size({})!=ref_joint_order size({})", r.name,
+                               d_vec.size(), rjo.size());
             return false;
           }
           r.kp = p_vec;
           r.kd = d_vec;
+          return true;
+        });
+  }
+  // make_call for reading pd gains
+  for(auto & r : robots)
+  {
+    controller->controller().datastore().make_call(
+        r.name + "::GetPDGains", [this, &r](std::vector<double> & p_vec, std::vector<double> & d_vec) {
+          p_vec.resize(0);
+          d_vec.resize(0);
+          p_vec = r.kp;
+          d_vec = r.kd;
           return true;
         });
   }
