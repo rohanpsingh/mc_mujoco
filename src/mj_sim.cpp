@@ -381,9 +381,9 @@ void MjSimImpl::setSimulationInitialState()
 
 void MjSimImpl::makeDatastoreCalls()
 {
-  // make_call for setting pd gains
   for(auto & r : robots)
   {
+    // make_call for setting pd gains (for all joints)
     controller->controller().datastore().make_call(
         r.name + "::SetPDGains", [this, &r](const std::vector<double> & p_vec, const std::vector<double> & d_vec) {
           const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
@@ -403,16 +403,48 @@ void MjSimImpl::makeDatastoreCalls()
           r.kd = d_vec;
           return true;
         });
-  }
-  // make_call for reading pd gains
-  for(auto & r : robots)
-  {
+
+    // make_call for setting pd gains (by name)
+    controller->controller().datastore().make_call(
+        r.name + "::SetPDGainsByName", [this, &r](const std::string & jn, const double & p, const double & d) {
+          const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+          auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
+          if(rjo_it == rjo.end())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::SetPDGainsByName failed. Joint {} not found in ref_joint_order.",
+                                 r.name, jn);
+            return false;
+          }
+          int rjo_idx = std::distance(rjo.begin(), rjo_it);
+          r.kp[rjo_idx] = p;
+          r.kd[rjo_idx] = d;
+          return true;
+        });
+
+    // make_call for reading pd gains (for all joints)
     controller->controller().datastore().make_call(
         r.name + "::GetPDGains", [this, &r](std::vector<double> & p_vec, std::vector<double> & d_vec) {
           p_vec.resize(0);
           d_vec.resize(0);
           p_vec = r.kp;
           d_vec = r.kd;
+          return true;
+        });
+
+    // make_call for reading pd gains (by name)
+    controller->controller().datastore().make_call(
+        r.name + "::GetPDGainsByName", [this, &r](const std::string & jn, double & p, double & d) {
+          const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+          auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
+          if(rjo_it == rjo.end())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::GetPDGainsByName failed. Joint {} not found in ref_joint_order.",
+                                 r.name, jn);
+            return false;
+          }
+          int rjo_idx = std::distance(rjo.begin(), rjo_it);
+          p = r.kp[rjo_idx];
+          d = r.kd[rjo_idx];
           return true;
         });
   }
