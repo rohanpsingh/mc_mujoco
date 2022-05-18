@@ -406,7 +406,7 @@ void MjSimImpl::makeDatastoreCalls()
 
     // make_call for setting pd gains (by name)
     controller->controller().datastore().make_call(
-        r.name + "::SetPDGainsByName", [this, &r](const std::string & jn, const double & p, const double & d) {
+        r.name + "::SetPDGainsByName", [this, &r](const std::string & jn, double p, double d) {
           const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
           auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
           if(rjo_it == rjo.end())
