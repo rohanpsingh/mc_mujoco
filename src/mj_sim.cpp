@@ -428,6 +428,19 @@ void MjSimImpl::makeDatastoreCalls()
           d_vec.resize(0);
           p_vec = r.kp;
           d_vec = r.kd;
+          const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+          if(p_vec.size() != rjo.size())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::GetPDGains failed. p_vec size({})!=ref_joint_order size({})", r.name,
+                                 p_vec.size(), rjo.size());
+            return false;
+          }
+          if(d_vec.size() != rjo.size())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::GetPDGains failed. d_vec size({})!=ref_joint_order size({})", r.name,
+                                 d_vec.size(), rjo.size());
+            return false;
+          }
           return true;
         });
 
