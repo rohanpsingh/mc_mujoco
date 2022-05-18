@@ -93,6 +93,8 @@ bool MjRobot::loadGain(const std::string & path_to_pd, const std::vector<std::st
   {
     mc_rtc::log::info("[mc_mujoco] {}, pgain = {}, dgain = {}", joints[i], default_pgain[i], default_dgain[i]);
     // push to kp and kd
+    default_kp.push_back(default_pgain[i]);
+    default_kd.push_back(default_dgain[i]);
     kp.push_back(default_pgain[i]);
     kd.push_back(default_dgain[i]);
   }
@@ -313,6 +315,10 @@ void MjRobot::reset(const mc_rbdyn::Robot & robot)
   mj_ctrl = mj_prev_ctrl_q;
   mj_next_ctrl_q = mj_prev_ctrl_q;
   mj_next_ctrl_alpha = mj_prev_ctrl_alpha;
+
+  // reset the PD gains to default values
+  kp = default_kp;
+  kd = default_kd;
 }
 
 void MjSimImpl::setSimulationInitialState()
@@ -373,6 +379,90 @@ void MjSimImpl::setSimulationInitialState()
   mj_forward(model, data);
 }
 
+void MjSimImpl::makeDatastoreCalls()
+{
+  for(auto & r : robots)
+  {
+    // make_call for setting pd gains (for all joints)
+    controller->controller().datastore().make_call(
+        r.name + "::SetPDGains", [this, &r](const std::vector<double> & p_vec, const std::vector<double> & d_vec) {
+          const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+          if(p_vec.size() != rjo.size())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::SetPDGains failed. p_vec size({})!=ref_joint_order size({})", r.name,
+                                 p_vec.size(), rjo.size());
+            return false;
+          }
+          if(d_vec.size() != rjo.size())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::SetPDGains failed. d_vec size({})!=ref_joint_order size({})", r.name,
+                                 d_vec.size(), rjo.size());
+            return false;
+          }
+          r.kp = p_vec;
+          r.kd = d_vec;
+          return true;
+        });
+
+    // make_call for setting pd gains (by name)
+    controller->controller().datastore().make_call(
+        r.name + "::SetPDGainsByName", [this, &r](const std::string & jn, double p, double d) {
+          const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+          auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
+          if(rjo_it == rjo.end())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::SetPDGainsByName failed. Joint {} not found in ref_joint_order.",
+                                 r.name, jn);
+            return false;
+          }
+          int rjo_idx = std::distance(rjo.begin(), rjo_it);
+          r.kp[rjo_idx] = p;
+          r.kd[rjo_idx] = d;
+          return true;
+        });
+
+    // make_call for reading pd gains (for all joints)
+    controller->controller().datastore().make_call(
+        r.name + "::GetPDGains", [this, &r](std::vector<double> & p_vec, std::vector<double> & d_vec) {
+          p_vec.resize(0);
+          d_vec.resize(0);
+          p_vec = r.kp;
+          d_vec = r.kd;
+          const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+          if(p_vec.size() != rjo.size())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::GetPDGains failed. p_vec size({})!=ref_joint_order size({})", r.name,
+                                 p_vec.size(), rjo.size());
+            return false;
+          }
+          if(d_vec.size() != rjo.size())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::GetPDGains failed. d_vec size({})!=ref_joint_order size({})", r.name,
+                                 d_vec.size(), rjo.size());
+            return false;
+          }
+          return true;
+        });
+
+    // make_call for reading pd gains (by name)
+    controller->controller().datastore().make_call(
+        r.name + "::GetPDGainsByName", [this, &r](const std::string & jn, double & p, double & d) {
+          const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+          auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
+          if(rjo_it == rjo.end())
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::GetPDGainsByName failed. Joint {} not found in ref_joint_order.",
+                                 r.name, jn);
+            return false;
+          }
+          int rjo_idx = std::distance(rjo.begin(), rjo_it);
+          p = r.kp[rjo_idx];
+          d = r.kd[rjo_idx];
+          return true;
+        });
+  }
+}
+
 void MjSimImpl::startSimulation()
 {
   setSimulationInitialState();
@@ -381,6 +471,8 @@ void MjSimImpl::startSimulation()
     controller.reset();
     return;
   }
+
+  makeDatastoreCalls();
 
   // get sim timestep and set the frameskip parameter
   double simTimestep = model->opt.timestep;
@@ -590,6 +682,7 @@ void MjSimImpl::resetSimulation(const std::map<std::string, std::vector<double>>
   }
   mj_resetData(model, data);
   setSimulationInitialState();
+  makeDatastoreCalls();
 }
 
 bool MjSimImpl::stepSimulation()
