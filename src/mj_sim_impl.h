@@ -252,6 +252,9 @@ public:
   {
     return controller.get();
   }
+
+  std::map<std::string, std::vector<double>> init_qs_;
+  std::map<std::string, sva::PTransformd> init_pos_;
 };
 
 } // namespace mc_mujoco

@@ -485,6 +485,11 @@ void MjSimImpl::startSimulation()
     controller->setEncoderValues(r.name, r.encoders);
   }
   controller->init(robots[0].encoders);
+  for(const auto & r : robots)
+  {
+    init_qs_[r.name] = r.encoders;
+    init_pos_[r.name] = controller->controller().robot(r.name).posW();
+  }
   controller->running = true;
 }
 
@@ -689,7 +694,7 @@ bool MjSimImpl::stepSimulation()
 {
   if(reset_simulation_)
   {
-    resetSimulation({}, {});
+    resetSimulation(init_qs_, init_pos_);
   }
   auto start_step = clock::now();
   // Only run the GUI update if the simulation is paused
