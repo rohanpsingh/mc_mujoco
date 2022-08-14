@@ -21,7 +21,7 @@
       <light mode="targetbodycom" target="base_link" directional="false" diffuse=".8 .8 .8" specular="0.3 0.3 0.3" pos="0 0 4.0" dir="0 0 -1" />
       <body name="base_link">
         <freejoint name="root" />
-        <inertial pos="0 0 0" mass="3" diaginertia="0.0005 0.0005 0.0008"/>
+        <inertial pos="0 0 0" mass="3" diaginertia="0.050112 0.046272 0.009984"/>
         <geom class="collision" />
         <geom class="visual" />
       </body>
