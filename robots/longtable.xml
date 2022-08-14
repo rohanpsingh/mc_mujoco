@@ -1,0 +1,29 @@
+<mujoco model="longtable">
+    <compiler meshdir="assets" texturedir="assets"/>
+    <asset>
+        <texture name="texmarble" type="cube" file="marble.png"/>
+        <material name="matmarble" texture="texmarble" rgba=".7 .7 .7 1"/>
+        <mesh name="longtable_mesh" file="longtable.stl" />
+    </asset>
+
+    <default>
+        <default class="collision">
+            <geom condim="3" group="0" />
+        </default>
+        <default class="visual">
+            <geom condim="3" group="1" conaffinity="0" contype="0" />
+        </default>
+    </default>
+
+    <worldbody>
+      <body name="base_link">
+        <freejoint name="root" />
+        <geom class="collision" type="box" size="0.5 0.75 .02" rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="collision" type="cylinder" size="0.03 0.2" pos="0.4 -0.7 0.58"  rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="collision" type="cylinder" size="0.03 0.2" pos="-0.4 -0.7 0.58"  rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="collision" type="cylinder" size="0.03 0.2" pos="0.4 0.7 0.58"  rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="collision" type="cylinder" size="0.03 0.2" pos="-0.4 0.7 0.58"  rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="visual" type="mesh" mesh="longtable_mesh" material="matmarble" />
+      </body>
+    </worldbody>
+</mujoco>
