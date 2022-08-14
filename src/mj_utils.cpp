@@ -111,6 +111,11 @@ void uiEvent(mjuiState * state)
     {
       mj_sim->options.flags[mjVIS_TRANSPARENT] = !mj_sim->options.flags[mjVIS_TRANSPARENT];
     }
+    // V: render convex hull
+    if(state->key == GLFW_KEY_V)
+    {
+      mj_sim->options.flags[mjVIS_CONVEXHULL] = !mj_sim->options.flags[mjVIS_CONVEXHULL];
+    }
     return;
   }
 
