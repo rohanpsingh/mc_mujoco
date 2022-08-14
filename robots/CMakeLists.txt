@@ -8,6 +8,7 @@ function(setup_env_object NAME ENV_OBJECT)
   configure_file(${NAME}.in.yaml "${YAML_OUT}")
   install(FILES "${YAML_OUT}" DESTINATION "${MC_MUJOCO_SHARE_DESTINATION}")
   install(FILES "${NAME}.xml" DESTINATION "${MC_MUJOCO_SHARE_DESTINATION}/${ENV_OBJECT}")
+  install(DIRECTORY assets DESTINATION "${MC_MUJOCO_SHARE_DESTINATION}/${ENV_OBJECT}")
 endfunction()
 
 setup_env_object(ground env)
