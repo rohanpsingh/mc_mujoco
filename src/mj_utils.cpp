@@ -116,6 +116,17 @@ void uiEvent(mjuiState * state)
     {
       mj_sim->options.flags[mjVIS_CONVEXHULL] = !mj_sim->options.flags[mjVIS_CONVEXHULL];
     }
+    // TAB: switch cameras
+    if(state->key == GLFW_KEY_TAB)
+    {
+      mj_sim->camera.fixedcamid += 1;
+      mj_sim->camera.type = mjtCamera(mjCAMERA_FIXED);
+      if (mj_sim->camera.fixedcamid >= mj_sim->model->ncam)
+      {
+	mj_sim->camera.fixedcamid = -1;
+	mj_sim->camera.type = mjtCamera(mjCAMERA_FREE);
+      }
+    }
     return;
   }
 
