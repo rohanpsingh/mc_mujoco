@@ -10,6 +10,7 @@ $ cd mc_mujoco
 $ mkdir build && cd build
 $ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=$HOME/.mujoco/mujoco212
 $ make
+$ make install
 ```
 Add the following line to your `~/.bashrc`:
 ```
