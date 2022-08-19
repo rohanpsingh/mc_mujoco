@@ -18,6 +18,15 @@ using clock = std::conditional_t<std::chrono::high_resolution_clock::is_steady,
                                  std::chrono::high_resolution_clock,
                                  std::chrono::steady_clock>;
 
+/** Mujoco free-floating unarticulated objects that do not exist in mc_rtc */
+struct MjObject
+{
+ /** Name in config */
+  std::string name;
+ /** Initial pose in world frame */
+  sva::PTransformd init_pose;
+};
+
 /** Interface between a Mujoco robot and an mc_rtc robot */
 struct MjRobot
 {
@@ -205,6 +214,9 @@ public:
 
   /** Robots in simulation and mc_rtc */
   std::vector<MjRobot> robots;
+
+  /** Objects in simulation */
+  std::vector<MjObject> objects;
 
 private:
   /** Number of MuJoCo iteration since the start */

@@ -132,22 +132,31 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   auto config_objects = mc_mujoco_cfg("objects", std::map<std::string, mc_rtc::Configuration>{});
   for(const auto & co : config_objects)
   {
-    std::string object = co.first;
-    if(bfs::exists(bfs::path(mc_mujoco::SHARE_FOLDER) / (object + ".yaml")))
+    MjObject object;
+    object.name = static_cast<std::string>(co.first);
+    object.init_pose = static_cast<sva::PTransformd>(co.second("init_pos"));
+    objects.push_back(object);
+
+    std::string module = co.second("module");
+    auto object_cfg_path = (bfs::path(mc_mujoco::SHARE_FOLDER) / (module + ".yaml")).string();
+    if(!bfs::exists(object_cfg_path))
     {
-      auto robot_cfg_path = (bfs::path(mc_mujoco::SHARE_FOLDER) / (object + ".yaml")).string();
-      auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
-      if(!robot_cfg.has("xmlModelPath"))
-      {
-        mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath in {}", robot_cfg_path);
-      }
-      std::string xmlFile = static_cast<std::string>(robot_cfg("xmlModelPath"));
-      mjObjects[object] = xmlFile;
-      if(!bfs::exists(xmlFile))
-      {
-        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}", xmlFile,
-                                                         object);
-      }
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] config cannot be found at {} for {} object",
+						       object_cfg_path,
+						       co.first);
+    }
+    auto object_cfg = mc_rtc::Configuration(object_cfg_path);
+    if(!object_cfg.has("xmlModelPath"))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath in {}", object_cfg_path);
+    }
+    std::string xmlFile = static_cast<std::string>(object_cfg("xmlModelPath"));
+    mjObjects[object.name] = xmlFile;
+    if(!bfs::exists(xmlFile))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}",
+						       xmlFile,
+						       co.first);
     }
   }
 
@@ -353,12 +362,9 @@ void MjSimImpl::setSimulationInitialState()
     qInit.resize(0);
     alphaInit.resize(0);
 
-    auto mc_mujoco_cfg_path = (bfs::path(USER_FOLDER) / "mc_mujoco.yaml").string();
-    auto mc_mujoco_cfg = mc_rtc::Configuration(mc_mujoco_cfg_path);
-    auto config_objects = mc_mujoco_cfg("objects", std::map<std::string, mc_rtc::Configuration>{});
-    for(const auto & co : config_objects)
+    for(auto & o : objects)
     {
-      sva::PTransformd pose = co.second("init_pos");
+      sva::PTransformd pose = o.init_pose;
       const auto & t = pose.translation();
       for(size_t i = 0; i < 3; ++i)
       {
