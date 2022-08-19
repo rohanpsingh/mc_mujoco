@@ -21,9 +21,9 @@ using clock = std::conditional_t<std::chrono::high_resolution_clock::is_steady,
 /** Mujoco free-floating unarticulated objects that do not exist in mc_rtc */
 struct MjObject
 {
- /** Name in config */
+  /** Name in config */
   std::string name;
- /** Initial pose in world frame */
+  /** Initial pose in world frame */
   sva::PTransformd init_pose;
 };
 

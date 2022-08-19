@@ -142,8 +142,7 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     if(!bfs::exists(object_cfg_path))
     {
       mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] config cannot be found at {} for {} object",
-						       object_cfg_path,
-						       co.first);
+                                                       object_cfg_path, co.first);
     }
     auto object_cfg = mc_rtc::Configuration(object_cfg_path);
     if(!object_cfg.has("xmlModelPath"))
@@ -154,9 +153,8 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     mjObjects[object.name] = xmlFile;
     if(!bfs::exists(xmlFile))
     {
-      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}",
-						       xmlFile,
-						       co.first);
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}", xmlFile,
+                                                       co.first);
     }
   }
 
