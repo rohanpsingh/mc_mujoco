@@ -121,10 +121,10 @@ void uiEvent(mjuiState * state)
     {
       mj_sim->camera.fixedcamid += 1;
       mj_sim->camera.type = mjtCamera(mjCAMERA_FIXED);
-      if (mj_sim->camera.fixedcamid >= mj_sim->model->ncam)
+      if(mj_sim->camera.fixedcamid >= mj_sim->model->ncam)
       {
-	mj_sim->camera.fixedcamid = -1;
-	mj_sim->camera.type = mjtCamera(mjCAMERA_FREE);
+        mj_sim->camera.fixedcamid = -1;
+        mj_sim->camera.type = mjtCamera(mjCAMERA_FREE);
       }
     }
     return;
@@ -259,9 +259,8 @@ void uiEvent(mjuiState * state)
  ******************************************************************************/
 
 bool mujoco_init(MjSimImpl * mj_sim,
-		 const std::map<std::string, std::string> & mujocoObjects,
-		 const std::map<std::string, std::string> & mcrtcObjects
-		 )
+                 const std::map<std::string, std::string> & mujocoObjects,
+                 const std::map<std::string, std::string> & mcrtcObjects)
 {
 #if mjVERSION_HEADER <= 200
   // Initialize MuJoCo

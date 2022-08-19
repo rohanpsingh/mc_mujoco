@@ -487,11 +487,11 @@ std::string merge_mujoco_models(const std::map<std::string, std::string> & mujoc
   pugi::xml_document out_doc;
   auto out = out_doc.append_child("mujoco");
   out.append_attribute("model").set_value("mc_mujoco");
-  for (const auto& [name, xmlFile] : mujocoObjects)
+  for(const auto & [name, xmlFile] : mujocoObjects)
   {
     merge_mujoco_model(name, xmlFile, out);
   }
-  for (const auto& [name, xmlFile] : mcrtcObjects)
+  for(const auto & [name, xmlFile] : mcrtcObjects)
   {
     merge_mujoco_model(name, xmlFile, out);
     mjRobots.push_back(mj_robot_from_xml(name, xmlFile, name));

@@ -145,9 +145,8 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
       mjObjects[object] = xmlFile;
       if(!bfs::exists(xmlFile))
       {
-	mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}",
-							 xmlFile,
-							 object);
+        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}", xmlFile,
+                                                         object);
       }
     }
   }
@@ -174,9 +173,8 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
       pdGainsFiles[r.name()] = robot_cfg("pdGainsPath", std::string(""));
       if(!bfs::exists(xmlFile))
       {
-        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}",
-                                                         xmlFile,
-							 r.name());
+        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}", xmlFile,
+                                                         r.name());
       }
     }
   }
@@ -364,9 +362,9 @@ void MjSimImpl::setSimulationInitialState()
       const auto & t = pose.translation();
       for(size_t i = 0; i < 3; ++i)
       {
-	qInit.push_back(t[i]);
-	alphaInit.push_back(0);
-	alphaInit.push_back(0);
+        qInit.push_back(t[i]);
+        alphaInit.push_back(0);
+        alphaInit.push_back(0);
       }
       Eigen::Quaterniond q = Eigen::Quaterniond(pose.rotation()).inverse();
       qInit.push_back(q.w());

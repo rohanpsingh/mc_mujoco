@@ -25,13 +25,13 @@ namespace mc_mujoco
  * \returns The path to the generated model
  */
 std::string merge_mujoco_models(const std::map<std::string, std::string> & mujocoObjects,
-				const std::map<std::string, std::string> & mcrtcObjects,
+                                const std::map<std::string, std::string> & mcrtcObjects,
                                 std::vector<MjRobot> & mjRobots);
 
 /*! Load XML model and initialize */
 bool mujoco_init(MjSimImpl * mj_sim,
                  const std::map<std::string, std::string> & mujocoObjects,
-		 const std::map<std::string, std::string> & mcrtcObjects);
+                 const std::map<std::string, std::string> & mcrtcObjects);
 
 /*! Create GLFW window */
 void mujoco_create_window(MjSimImpl * mj_sim);
