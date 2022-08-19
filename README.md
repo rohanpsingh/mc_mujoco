@@ -18,14 +18,31 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HOME}/.mujoco/mujoco212/lib:${HOME}/.m
 ```
 Then, to run the interface:
 ```sh
-$ cd mc_mujoco/build/
-$ ./src/mc_mujoco
+$ mc_mujoco
 ```
 ---
 
- 
-- (For old versions of mujoco) By default, we assume your mujoco key is at `${MUJOCO_ROOT_DIR}/bin/mjkey.txt` if that is not the case you can set the environment variabe `MUJOCO_KEY_PATH` to the path where your `mjkey.txt` is.
-- If Mujoco simulation becomes unstable `WARNING: Nan, Inf or huge value ... The simulation is unstable`. Try setting the mc-rtc control timestep lower (`0.001` or `0.002`).
+#### To load additional objects in the scene
+There are several steps needed to be followed:
+- First, create your object's XML file under `mc_mujoco/robots`. For example, [longtable.xml](https://github.com/rohanpsingh/mc_mujoco/blob/topic/load-xml-objects/robots/box.xml)
+- Then, create a simple config file with the `xmlModelPath` attribute. For example, [longtable.in.yaml](https://github.com/rohanpsingh/mc_mujoco/blob/topic/load-xml-objects/robots/box.in.yaml)
+- Then, install your object by adding it to the end of `mc_mujoco/robots/CMakeLists.txt`. For example, add [setup_env_object(box object)](https://github.com/rohanpsingh/mc_mujoco/blob/topic/load-xml-objects/robots/CMakeLists.txt#L15)  
+
+Your object is now created and installed. Next you want to tell `mc-mujoco` to load it and place it at the desired pose.  
+Find `~/.config/mc_rtc/mc_mujoco/mc_mujoco.yaml` (create it manually if needed) and paste the following:
+```yaml
+objects:
+  box1:
+    module: "box"
+    init_pos:
+      translation: [3.1, 0, 0.9]
+      rotation: [0, 0, 0]
+  box2:
+    module: "box"
+    init_pos:
+      translation: [3.7, 0.2, 0.9]
+      rotation: [0, 0, 0]
+```
 
 ### GUI
 
