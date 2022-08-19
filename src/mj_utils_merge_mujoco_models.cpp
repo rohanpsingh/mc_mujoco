@@ -478,24 +478,23 @@ static MjRobot mj_robot_from_xml(const std::string & name, const std::string & x
   return out;
 }
 
-std::string merge_mujoco_models(const std::vector<std::string> & robots,
-                                const std::vector<std::string> & xmlFiles,
+std::string merge_mujoco_models(const std::map<std::string, std::string> & mujocoObjects,
+                                const std::map<std::string, std::string> & mcrtcObjects,
                                 std::vector<MjRobot> & mjRobots)
 {
   mjRobots.clear();
-  if(xmlFiles.size() == 1)
-  {
-    mjRobots.push_back(mj_robot_from_xml(robots[0], xmlFiles[0]));
-    return xmlFiles[0];
-  }
   std::string outFile = (bfs::temp_directory_path() / bfs::unique_path("mc_mujoco_%%%%-%%%%-%%%%-%%%%.xml")).string();
   pugi::xml_document out_doc;
   auto out = out_doc.append_child("mujoco");
   out.append_attribute("model").set_value("mc_mujoco");
-  for(size_t i = 0; i < robots.size(); ++i)
+  for (const auto& [name, xmlFile] : mujocoObjects)
   {
-    merge_mujoco_model(robots[i], xmlFiles[i], out);
-    mjRobots.push_back(mj_robot_from_xml(robots[i], xmlFiles[i], robots[i]));
+    merge_mujoco_model(name, xmlFile, out);
+  }
+  for (const auto& [name, xmlFile] : mcrtcObjects)
+  {
+    merge_mujoco_model(name, xmlFile, out);
+    mjRobots.push_back(mj_robot_from_xml(name, xmlFile, name));
   }
   {
     std::ofstream ofs(outFile);
