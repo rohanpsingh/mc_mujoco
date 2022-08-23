@@ -889,7 +889,16 @@ void MjSimImpl::saveGUISettings()
       return;
     }
   }
-  mc_rtc::Configuration config;
+
+  auto config_path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
+  auto config = [&]() -> mc_rtc::Configuration {
+    if(bfs::exists(config_path))
+    {
+      return {config_path};
+    }
+    return {};
+  }();
+
   auto camera_c = config.add("camera");
   auto lookat = camera_c.array("lookat", 3);
   for(size_t i = 0; i < 3; ++i)
@@ -904,9 +913,8 @@ void MjSimImpl::saveGUISettings()
   visualize_c.add("visuals", static_cast<bool>(options.geomgroup[1]));
   visualize_c.add("contact-points", static_cast<bool>(options.flags[mjVIS_CONTACTPOINT]));
   visualize_c.add("contact-forces", static_cast<bool>(options.flags[mjVIS_CONTACTFORCE]));
-  auto path_out = (user_path / "mc_mujoco.yaml").string();
-  config.save(path_out);
-  mc_rtc::log::success("[mc_mujoco] Configuration saved to {}", path_out);
+  config.save(config_path);
+  mc_rtc::log::success("[mc_mujoco] Configuration saved to {}", config_path);
 }
 
 MjSim::MjSim(const MjConfiguration & config) : impl(new MjSimImpl(config))
