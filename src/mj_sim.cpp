@@ -900,6 +900,9 @@ void MjSimImpl::saveGUISettings()
   }();
 
   auto camera_c = config.add("camera");
+  camera_c.add("type", camera.type);
+  camera_c.add("fixedcamid", camera.fixedcamid);
+  camera_c.add("trackbodyid", camera.trackbodyid);
   auto lookat = camera_c.array("lookat", 3);
   for(size_t i = 0; i < 3; ++i)
   {
