@@ -121,7 +121,7 @@ void uiEvent(mjuiState * state)
     {
       mj_sim->camera.fixedcamid += 1;
       mj_sim->camera.type = mjtCamera(mjCAMERA_FIXED);
-      if(mj_sim->camera.fixedcamid >= mj_sim->model->ncam)
+      if(mj_sim->camera.fixedcamid == mj_sim->model->ncam)
       {
         mj_sim->camera.fixedcamid = -1;
         mj_sim->camera.type = mjtCamera(mjCAMERA_FREE);
@@ -329,6 +329,7 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   }();
   auto camera = config("camera", mc_rtc::Configuration{});
   auto lookat = camera("lookat", std::array<double, 3>{0.0, 0.0, 0.75});
+  mjv_defaultCamera(&mj_sim->camera);
   mj_sim->camera.lookat[0] = static_cast<float>(lookat[0]);
   mj_sim->camera.lookat[1] = static_cast<float>(lookat[1]);
   mj_sim->camera.lookat[2] = static_cast<float>(lookat[2]);
