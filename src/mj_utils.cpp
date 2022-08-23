@@ -120,11 +120,11 @@ void uiEvent(mjuiState * state)
     if(state->key == GLFW_KEY_TAB)
     {
       mj_sim->camera.fixedcamid += 1;
-      mj_sim->camera.type = mjtCamera(mjCAMERA_FIXED);
+      mj_sim->camera.type = mjCAMERA_FIXED;
       if(mj_sim->camera.fixedcamid == mj_sim->model->ncam)
       {
         mj_sim->camera.fixedcamid = -1;
-        mj_sim->camera.type = mjtCamera(mjCAMERA_FREE);
+        mj_sim->camera.type = mjCAMERA_FREE;
       }
     }
     return;
@@ -328,8 +328,21 @@ void mujoco_create_window(MjSimImpl * mj_sim)
     return {};
   }();
   auto camera = config("camera", mc_rtc::Configuration{});
-  auto lookat = camera("lookat", std::array<double, 3>{0.0, 0.0, 0.75});
   mjv_defaultCamera(&mj_sim->camera);
+  int ctype = static_cast<int>(camera("type", 0));
+  int cid = static_cast<int>(camera("fixedcamid", -1));
+  int bid = static_cast<int>(camera("trackbodyid", -1));
+  if(ctype == mjCAMERA_FIXED && cid < mj_sim->model->ncam)
+  {
+    mj_sim->camera.type = ctype;
+    mj_sim->camera.fixedcamid = cid;
+  }
+  if(ctype == mjCAMERA_TRACKING && bid < mj_sim->model->nbody)
+  {
+    mj_sim->camera.type = ctype;
+    mj_sim->camera.trackbodyid = bid;
+  }
+  auto lookat = camera("lookat", std::array<double, 3>{0.0, 0.0, 0.75});
   mj_sim->camera.lookat[0] = static_cast<float>(lookat[0]);
   mj_sim->camera.lookat[1] = static_cast<float>(lookat[1]);
   mj_sim->camera.lookat[2] = static_cast<float>(lookat[2]);
