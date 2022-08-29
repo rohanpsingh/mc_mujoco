@@ -119,9 +119,46 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     }
   };
 
-  std::vector<std::string> mujRobots;
-  std::vector<std::string> xmlFiles;
-  std::vector<std::string> pdGainsFiles;
+  /** Map between name and xml file path of objects specified in mujoco config **/
+  std::map<std::string, std::string> mjObjects;
+  /** Map between name and xml file path of objects specified in mc-rtc config **/
+  std::map<std::string, std::string> mcObjects;
+  /** Map between name and pdgains file path of objects specified in mc-rtc config **/
+  std::map<std::string, std::string> pdGainsFiles;
+
+  // load all robots named in mujoco config
+  auto mc_mujoco_cfg_path = (bfs::path(USER_FOLDER) / "mc_mujoco.yaml").string();
+  auto mc_mujoco_cfg = mc_rtc::Configuration(mc_mujoco_cfg_path);
+  auto config_objects = mc_mujoco_cfg("objects", std::map<std::string, mc_rtc::Configuration>{});
+  for(const auto & co : config_objects)
+  {
+    MjObject object;
+    object.name = static_cast<std::string>(co.first);
+    object.init_pose = static_cast<sva::PTransformd>(co.second("init_pos"));
+    objects.push_back(object);
+
+    std::string module = co.second("module");
+    auto object_cfg_path = (bfs::path(mc_mujoco::SHARE_FOLDER) / (module + ".yaml")).string();
+    if(!bfs::exists(object_cfg_path))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] config cannot be found at {} for {} object",
+                                                       object_cfg_path, co.first);
+    }
+    auto object_cfg = mc_rtc::Configuration(object_cfg_path);
+    if(!object_cfg.has("xmlModelPath"))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath in {}", object_cfg_path);
+    }
+    std::string xmlFile = static_cast<std::string>(object_cfg("xmlModelPath"));
+    mjObjects[object.name] = xmlFile;
+    if(!bfs::exists(xmlFile))
+    {
+      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}", xmlFile,
+                                                       co.first);
+    }
+  }
+
+  // load all robots named in mc-rtc config
 #if MC_RTC_VERSION_MAJOR > 1
   for(const auto & r_ptr : controller->robots())
   {
@@ -138,24 +175,19 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
       {
         mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath in {}", robot_cfg_path);
       }
-      mujRobots.push_back(r.name());
-      xmlFiles.push_back(static_cast<std::string>(robot_cfg("xmlModelPath")));
-      pdGainsFiles.push_back(robot_cfg("pdGainsPath", std::string("")));
-      if(!bfs::exists(xmlFiles.back()))
+      std::string xmlFile = static_cast<std::string>(robot_cfg("xmlModelPath"));
+      mcObjects[r.name()] = xmlFile;
+      pdGainsFiles[r.name()] = robot_cfg("pdGainsPath", std::string(""));
+      if(!bfs::exists(xmlFile))
       {
-        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {}",
-                                                         xmlFiles.back());
+        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}", xmlFile,
+                                                         r.name());
       }
     }
   }
 
-  if(!xmlFiles.size())
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("No Mujoco model associated to any robots in the controller");
-  }
-
   // initial mujoco here and load XML model
-  bool initialized = mujoco_init(this, mujRobots, xmlFiles);
+  bool initialized = mujoco_init(this, mjObjects, mcObjects);
   if(!initialized)
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Initialized failed.");
@@ -172,12 +204,12 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     {
       continue;
     }
-    if(!bfs::exists(pdGainsFiles[i]))
+    if(!bfs::exists(pdGainsFiles[r.name]))
     {
       mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file for {} cannot be found at {}", r.name,
-                                                       pdGainsFiles.back());
+                                                       pdGainsFiles[r.name]);
     }
-    r.loadGain(pdGainsFiles[i], controller->robots().robot(r.name).module().ref_joint_order());
+    r.loadGain(pdGainsFiles[r.name], controller->robots().robot(r.name).module().ref_joint_order());
   }
 
   if(config.with_visualization)
@@ -327,6 +359,24 @@ void MjSimImpl::setSimulationInitialState()
   {
     qInit.resize(0);
     alphaInit.resize(0);
+
+    for(auto & o : objects)
+    {
+      sva::PTransformd pose = o.init_pose;
+      const auto & t = pose.translation();
+      for(size_t i = 0; i < 3; ++i)
+      {
+        qInit.push_back(t[i]);
+        alphaInit.push_back(0);
+        alphaInit.push_back(0);
+      }
+      Eigen::Quaterniond q = Eigen::Quaterniond(pose.rotation()).inverse();
+      qInit.push_back(q.w());
+      qInit.push_back(q.x());
+      qInit.push_back(q.y());
+      qInit.push_back(q.z());
+    }
+
     for(auto & r : robots)
     {
       const auto & robot = controller->robots().robot(r.name);
@@ -484,7 +534,8 @@ void MjSimImpl::startSimulation()
   {
     controller->setEncoderValues(r.name, r.encoders);
   }
-  controller->init(robots[0].encoders);
+  // TODO: this is bad because it assumes fixed order of mc-rtc loaded robots
+  controller->init(robots[1].encoders);
   for(const auto & r : robots)
   {
     init_qs_[r.name] = r.encoders;

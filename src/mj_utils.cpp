@@ -258,7 +258,9 @@ void uiEvent(mjuiState * state)
  * Mujoco utility functions
  ******************************************************************************/
 
-bool mujoco_init(MjSimImpl * mj_sim, const std::vector<std::string> & robots, const std::vector<std::string> & xmlFiles)
+bool mujoco_init(MjSimImpl * mj_sim,
+                 const std::map<std::string, std::string> & mujocoObjects,
+                 const std::map<std::string, std::string> & mcrtcObjects)
 {
 #if mjVERSION_HEADER <= 200
   // Initialize MuJoCo
@@ -279,7 +281,7 @@ bool mujoco_init(MjSimImpl * mj_sim, const std::vector<std::string> & robots, co
 #endif
 
   // Load the model;
-  std::string model = merge_mujoco_models(robots, xmlFiles, mj_sim->robots);
+  std::string model = merge_mujoco_models(mujocoObjects, mcrtcObjects, mj_sim->robots);
   char error[1000] = "Could not load XML model";
   mj_sim->model = mj_loadXML(model.c_str(), 0, error, 1000);
   if(!mj_sim->model)
