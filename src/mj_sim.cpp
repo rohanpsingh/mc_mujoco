@@ -127,8 +127,14 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   std::map<std::string, std::string> pdGainsFiles;
 
   // load all robots named in mujoco config
-  auto mc_mujoco_cfg_path = (bfs::path(USER_FOLDER) / "mc_mujoco.yaml").string();
-  auto mc_mujoco_cfg = mc_rtc::Configuration(mc_mujoco_cfg_path);
+  auto mc_mujoco_cfg_path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
+  auto mc_mujoco_cfg = [&mc_mujoco_cfg_path]() -> mc_rtc::Configuration {
+    if(bfs::exists(mc_mujoco_cfg_path))
+    {
+      return {mc_mujoco_cfg_path};
+    }
+    return {};
+  }();
   auto config_objects = mc_mujoco_cfg("objects", std::map<std::string, mc_rtc::Configuration>{});
   for(const auto & co : config_objects)
   {
