@@ -50,6 +50,17 @@ objects:
 
 An object is selected by left-double-click. The user can then apply forces and torques on the selected object by holding `Ctrl` key and dragging the mouse.
 
+
+## Citation
+```
+@article{singh2022mcmujoco,
+  title={mc-mujoco: Simulating Articulated Robots with FSM Controllers in MuJoCo},
+  author={Singh, Rohan Pratap and Gergondet, Pierre and Kanehiro, Fumio},
+  journal={arXiv preprint arXiv:2209.00274},
+  year={2022}
+}
+```
+
 ### Credits
 
 This package includes code from:
