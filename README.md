@@ -1,6 +1,8 @@
-# Mujoco interface for mc-rtc
+# mujoco interface for mc-rtc
+![Screenshot from 2022-08-12 17-09-16](https://user-images.githubusercontent.com/16384313/188832982-1a1263e4-ce33-4dc7-804a-589d151670b3.png)
 
-### Usage
+
+## Usage
 
 Assuming that you have mujoco installed under `${HOME}/.mujoco/mujoco212`,
 
@@ -43,13 +45,15 @@ objects:
       translation: [3.7, 0.2, 0.9]
       rotation: [0, 0, 0]
 ```
+---
 
-### GUI
+#### GUI: Mouse Interaction
 
-**Apply external force**
+An object is selected by left-double-click. The user can then apply forces and torques on the selected object by holding `Ctrl` key and dragging the left-mouse-button for torques and right-mouse-button for forces.
 
-An object is selected by left-double-click. The user can then apply forces and torques on the selected object by holding `Ctrl` key and dragging the mouse.
+## Example
 
+A basic example of what you can do using this package is [here](https://github.com/rohanpsingh/grasp-fsm-sample-controller).
 
 ## Citation
 ```
