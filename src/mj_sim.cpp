@@ -540,13 +540,12 @@ void MjSimImpl::startSimulation()
   {
     controller->setEncoderValues(r.name, r.encoders);
   }
-  // TODO: this is bad because it assumes fixed order of mc-rtc loaded robots
-  controller->init(robots[1].encoders);
   for(const auto & r : robots)
   {
     init_qs_[r.name] = r.encoders;
     init_pos_[r.name] = controller->controller().robot(r.name).posW();
   }
+  controller->init(init_qs_, init_pos_);
   controller->running = true;
 }
 
