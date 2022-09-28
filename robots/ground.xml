@@ -1,9 +1,17 @@
 <mujoco model="ground">
+
+    <visual>
+      <headlight diffuse="0.6 0.6 0.6"  ambient="0.3 0.3 0.3" specular="0 0 0"/>
+      <rgba haze="0.15 0.25 0.35 1"/>
+    </visual>
+
     <asset>
         <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>  
         <material name="matplane" reflectance="0.3" texture="texplane" texrepeat="1 1" texuniform="true"/>
     </asset>
+
     <worldbody>
+      <light pos="0 0 2" dir="0 0 -1" directional="true"/>
       <body name="base_link">
         <geom name="floor" pos="0 0 0" size="0 0 .25" type="plane" material="matplane" condim="3" group="1"/>
       </body>
