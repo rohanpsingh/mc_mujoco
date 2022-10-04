@@ -307,6 +307,7 @@ void MjRobot::reset(const mc_rbdyn::Robot & robot)
   mj_to_mbc.resize(0);
   mj_prev_ctrl_q.resize(0);
   mj_prev_ctrl_alpha.resize(0);
+  mj_prev_ctrl_jointTorque.resize(0);
   mj_jnt_to_rjo.resize(0);
   mj_to_mbc.resize(0);
   encoders = std::vector<double>(rjo.size(), 0.0);
@@ -339,10 +340,12 @@ void MjRobot::reset(const mc_rbdyn::Robot & robot)
       }
       mj_prev_ctrl_q.push_back(robot.mbc().q[jIndex][0]);
       mj_prev_ctrl_alpha.push_back(robot.mbc().alpha[jIndex][0]);
+      mj_prev_ctrl_jointTorque.push_back(robot.mbc().jointTorque[jIndex][0]);
       if(rjo_idx != -1)
       {
         encoders[rjo_idx] = mj_prev_ctrl_q.back();
         alphas[rjo_idx] = mj_prev_ctrl_alpha.back();
+        torques[rjo_idx] = mj_prev_ctrl_jointTorque.back();
       }
     }
     else
@@ -350,9 +353,10 @@ void MjRobot::reset(const mc_rbdyn::Robot & robot)
       mj_to_mbc.push_back(-1);
     }
   }
-  mj_ctrl = mj_prev_ctrl_q;
+  mj_ctrl = std::vector<double>(mj_prev_ctrl_q.size(), 0.0);
   mj_next_ctrl_q = mj_prev_ctrl_q;
   mj_next_ctrl_alpha = mj_prev_ctrl_alpha;
+  mj_next_ctrl_jointTorque = mj_prev_ctrl_jointTorque;
 
   // reset the PD gains to default values
   kp = default_kp;
@@ -641,6 +645,7 @@ void MjRobot::updateControl(const mc_rbdyn::Robot & robot)
 {
   mj_prev_ctrl_q = mj_next_ctrl_q;
   mj_prev_ctrl_alpha = mj_next_ctrl_alpha;
+  mj_prev_ctrl_jointTorque = mj_next_ctrl_jointTorque;
   size_t ctrl_idx = 0;
   for(size_t i = 0; i < mj_to_mbc.size(); ++i)
   {
@@ -649,6 +654,7 @@ void MjRobot::updateControl(const mc_rbdyn::Robot & robot)
     {
       mj_next_ctrl_q[ctrl_idx] = robot.mbc().q[jIndex][0];
       mj_next_ctrl_alpha[ctrl_idx] = robot.mbc().alpha[jIndex][0];
+      mj_next_ctrl_jointTorque[ctrl_idx] = robot.mbc().jointTorque[jIndex][0];
       ctrl_idx++;
     }
   }
@@ -672,10 +678,21 @@ void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_id
     // compute desired alpha using interpolation
     double alpha_ref = (interp_idx + 1) * (mj_next_ctrl_alpha[i] - mj_prev_ctrl_alpha[i]) / frameskip_;
     alpha_ref += mj_prev_ctrl_alpha[i];
+    // compute desired jointTorque using interpolation
+    double torque_ref = (interp_idx + 1) * (mj_next_ctrl_jointTorque[i] - mj_prev_ctrl_jointTorque[i]) / frameskip_;
+    torque_ref += mj_prev_ctrl_jointTorque[i];
     if(mot_id != -1)
     {
-      // compute desired torque using PD control
-      mj_ctrl[i] = PD(i, q_ref, encoders[rjo_id], alpha_ref, alphas[rjo_id]);
+      if(torque_ref != 0)
+      {
+        // if torque reference is available, it will override PD control
+        mj_ctrl[i] = torque_ref;
+      }
+      else
+      {
+        // else compute desired torque using PD control
+        mj_ctrl[i] = PD(i, q_ref, encoders[rjo_id], alpha_ref, alphas[rjo_id]);
+      }
       double ratio = model.actuator_gear[6 * mot_id];
       data.ctrl[mot_id] = mj_ctrl[i] / ratio;
     }
