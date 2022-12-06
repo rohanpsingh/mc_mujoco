@@ -25,6 +25,8 @@ struct MjConfiguration
   bool step_by_step = false;
   /** mc_rtc configuration file */
   std::string mc_config = "";
+  /** Use torque-control rather than position control */
+  bool torque_control = false;
 };
 
 } // namespace mc_mujoco

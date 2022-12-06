@@ -660,7 +660,11 @@ void MjRobot::updateControl(const mc_rbdyn::Robot & robot)
   }
 }
 
-void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_idx, size_t frameskip_)
+void MjRobot::sendControl(const mjModel & model,
+                          mjData & data,
+                          size_t interp_idx,
+                          size_t frameskip_,
+                          bool torque_control)
 {
   for(size_t i = 0; i < mj_ctrl.size(); ++i)
   {
@@ -683,7 +687,7 @@ void MjRobot::sendControl(const mjModel & model, mjData & data, size_t interp_id
     torque_ref += mj_prev_ctrl_jointTorque[i];
     if(mot_id != -1)
     {
-      if(torque_ref != 0)
+      if(torque_control && torque_ref != 0)
       {
         // if torque reference is available, it will override PD control
         mj_ctrl[i] = torque_ref;
@@ -726,7 +730,7 @@ bool MjSimImpl::controlStep()
   // On each control iter
   for(auto & r : robots)
   {
-    r.sendControl(*model, *data, interp_idx, frameskip_);
+    r.sendControl(*model, *data, interp_idx, frameskip_, config.torque_control);
   }
   iterCount_++;
   return false;

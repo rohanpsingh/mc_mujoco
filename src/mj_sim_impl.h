@@ -136,7 +136,7 @@ struct MjRobot
   void updateControl(const mc_rbdyn::Robot & robot);
 
   /** Send control to MuJoCo */
-  void sendControl(const mjModel & model, mjData & data, size_t interp_idx, size_t frameskip_);
+  void sendControl(const mjModel & model, mjData & data, size_t interp_idx, size_t frameskip_, bool torque_control);
 
   /** Run PD control for a given joint */
   double PD(double jnt_id, double q_ref, double q, double qdot_ref, double qdot);
