@@ -689,12 +689,10 @@ void MjRobot::sendControl(const mjModel & model,
     {
       if(torque_control && torque_ref != 0)
       {
-        // if torque reference is available, it will override PD control
         mj_ctrl[i] = torque_ref;
       }
       else
       {
-        // else compute desired torque using PD control
         mj_ctrl[i] = PD(i, q_ref, encoders[rjo_id], alpha_ref, alphas[rjo_id]);
       }
       double ratio = model.actuator_gear[6 * mot_id];
