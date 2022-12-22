@@ -254,6 +254,12 @@ void uiEvent(mjuiState * state)
   }
 }
 
+void uiRender(mjuiState * state)
+{
+  auto mj_sim = static_cast<MjSimImpl *>(state->userdata);
+  mj_sim->render();
+}
+
 /*******************************************************************************
  * Mujoco utility functions
  ******************************************************************************/
@@ -364,7 +370,11 @@ void mujoco_create_window(MjSimImpl * mj_sim)
 
   // install GLFW event callback
   mj_sim->uistate.userdata = static_cast<void *>(mj_sim);
+#if mjVERSION_HEADER >= 230
+  uiSetCallback(mj_sim->window, &mj_sim->uistate, uiEvent, uiLayout, uiRender, nullptr);
+#else
   uiSetCallback(mj_sim->window, &mj_sim->uistate, uiEvent, uiLayout);
+#endif
   uiLayout(&mj_sim->uistate);
 
   /** Initialize Dear Imgui */

@@ -114,10 +114,14 @@ struct MjRobot
   std::vector<double> mj_prev_ctrl_q;
   /** Previous velocity desired by mc_rtc */
   std::vector<double> mj_prev_ctrl_alpha;
+  /** Previous torque desired by mc_rtc */
+  std::vector<double> mj_prev_ctrl_jointTorque;
   /** Next position desired by mc_rtc */
   std::vector<double> mj_next_ctrl_q;
   /** Next velocity desired by mc_rtc */
   std::vector<double> mj_next_ctrl_alpha;
+  /** Next torque desired by mc_rtc */
+  std::vector<double> mj_next_ctrl_jointTorque;
 
   /** Initialize some data after the simulation has started */
   void initialize(mjModel * model, const mc_rbdyn::Robot & robot);
@@ -132,7 +136,7 @@ struct MjRobot
   void updateControl(const mc_rbdyn::Robot & robot);
 
   /** Send control to MuJoCo */
-  void sendControl(const mjModel & model, mjData & data, size_t interp_idx, size_t frameskip_);
+  void sendControl(const mjModel & model, mjData & data, size_t interp_idx, size_t frameskip_, bool torque_control);
 
   /** Run PD control for a given joint */
   double PD(double jnt_id, double q_ref, double q, double qdot_ref, double qdot);

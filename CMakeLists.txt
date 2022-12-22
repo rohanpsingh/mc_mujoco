@@ -25,6 +25,7 @@ if(NOT EXISTS "${MUJOCO_INCLUDE_DIR}/mujoco.h")
 endif()
 set(MUJOCO_LIB_DIR "${MUJOCO_ROOT_DIR}/lib")
 set(MUJOCO_SAMPLE_DIR "${MUJOCO_ROOT_DIR}/sample")
+set(MUJOCO_SIMULATE_DIR "${MUJOCO_ROOT_DIR}/simulate")
 message("${MUJOCO_INCLUDE_DIR}")
 message(STATUS "MuJoCo root dir: " ${MUJOCO_ROOT_DIR})
 
