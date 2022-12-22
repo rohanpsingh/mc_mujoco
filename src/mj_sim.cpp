@@ -4,6 +4,8 @@
 #include <cassert>
 #include <chrono>
 #include <type_traits>
+#include <cstdio>
+#include <unordered_map>
 
 #include "MujocoClient.h"
 #include "config.h"
@@ -437,6 +439,94 @@ void MjSimImpl::setSimulationInitialState()
 
 void MjSimImpl::makeDatastoreCalls()
 {
+
+  // store the name, position, and orientation of the object from the simulation into the DataStore
+  std::vector<std::string> objectsNames;
+  std::vector<double> objectsPositions;
+  std::vector<double> objectsOrientations;
+  std::vector<double> handsPositions;
+  std::vector<double> handsOrientations;
+  std::unordered_map<std::string, int> mapOfObjectsNames;
+  listOfHandIndex.resize(0);
+
+  for (unsigned int i = 0; i < model->nbody; i++){
+
+    std::string objectName = mj_id2name(model, mjOBJ_BODY, i);
+    if (i > 0 && i < 10 && objectName.compare("longtable_base_link") != 0)
+    {
+      objectName = objectName.substr(0, objectName.find('_'));
+      objectsNames.push_back(objectName);
+      objectsPositions.push_back(data->xpos[i*3]);
+      objectsPositions.push_back(data->xpos[i*3+1]);
+      objectsPositions.push_back(data->xpos[i*3+2]);
+      objectsOrientations.push_back(data->xquat[i*4]);
+      objectsOrientations.push_back(data->xquat[i*4+1]);
+      objectsOrientations.push_back(data->xquat[i*4+2]);
+      objectsOrientations.push_back(data->xquat[i*4+3]);
+      listOfObjectIndex.push_back(i);
+      mapOfObjectsNames[objectName] = i;
+      std::cout << "Name: "<< objectName << ", id: " << i;
+      std::cout << ", position: (" << data->xpos[i*3] << ", " << data->xpos[i*3+1] << ", " << data->xpos[i*3+2] << ")";
+      std::cout << " and orientation: (" << data->xquat[i*4] << ", " << data->xquat[i*4+1] << ", " << data->xquat[i*4+2] << ", " << data->xquat[i*4+3] <<")\n";
+    }
+
+    else if(objectName.compare("hrp4cr_R_HAND_MIDDLE_J0_LINK") == 0 || objectName.compare("hrp4cr_L_HAND_MIDDLE_J0_LINK") == 0)
+    {
+      std::cout << "Add a hand to the dataStore" << std::endl;
+      handsPositions.push_back(data->xpos[i*3]);
+      handsPositions.push_back(data->xpos[i*3+1]);
+      handsPositions.push_back(data->xpos[i*3+2]);
+      handsOrientations.push_back(data->xquat[i*4]);
+      handsOrientations.push_back(data->xquat[i*4+1]);
+      handsOrientations.push_back(data->xquat[i*4+2]);
+      handsOrientations.push_back(data->xquat[i*4+3]);
+      listOfHandIndex.push_back(i);
+      std::cout << "Name: "<< objectName << ", id: " << i;
+      std::cout << ", position: (" << data->xpos[i*3] << ", " << data->xpos[i*3+1] << ", " << data->xpos[i*3+2] << ")";
+      std::cout << " and orientation: (" << data->xquat[i*4] << ", " << data->xquat[i*4+1] << ", " << data->xquat[i*4+2] << ", " << data->xquat[i*4+3] <<")\n";
+    }
+  }
+  std::cout << std::endl;
+
+  std::unordered_map<int, std::vector<double>> mapOfGoalPositions;
+  std::unordered_map<int, std::vector<double>> mapOfGoalOrientations;
+
+  std::cout << "List of geoms to grab in the sim:" << std::endl;
+  for (unsigned int i = 0; i < model->ngeom; i++)
+  {
+    const char* geomNameTmp = mj_id2name(model, mjOBJ_GEOM, i);
+    if(geomNameTmp != NULL)
+    {
+      std::cout << "Name: "<< geomNameTmp << ", id: " << i;
+      Eigen::Matrix3d rotationMatrix;
+      rotationMatrix << data->geom_xmat[i*9], data->geom_xmat[i*9+1], data->geom_xmat[i*9+2], data->geom_xmat[i*9+3], data->geom_xmat[i*9+4],
+                        data->geom_xmat[i*9+5], data->geom_xmat[i*9+6], data->geom_xmat[i*9+7], data->geom_xmat[i*9+8]; 
+      Eigen::Quaterniond geomQuat(rotationMatrix);
+      std::cout << ", position: (" << data->geom_xpos[i*3] << ", " << data->geom_xpos[i*3+1] << ", " << data->geom_xpos[i*3+2] << ")";
+      std::cout << " and orientation: (" << geomQuat.w() << ", " << geomQuat.x() << ", " << geomQuat.y() << ", " << geomQuat.z() <<")\n";
+      std::string geomName = geomNameTmp;
+      geomName = geomName.substr(0, geomName.find('_'));
+      int objectIndex = mapOfObjectsNames[geomName];
+      mapOfGoalPositions[objectIndex].push_back(data->geom_xpos[i*3]);
+      mapOfGoalPositions[objectIndex].push_back(data->geom_xpos[i*3+1]);
+      mapOfGoalPositions[objectIndex].push_back(data->geom_xpos[i*3+2]);
+      mapOfGoalOrientations[objectIndex].push_back(geomQuat.w());
+      mapOfGoalOrientations[objectIndex].push_back(geomQuat.x());
+      mapOfGoalOrientations[objectIndex].push_back(geomQuat.y());
+      mapOfGoalOrientations[objectIndex].push_back(geomQuat.z());
+      mapOfGeomIndex[objectIndex].push_back(i);
+    }
+  }
+
+  controller->controller().datastore().make<std::vector<std::string>>("objectsNames", objectsNames);
+  controller->controller().datastore().make<std::vector<double>>("objectsPositions", objectsPositions);
+  controller->controller().datastore().make<std::vector<double>>("objectsOrientations", objectsOrientations);
+  controller->controller().datastore().make<std::vector<double>>("handsPositions", handsPositions);
+  controller->controller().datastore().make<std::vector<double>>("handsOrientations", handsOrientations);
+  controller->controller().datastore().make<std::unordered_map<int, std::vector<double>>>("mapOfGoalPositions", mapOfGoalPositions);
+  controller->controller().datastore().make<std::unordered_map<int, std::vector<double>>>("mapOfGoalOrientations", mapOfGoalOrientations);
+  mc_rtc::log::info("Reaches Very first step");
+
   for(auto & r : robots)
   {
     // make_call for setting pd gains (for all joints)
@@ -529,6 +619,7 @@ void MjSimImpl::startSimulation()
   }
 
   makeDatastoreCalls();
+  timer = std::chrono::system_clock::now();
 
   // get sim timestep and set the frameskip parameter
   double simTimestep = model->opt.timestep;
@@ -547,6 +638,54 @@ void MjSimImpl::startSimulation()
   }
   controller->init(init_qs_, init_pos_);
   controller->running = true;
+}
+
+void MjSimImpl::updateTeleopData(){
+  auto & objectsPositions = controller->controller().datastore().get<std::vector<double>>("objectsPositions");
+  auto & objectsOrientations = controller->controller().datastore().get<std::vector<double>>("objectsOrientations");
+  auto & handsPositions = controller->controller().datastore().get<std::vector<double>>("handsPositions");
+  auto & handsOrientations = controller->controller().datastore().get<std::vector<double>>("handsOrientations");
+  auto & mapOfGoalPositions = controller->controller().datastore().get<std::unordered_map<int, std::vector<double>>>("mapOfGoalPositions");
+  auto & mapOfGoalOrientations = controller->controller().datastore().get<std::unordered_map<int, std::vector<double>>>("mapOfGoalOrientations");
+  for (unsigned int i = 0; i < listOfObjectIndex.size(); i++){
+    int index = listOfObjectIndex[i]*3;
+    objectsPositions[i*3] = data->xpos[index];
+    objectsPositions[i*3+1] = data->xpos[index+1];
+    objectsPositions[i*3+2] = data->xpos[index+2];
+    index = listOfObjectIndex[i]*4;
+    objectsOrientations[i*4] = data->xquat[index];
+    objectsOrientations[i*4+1] = data->xquat[index+1];
+    objectsOrientations[i*4+2] = data->xquat[index+2];
+    objectsOrientations[i*4+3] = data->xquat[index+3];
+    int j = 0;
+    while(j < mapOfGoalPositions[i].size()/3)
+    {
+      int geomIndex = mapOfGeomIndex[i][j];
+      mapOfGoalPositions[i][j*3] = data->geom_xpos[geomIndex];
+      mapOfGoalPositions[i][j*3+1] = data->geom_xpos[geomIndex+1];
+      mapOfGoalPositions[i][j*3+2] = data->geom_xpos[geomIndex+2];
+      Eigen::Matrix3d rotationMatrix;
+      rotationMatrix << data->geom_xmat[geomIndex*9], data->geom_xmat[geomIndex*9+1], data->geom_xmat[geomIndex*9+2], data->geom_xmat[geomIndex*9+3], data->geom_xmat[geomIndex*9+4],
+                        data->geom_xmat[geomIndex*9+5], data->geom_xmat[geomIndex*9+6], data->geom_xmat[geomIndex*9+7], data->geom_xmat[geomIndex*9+8]; 
+      Eigen::Quaterniond geomQuat(rotationMatrix);
+      mapOfGoalOrientations[i][j*4] = geomQuat.w();
+      mapOfGoalOrientations[i][j*4+1] = geomQuat.x();
+      mapOfGoalOrientations[i][j*4+2] = geomQuat.y();
+      mapOfGoalOrientations[i][j*4+3] = geomQuat.z();
+      j++; 
+    }
+  }
+  for (unsigned int i = 0; i < listOfHandIndex.size(); i++){
+    int index = listOfHandIndex[i]*3;
+    handsPositions[i*3] = data->xpos[index];
+    handsPositions[i*3+1] = data->xpos[index+1];
+    handsPositions[i*3+2] = data->xpos[index+2];
+    index = listOfHandIndex[i]*4;
+    handsOrientations[i*4] = data->xquat[index];
+    handsOrientations[i*4+1] = data->xquat[index+1];
+    handsOrientations[i*4+2] = data->xquat[index+2];
+    handsOrientations[i*4+3] = data->xquat[index+3];
+  }
 }
 
 void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model, mjData * data)
@@ -634,6 +773,13 @@ void MjSimImpl::updateData()
   for(auto & r : robots)
   {
     r.updateSensors(controller.get(), model, data);
+  }
+  auto current_time = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_time = current_time - timer;
+  if (elapsed_time.count() > 0.250)
+  {
+    updateTeleopData();
+    timer = std::chrono::system_clock::now();
   }
 }
 
@@ -840,7 +986,7 @@ bool MjSimImpl::render()
   {
     client->update();
     client->draw2D(window);
-    client->draw3D();
+    //client->draw3D();
   }
   {
     auto right_margin = 5.0f;

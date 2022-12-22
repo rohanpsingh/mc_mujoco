@@ -160,6 +160,12 @@ private:
   /** Controller instance in this simulation, might be null if the controller is disabled */
   std::unique_ptr<mc_control::MCGlobalController> controller;
 
+  // Guillaume's variables for Assisted Teleop
+  std::chrono::time_point<std::chrono::system_clock> timer;
+  std::vector<int> listOfObjectIndex;
+  std::vector<int> listOfHandIndex;
+  std::unordered_map<int, std::vector<int>> mapOfGeomIndex;
+
 public:
   /** Configuration and data for the step-by-step mode */
   MjConfiguration config;
@@ -240,6 +246,8 @@ public:
   void startSimulation();
 
   void updateData();
+
+  void updateTeleopData();
 
   bool controlStep();
 
