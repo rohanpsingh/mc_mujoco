@@ -58,6 +58,7 @@ public:
 
 private:
   std::unique_ptr<MjSimImpl> impl;
+
 };
 
 } // namespace mc_mujoco
