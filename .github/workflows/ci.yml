@@ -67,3 +67,12 @@ jobs:
         compiler: ${{ matrix.compiler }}
         build-type: ${{ matrix.build-type }}
         options: -DMUJOCO_ROOT_DIR="${{ env.MUJOCO_ROOT_DIR }}"
+    - name: Check usage
+      shell: bash
+      run: |
+        set -x
+        cd .github/workflows/test-standalone
+        mkdir build && cd build
+        cmake ../ -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
+        cmake --build . --config ${{ matrix.build-type }}
+        ctest -V -C ${{ matrix.build-type }}
