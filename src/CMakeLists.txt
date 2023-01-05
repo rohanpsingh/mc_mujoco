@@ -95,8 +95,23 @@ if(GLFW)
 else()
   target_include_directories(mc_mujoco_lib PRIVATE "${PROJECT_SOURCE_DIR}/ext/glfw/include/GLFW")
   target_link_libraries(mc_mujoco_lib PRIVATE $<BUILD_INTERFACE:glfw>)
+  if(UNIX)
+    set(mc_mujoco_lib_combined_OUT ${CMAKE_CURRENT_BINARY_DIR}/combined/libmc_mujoco_lib_combined.a)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/combined)
+    add_custom_command(OUTPUT ${mc_mujoco_lib_combined_OUT}
+      COMMAND ar -x $<TARGET_FILE:mc_mujoco_lib>
+      COMMAND ar -x $<TARGET_FILE:glfw>
+      COMMAND ar -qcs ${mc_mujoco_lib_combined_OUT} *.o
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/combined
+      DEPENDS mc_mujoco_lib glfw
+    )
+    add_custom_target(mc_mujoco_lib_combined ALL DEPENDS ${mc_mujoco_lib_combined_OUT})
+    install(FILES ${mc_mujoco_lib_combined_OUT} DESTINATION lib)
+  endif()
 endif()
-set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
+if(NOT COMBINED_MC_MUJOCO_LIB)
+  set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
+endif()
 
 find_package(Boost REQUIRED COMPONENTS program_options)
 

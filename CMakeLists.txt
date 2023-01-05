@@ -29,12 +29,16 @@ set(MUJOCO_SIMULATE_DIR "${MUJOCO_ROOT_DIR}/simulate")
 message("${MUJOCO_INCLUDE_DIR}")
 message(STATUS "MuJoCo root dir: " ${MUJOCO_ROOT_DIR})
 
+set(COMBINED_MC_MUJOCO_LIB OFF)
 # find glfw library
 find_library(GLFW
   NAMES libglfw.so.3
   PATHS ${MUJOCO_BIN_DIR}
   NO_DEFAULT_PATH)
 if(NOT GLFW)
+  if(UNIX)
+    set(COMBINED_MC_MUJOCO_LIB ON)
+  endif()
   set(BUILD_STATIC ON CACHE BOOL "" FORCE)
   add_subdirectory(ext/glfw EXCLUDE_FROM_ALL)
 else()

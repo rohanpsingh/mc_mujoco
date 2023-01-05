@@ -11,3 +11,10 @@ set(MC_MUJOCO_USER_DESTINATION "@MC_MUJOCO_USER_DESTINATION@")
 
 include("${CMAKE_CURRENT_LIST_DIR}/mc_mujocoTargets.cmake")
 check_required_components(mc_mujoco)
+
+if(@COMBINED_MC_MUJOCO_LIB@)
+  find_package(X11 REQUIRED)
+  add_library(mc_mujoco::mc_mujoco STATIC IMPORTED GLOBAL)
+  set_target_properties(mc_mujoco::mc_mujoco PROPERTIES IMPORTED_LOCATION @CMAKE_INSTALL_PREFIX@/lib/libmc_mujoco_lib_combined.a)
+  target_link_libraries(mc_mujoco::mc_mujoco INTERFACE mc_mujoco::mc_mujoco_lib ${X11_X11_LIB})
+endif()
