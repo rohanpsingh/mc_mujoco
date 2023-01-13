@@ -519,9 +519,9 @@ void MjSimImpl::makeDatastoreCalls()
 
 void MjSimImpl::startSimulation()
 {
-  setSimulationInitialState();
   if(!config.with_controller)
   {
+    setSimulationInitialState();
     controller.reset();
     return;
   }
@@ -534,17 +534,19 @@ void MjSimImpl::startSimulation()
   mc_rtc::log::info("[mc_mujoco] MC-RTC timestep: {}. MJ timestep: {}", controller->timestep(), simTimestep);
   mc_rtc::log::info("[mc_mujoco] Hence, Frameskip: {}", frameskip_);
 
-  for(const auto & r : robots)
+  for(auto & r : robots)
   {
+    r.initialize(model, controller->robot(r.name));
     controller->setEncoderValues(r.name, r.encoders);
   }
   for(const auto & r : robots)
   {
-    init_qs_[r.name] = r.encoders;
+    init_qs_[r.name] = controller->robot(r.name).encoderValues();
     init_pos_[r.name] = controller->controller().robot(r.name).posW();
   }
   controller->init(init_qs_, init_pos_);
   controller->running = true;
+  setSimulationInitialState();
 }
 
 void MjRobot::updateSensors(mc_control::MCGlobalController * gc, mjModel * model, mjData * data)
