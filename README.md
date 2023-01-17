@@ -26,9 +26,9 @@ $ mc_mujoco
 
 #### To load additional objects in the scene
 There are several steps needed to be followed:
-- First, create your object's XML file under `mc_mujoco/robots`. For example, [longtable.xml](https://github.com/rohanpsingh/mc_mujoco/blob/topic/load-xml-objects/robots/box.xml)
-- Then, create a simple config file with the `xmlModelPath` attribute. For example, [longtable.in.yaml](https://github.com/rohanpsingh/mc_mujoco/blob/topic/load-xml-objects/robots/box.in.yaml)
-- Then, install your object by adding it to the end of `mc_mujoco/robots/CMakeLists.txt`. For example, add [setup_env_object(box object)](https://github.com/rohanpsingh/mc_mujoco/blob/topic/load-xml-objects/robots/CMakeLists.txt#L15)  
+- First, create your object's XML file under `mc_mujoco/robots`. For example, [longtable.xml](robots/longtable.xml)
+- Then, create a simple config file with the `xmlModelPath` attribute. For example, [longtable.in.yaml](robots/longtable.in.yaml)
+- Then, install your object by adding it to the end of `mc_mujoco/robots/CMakeLists.txt`. For example, add [setup_env_object(box object)](robots/CMakeLists.txt#L15)  
 
 Your object is now created and installed. Next you want to tell `mc-mujoco` to load it and place it at the desired pose.  
 Find `~/.config/mc_rtc/mc_mujoco/mc_mujoco.yaml` (create it manually if needed) and paste the following:
