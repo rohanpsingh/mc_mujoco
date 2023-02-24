@@ -57,11 +57,13 @@ A basic example of what you can do using this package is [here](https://github.c
 
 ## Citation
 ```
-@article{singh2022mcmujoco,
+@inproceedings{singh2023mc,
   title={mc-mujoco: Simulating Articulated Robots with FSM Controllers in MuJoCo},
-  author={Singh, Rohan Pratap and Gergondet, Pierre and Kanehiro, Fumio},
-  journal={arXiv preprint arXiv:2209.00274},
-  year={2022}
+  author={Singh, Rohan P and Gergondet, Pierre and Kanehiro, Fumio},
+  booktitle={2023 IEEE/SICE International Symposium on System Integration (SII)},
+  pages={1--5},
+  year={2023},
+  organization={IEEE}
 }
 ```
 
