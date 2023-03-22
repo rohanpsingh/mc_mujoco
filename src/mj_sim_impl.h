@@ -222,6 +222,9 @@ public:
   /** Objects in simulation */
   std::vector<MjObject> objects;
 
+  /*! Simulation wall clock time (seconds) */
+  double wallclock;
+
 private:
   /** Number of MuJoCo iteration since the start */
   size_t iterCount_ = 0;
