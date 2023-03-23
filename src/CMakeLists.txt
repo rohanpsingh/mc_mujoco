@@ -78,9 +78,9 @@ add_subdirectory("${mc_rtc-imgui_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/mc_rtc-imgui
 configure_file(config.in.h "${CMAKE_CURRENT_BINARY_DIR}/include/config.h")
 
 add_library(mc_mujoco_lib STATIC ${mc_mujoco_lib_SRC} ${imgui_SRC} ${implot_SRC} ${ImGuizmo_SRC} ${mc_rtc-imgui-SRC} ${mc_rtc-imgui-HDR} $<TARGET_OBJECTS:pugixml>)
-target_include_directories(mc_mujoco_lib PUBLIC $<BUILD_INTERFACE:${MUJOCO_INCLUDE_DIR}> $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}> $<BUILD_INTERFACE:${MUJOCO_SIMULATE_DIR}> $<INSTALL_INTERFACE:include>)
+target_include_directories(mc_mujoco_lib PUBLIC ${MUJOCO_INCLUDE_DIR} $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}> $<BUILD_INTERFACE:${MUJOCO_SIMULATE_DIR}> $<INSTALL_INTERFACE:include>)
 if(DEFINED MUJOCO_ROOT_INCLUDE_DIR)
-  target_include_directories(mc_mujoco_lib PUBLIC $<BUILD_INTERFACE:${MUJOCO_ROOT_INCLUDE_DIR}>)
+  target_include_directories(mc_mujoco_lib PUBLIC ${MUJOCO_ROOT_INCLUDE_DIR})
 endif()
 target_include_directories(mc_mujoco_lib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 target_include_directories(mc_mujoco_lib PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}" "${ImGuizmo_DIR}" "${PROJECT_SOURCE_DIR}/ext/pugixml")
