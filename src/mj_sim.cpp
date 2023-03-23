@@ -997,6 +997,8 @@ void MjSimImpl::saveGUISettings()
 MjSim::MjSim(const MjConfiguration & config) : impl(new MjSimImpl(config))
 {
   impl->startSimulation();
+  model = impl->model;
+  data = impl->data;
 }
 
 MjSim::~MjSim()

@@ -4,6 +4,8 @@
 #include <mc_rtc/config.h>
 #include <mc_rtc/logging.h>
 
+#include "mujoco.h"
+
 #include "mj_configuration.h"
 
 namespace mc_mujoco
@@ -55,6 +57,12 @@ public:
    * nullptr if with_controller was false in MjConfiguration
    */
   mc_control::MCGlobalController * controller() noexcept;
+
+  /** MuJoCo model */
+  mjModel * model = nullptr;
+
+  /** MuJoCo data */
+  mjData * data = nullptr;
 
 private:
   std::unique_ptr<MjSimImpl> impl;
