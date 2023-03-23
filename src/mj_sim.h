@@ -58,11 +58,11 @@ public:
    */
   mc_control::MCGlobalController * controller() noexcept;
 
-  /** MuJoCo model */
-  mjModel * model = nullptr;
+  /** Return the MuJoCo model */
+  mjModel & model() noexcept;
 
-  /** MuJoCo data */
-  mjData * data = nullptr;
+  /** Return the MuJoCo data */
+  mjData & data() noexcept;
 
 private:
   std::unique_ptr<MjSimImpl> impl;

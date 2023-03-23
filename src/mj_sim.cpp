@@ -997,8 +997,6 @@ void MjSimImpl::saveGUISettings()
 MjSim::MjSim(const MjConfiguration & config) : impl(new MjSimImpl(config))
 {
   impl->startSimulation();
-  model = impl->model;
-  data = impl->data;
 }
 
 MjSim::~MjSim()
@@ -1035,6 +1033,16 @@ bool MjSim::render()
 mc_control::MCGlobalController * MjSim::controller() noexcept
 {
   return impl->get_controller();
+}
+
+mjModel & MjSim::model() noexcept
+{
+  return *impl->model;
+}
+
+mjData & MjSim::data() noexcept
+{
+  return *impl->data;
 }
 
 } // namespace mc_mujoco
