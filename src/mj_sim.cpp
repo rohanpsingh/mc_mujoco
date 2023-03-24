@@ -1035,4 +1035,14 @@ mc_control::MCGlobalController * MjSim::controller() noexcept
   return impl->get_controller();
 }
 
+mjModel & MjSim::model() noexcept
+{
+  return *impl->model;
+}
+
+mjData & MjSim::data() noexcept
+{
+  return *impl->data;
+}
+
 } // namespace mc_mujoco
