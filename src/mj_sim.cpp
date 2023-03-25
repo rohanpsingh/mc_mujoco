@@ -879,7 +879,7 @@ bool MjSimImpl::render()
     }
     ImGui::Text("Average sim time: %.2fμs", mj_sim_dt_average);
     ImGui::Text("Simulation/Real time: %.2f", mj_sim_dt_average / (1e6 * model->opt.timestep));
-    ImGui::Text("Wallclock time: %.2f", wallclock);
+    ImGui::Text("Wallclock time: %.2fs", wallclock);
     if(ImGui::Checkbox("Sync with real-time", &config.sync_real_time))
     {
       if(config.sync_real_time)
