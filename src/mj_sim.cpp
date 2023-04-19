@@ -990,6 +990,7 @@ void MjSimImpl::saveGUISettings()
   visualize_c.add("visuals", static_cast<bool>(options.geomgroup[1]));
   visualize_c.add("contact-points", static_cast<bool>(options.flags[mjVIS_CONTACTPOINT]));
   visualize_c.add("contact-forces", static_cast<bool>(options.flags[mjVIS_CONTACTFORCE]));
+  visualize_c.add("contact-split", static_cast<bool>(options.flags[mjVIS_CONTACTSPLIT]));
   config.save(config_path);
   mc_rtc::log::success("[mc_mujoco] Configuration saved to {}", config_path);
 }

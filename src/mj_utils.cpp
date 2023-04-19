@@ -71,7 +71,23 @@ void uiEvent(mjuiState * state)
     // F: show contact forces
     if(state->key == GLFW_KEY_F)
     {
-      mj_sim->options.flags[mjVIS_CONTACTFORCE] = !mj_sim->options.flags[mjVIS_CONTACTFORCE];
+      if(!mj_sim->options.flags[mjVIS_CONTACTFORCE])
+      {
+        mj_sim->options.flags[mjVIS_CONTACTFORCE] = 1;
+        mj_sim->options.flags[mjVIS_CONTACTSPLIT] = 0;
+      }
+      else
+      {
+        if(!mj_sim->options.flags[mjVIS_CONTACTSPLIT])
+        {
+          mj_sim->options.flags[mjVIS_CONTACTSPLIT] = 1;
+        }
+        else
+        {
+          mj_sim->options.flags[mjVIS_CONTACTFORCE] = 0;
+          mj_sim->options.flags[mjVIS_CONTACTSPLIT] = 0;
+        }
+      }
     }
     // 0-mjNGROUP: Toggle visiblity of geom groups
     if(state->key >= GLFW_KEY_0 && state->key < (GLFW_KEY_0 + mjNGROUP))
@@ -361,6 +377,7 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   mj_sim->options.geomgroup[1] = mj_sim->config.visualize_visual.value_or(visualize("visuals", true));
   mj_sim->options.flags[mjVIS_CONTACTPOINT] = visualize("contact-points", false);
   mj_sim->options.flags[mjVIS_CONTACTFORCE] = visualize("contact-forces", false);
+  mj_sim->options.flags[mjVIS_CONTACTSPLIT] = visualize("contact-split", false);
   mjv_defaultScene(&mj_sim->scene);
   mjr_defaultContext(&mj_sim->context);
 
