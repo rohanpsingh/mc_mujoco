@@ -1,3 +1,9 @@
+#ifndef IMGUI_DEFINE_MATH_OPERATORS
+#  define IMGUI_DEFINE_MATH_OPERATORS
+#endif
+#include "imgui.h"
+#include "imgui_internal.h" // for ImVec2 operations
+
 #include "widgets/Arrow.h"
 #include "widgets/Force.h"
 #include "widgets/Point3D.h"
@@ -7,13 +13,6 @@
 #include "widgets/Transform.h"
 #include "widgets/Visual.h"
 #include "widgets/XYTheta.h"
-
-#include "imgui.h"
-
-#ifndef IMGUI_DEFINE_MATH_OPERATORS
-#  define IMGUI_DEFINE_MATH_OPERATORS
-#endif
-#include "imgui_internal.h" // for ImVec2 operations
 
 namespace mc_mujoco
 {
@@ -280,9 +279,8 @@ void MujocoClient::draw_arrow(const Eigen::Vector3d & from_,
 
 void MujocoClient::draw_frame(const sva::PTransformd & pos, double size) noexcept
 {
-  auto draw_axis = [&](const Eigen::Vector3d & unit, const mc_rtc::gui::Color & color) {
-    draw_arrow(pos.translation(), (sva::PTransformd{unit} * pos).translation(), 0.015, 0.015, 0.2 * size, color);
-  };
+  auto draw_axis = [&](const Eigen::Vector3d & unit, const mc_rtc::gui::Color & color)
+  { draw_arrow(pos.translation(), (sva::PTransformd{unit} * pos).translation(), 0.015, 0.015, 0.2 * size, color); };
   draw_axis(size * Eigen::Vector3d::UnitX(), mc_rtc::gui::Color::Red);
   draw_axis(size * Eigen::Vector3d::UnitY(), mc_rtc::gui::Color::Green);
   draw_axis(size * Eigen::Vector3d::UnitZ(), mc_rtc::gui::Color::Blue);
