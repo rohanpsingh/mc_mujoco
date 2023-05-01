@@ -8,7 +8,7 @@ a 13 pixels high, pixel-perfect font used by default. We embed it in the source 
 You may also load external .TTF/.OTF files.
 In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) folder you can find a few suggested fonts, provided as a convenience.
 
-**Also read the FAQ:** https://www.dearimgui.org/faq (there is a Fonts section!)
+**Also read the FAQ:** https://www.dearimgui.com/faq (there is a Fonts section!)
 
 ## Index
 - [Readme First](#readme-first)
@@ -29,7 +29,11 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 
 - You can use the `Metrics/Debugger` window (available in `Demo>Tools`) to browse your fonts and understand what's going on if you have an issue. You can also reach it in `Demo->Tools->Style Editor->Fonts`. The same information are also available in the Style Editor under Fonts.
 
-![imgui_capture_0008](https://user-images.githubusercontent.com/8225057/135429892-0e41ef8d-33c5-4991-bcf6-f997a0bcfd6b.png)
+![Fonts debugging](https://user-images.githubusercontent.com/8225057/135429892-0e41ef8d-33c5-4991-bcf6-f997a0bcfd6b.png)
+
+- You can use the `UTF-8 Encoding viewer` in `Metrics/Debugger` to verify the content of your UTF-8 strings. From C/C++ code, you can call `ImGui::DebugTextEncoding("my string");` function to verify that your UTF-8 encoding is correct.
+
+![UTF-8 Encoding viewer](https://user-images.githubusercontent.com/8225057/166505963-8a0d7899-8ee8-4558-abb2-1ae523dc02f9.png)
 
 - All loaded fonts glyphs are rendered into a single texture atlas ahead of time. Calling either of `io.Fonts->GetTexDataAsAlpha8()`, `io.Fonts->GetTexDataAsRGBA32()` or `io.Fonts->Build()` will build the atlas.
 
@@ -113,13 +117,13 @@ io.Fonts->Build();
 
 ```cpp
 // Basic Latin, Extended Latin
-io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());
+io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, nullptr, io.Fonts->GetGlyphRangesDefault());
 
 // Default + Selection of 2500 Ideographs used by Simplified Chinese
-io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
 
 // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
+io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, nullptr, io.Fonts->GetGlyphRangesJapanese());
 ```
 See [Using Custom Glyph Ranges](#using-custom-glyph-ranges) section to create your own ranges.
 
@@ -128,7 +132,7 @@ See [Using Custom Glyph Ranges](#using-custom-glyph-ranges) section to create yo
 
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
-io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
 ```
 ```cpp
 ImGui::Text(u8"こんにちは！テスト %d", 123);
@@ -145,7 +149,7 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 
 **Font Atlas too large?**
 
-- If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API. The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
+- If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API. The typical result of failing to upload a texture is if every glyph appears as a white rectangle.
 - Mind the fact that some graphics drivers have texture size limitation. If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
 
 Some solutions:
@@ -241,7 +245,7 @@ builder.AddChar(0x7262);                               // Add a specific charact
 builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
 builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
 
-io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, ranges.Data);
+io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, nullptr, ranges.Data);
 io.Fonts->Build();                                     // Build the atlas while 'ranges' is still in scope and not deleted.
 ```
 
@@ -267,14 +271,14 @@ rect_ids[1] = io.Fonts->AddCustomRectFontGlyph(font, 'b', 13, 13, 13+1);
 io.Fonts->Build();
 
 // Retrieve texture in RGBA format
-unsigned char* tex_pixels = NULL;
+unsigned char* tex_pixels = nullptr;
 int tex_width, tex_height;
 io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
 
 for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
 {
-    int rect_id = rects_ids[rect_n];
-    if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
+    int rect_id = rect_ids[rect_n];
+    if (const ImFontAtlasCustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
     {
         // Fill the custom rectangle with red pixels (in reality you would draw/copy your bitmap data here!)
         for (int y = 0; y < rect->Height; y++)
@@ -312,7 +316,7 @@ ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_ba
 **Please note that many new C/C++ users have issues loading their files _because the filename they provide is wrong_.**
 
 Two things to watch for:
-- Make sure your IDE/debugger settings starts your executable from the right working directory. In Visual Studio you can change your working directory in project `Properties > General > Debugging > Working Directory`. People assume that their execution will start from the root folder of the project, where by default it oftens start from the folder where object or executable files are stored.
+- Make sure your IDE/debugger settings starts your executable from the right working directory. In Visual Studio you can change your working directory in project `Properties > General > Debugging > Working Directory`. People assume that their execution will start from the root folder of the project, where by default it often starts from the folder where object or executable files are stored.
 ```cpp
 // Relative filename depends on your Working Directory when running your program!
 io.Fonts->AddFontFromFileTTF("MyImage01.jpg", ...);
