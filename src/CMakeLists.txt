@@ -113,7 +113,7 @@ target_include_directories(
           "${ImGuizmo_DIR}" "${PROJECT_SOURCE_DIR}/ext/pugixml")
 target_link_libraries(
   mc_mujoco_lib PUBLIC mc_rtc::mc_control mc_rtc::mc_control_client
-                       ${CMAKE_DL_LIBS})
+                       ${CMAKE_DL_LIBS} "${TORCH_LIBRARIES}")
 if(UNIX)
   set(NO_AS_NEEDED "-Wl,--no-as-needed")
   set(AS_NEEDED "-Wl,--as-needed")
@@ -153,6 +153,7 @@ add_executable(mc_mujoco main.cpp)
 target_compile_definitions(mc_mujoco PUBLIC MUJOCO_BIN_DIR="${MUJOCO_BIN_DIR}")
 target_link_libraries(mc_mujoco PRIVATE mc_mujoco_lib Boost::program_options
                                         Boost::disable_autolinking)
+set_target_properties(mc_mujoco PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 install(
   TARGETS mc_mujoco

@@ -81,6 +81,25 @@ set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
+# find torch
+if(NOT EXISTS ${PROJECT_SOURCE_DIR}/ext/libtorch)
+  # FetchContent from CMake >= 3.11
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.11")
+    message(STATUS "libtorch is missing. Will be automatically downloaded.")
+    include(FetchContent)
+    FetchContent_Declare(libtorch
+      URL https://download.pytorch.org/libtorch/nightly/cpu/libtorch-cxx11-abi-shared-with-deps-latest.zip
+      SOURCE_DIR ${PROJECT_SOURCE_DIR}/ext/libtorch
+      )
+    FetchContent_Populate(libtorch)
+  else()
+    message(FATAL_ERROR "libtorch is missing at ${PROJECT_SOURCE_DIR}/ext/libtorch. Download from https://download.pytorch.org/libtorch/nightly/cpu/libtorch-cxx11-abi-shared-with-deps-latest.zip")
+  endif()
+endif()
+
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${PROJECT_SOURCE_DIR}/ext/libtorch)
+find_package(Torch REQUIRED)
+
 # find mujoco library
 if(USE_GL)
   file(GLOB LIB_MUJOCO ${MUJOCO_BIN_DIR}/libmujoco[0-9][0-9][0-9].so
