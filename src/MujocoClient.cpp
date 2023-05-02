@@ -1,3 +1,9 @@
+#ifndef IMGUI_DEFINE_MATH_OPERATORS
+#  define IMGUI_DEFINE_MATH_OPERATORS
+#endif
+#include "imgui.h"
+#include "imgui_internal.h" // for ImVec2 operations
+
 #include "widgets/Arrow.h"
 #include "widgets/Force.h"
 #include "widgets/Point3D.h"
@@ -7,13 +13,6 @@
 #include "widgets/Transform.h"
 #include "widgets/Visual.h"
 #include "widgets/XYTheta.h"
-
-#include "imgui.h"
-
-#ifndef IMGUI_DEFINE_MATH_OPERATORS
-#  define IMGUI_DEFINE_MATH_OPERATORS
-#endif
-#include "imgui_internal.h" // for ImVec2 operations
 
 namespace mc_mujoco
 {
