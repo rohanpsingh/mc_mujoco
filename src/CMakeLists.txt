@@ -113,7 +113,7 @@ target_include_directories(
           "${ImGuizmo_DIR}" "${PROJECT_SOURCE_DIR}/ext/pugixml")
 target_link_libraries(
   mc_mujoco_lib PUBLIC mc_rtc::mc_control mc_rtc::mc_control_client
-                       ${CMAKE_DL_LIBS} "${TORCH_LIBRARIES}")
+                       ${CMAKE_DL_LIBS})
 if(UNIX)
   set(NO_AS_NEEDED "-Wl,--no-as-needed")
   set(AS_NEEDED "-Wl,--as-needed")
