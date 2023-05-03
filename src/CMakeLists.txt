@@ -147,6 +147,8 @@ if(NOT COMBINED_MC_MUJOCO_LIB)
   set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
 endif()
 
+target_link_libraries(mc_mujoco_lib PUBLIC "${TORCH_LIBRARIES}")
+
 find_package(Boost REQUIRED COMPONENTS program_options)
 
 add_executable(mc_mujoco main.cpp)
