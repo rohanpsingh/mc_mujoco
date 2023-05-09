@@ -22,6 +22,10 @@ namespace bfs = boost::filesystem;
 
 #include <mc_rtc/version.h>
 
+#ifdef USE_UI_ADAPTER
+#  include "our_glfw_adapter.h"
+#endif
+
 namespace mc_mujoco
 {
 
@@ -843,7 +847,11 @@ bool MjSimImpl::render()
   }
 
   // mj render
+#ifdef USE_UI_ADAPTER
+  mjr_render(platform_ui_adapter->state().rect[0], &scene, &platform_ui_adapter->mjr_context());
+#else
   mjr_render(uistate.rect[0], &scene, &context);
+#endif
 
   // Render ImGui
   ImGui_ImplOpenGL3_NewFrame();
@@ -856,7 +864,11 @@ bool MjSimImpl::render()
   if(client)
   {
     client->update();
+#ifdef USE_UI_ADAPTER
+    client->draw2D(*platform_ui_adapter);
+#else
     client->draw2D(window);
+#endif
     client->draw3D();
   }
   {
@@ -944,9 +956,17 @@ bool MjSimImpl::render()
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
   // swap OpenGL buffers (blocking call due to v-sync)
+#ifdef USE_UI_ADAPTER
+  platform_ui_adapter->SwapBuffers();
+#else
   glfwSwapBuffers(window);
+#endif
 
+#ifdef USE_UI_ADAPTER
+  return !platform_ui_adapter->ShouldCloseWindow();
+#else
   return !glfwWindowShouldClose(window);
+#endif
 }
 
 void MjSimImpl::stopSimulation() {}

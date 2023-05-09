@@ -24,7 +24,7 @@ jobs:
         build-type: [RelWithDebInfo]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: recursive
     - name: Install dependencies
@@ -55,7 +55,7 @@ jobs:
         set -e
         mkdir -p /opt
         cd /opt
-        MUJOCO_VERSION=2.3.1
+        MUJOCO_VERSION=2.3.5
         wget --quiet https://github.com/deepmind/mujoco/releases/download/${MUJOCO_VERSION}/mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz
         tar xzf mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz
         mv mujoco-${MUJOCO_VERSION} mujoco
