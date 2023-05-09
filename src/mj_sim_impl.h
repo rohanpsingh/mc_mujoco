@@ -6,6 +6,10 @@
 
 #include "mujoco.h"
 
+#ifdef USE_UI_ADAPTER
+#  include "platform_ui_adapter.h"
+#endif
+
 #include <condition_variable>
 
 namespace mc_mujoco
@@ -183,8 +187,19 @@ public:
   /** Initial velocity */
   std::vector<double> alphaInit;
 
+#ifndef USE_UI_ADAPTER
   /** GLFW window, might be null if the visualization is disabled */
   GLFWwindow * window = nullptr;
+
+  /** GPU context */
+  mjrContext context;
+
+  /** Keyboard and mouse states */
+  mjuiState uistate;
+#else
+  /** Platform UI adapter */
+  std::unique_ptr<mujoco::PlatformUIAdapter> platform_ui_adapter;
+#endif
 
   /** Camera */
   mjvCamera camera;
@@ -197,12 +212,6 @@ public:
 
   /** Mouse perturbations */
   mjvPerturb pert;
-
-  /** GPU context */
-  mjrContext context;
-
-  /** Keyboard and mouse states */
-  mjuiState uistate;
 
   /** Start of the previous iteration */
   clock::time_point mj_sim_start_t;

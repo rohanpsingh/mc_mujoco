@@ -64,7 +64,11 @@ inline ImVec2 to_screen(const Eigen::Vector3d & point,
 
 } // namespace internal
 
+#ifdef USE_UI_ADAPTER
+void MujocoClient::draw2D(mujoco::PlatformUIAdapter & window)
+#else
 void MujocoClient::draw2D(GLFWwindow * window)
+#endif
 {
   glGetFloatv(GL_MODELVIEW_MATRIX, view_.data());
   glGetFloatv(GL_PROJECTION_MATRIX, projection_.data());
@@ -74,7 +78,11 @@ void MujocoClient::draw2D(GLFWwindow * window)
 
   int width;
   int height;
+#ifdef USE_UI_ADAPTER
+  std::tie(width, height) = window.GetWindowSize();
+#else
   glfwGetWindowSize(window, &width, &height);
+#endif
   width_ = static_cast<float>(width);
   height_ = static_cast<float>(height);
 

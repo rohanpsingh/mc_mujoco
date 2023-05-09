@@ -1,3 +1,4 @@
+set(uitools_is_platform_ui_adapter OFF)
 if(EXISTS ${MUJOCO_INCLUDE_DIR}/uitools.c)
   set(uitools_SRC
     ${MUJOCO_INCLUDE_DIR}/uitools.c
@@ -10,10 +11,20 @@ elseif(EXISTS ${MUJOCO_ROOT_DIR}/simulate/uitools.cc)
     ${MUJOCO_ROOT_DIR}/simulate/uitools.cc
     ${MUJOCO_ROOT_DIR}/simulate/uitools.h
   )
-else()
+elseif(EXISTS ${MUJOCO_SAMPLE_DIR}/uitools.c)
   set(uitools_SRC
     ${MUJOCO_SAMPLE_DIR}/uitools.c
     ${MUJOCO_SAMPLE_DIR}/uitools.h
+  )
+else()
+  set(uitools_is_platform_ui_adapter ON)
+  set(uitools_SRC
+    ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.cc
+    ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.h
+    ${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.h
+    ${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.cc
+    ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.h
+    ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.cc
   )
 endif()
 
@@ -78,6 +89,9 @@ add_subdirectory("${mc_rtc-imgui_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/mc_rtc-imgui
 configure_file(config.in.h "${CMAKE_CURRENT_BINARY_DIR}/include/config.h")
 
 add_library(mc_mujoco_lib STATIC ${mc_mujoco_lib_SRC} ${imgui_SRC} ${implot_SRC} ${ImGuizmo_SRC} ${mc_rtc-imgui-SRC} ${mc_rtc-imgui-HDR} $<TARGET_OBJECTS:pugixml>)
+if(uitools_is_platform_ui_adapter)
+  target_compile_definitions(mc_mujoco_lib PRIVATE USE_UI_ADAPTER)
+endif()
 target_include_directories(mc_mujoco_lib PUBLIC ${MUJOCO_INCLUDE_DIR} $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}> $<BUILD_INTERFACE:${MUJOCO_SIMULATE_DIR}> $<INSTALL_INTERFACE:include>)
 if(DEFINED MUJOCO_ROOT_INCLUDE_DIR)
   target_include_directories(mc_mujoco_lib PUBLIC ${MUJOCO_ROOT_INCLUDE_DIR})
