@@ -18,14 +18,19 @@ elseif(EXISTS ${MUJOCO_SAMPLE_DIR}/uitools.c)
   )
 else()
   set(uitools_is_platform_ui_adapter ON)
+  set(OUR_GLFW_ADAPTER_HDR ${CMAKE_CURRENT_BINARY_DIR}/include/our_glfw_adapter.h)
   set(uitools_SRC
     ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.cc
     ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.h
-    ${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.h
     ${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.cc
     ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.h
     ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.cc
+    ${OUR_GLFW_ADAPTER_HDR}
   )
+  # Make private members public so we can access the window_ field
+  file(READ "${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.h" GLFW_ADAPTER_SRC)
+  string(REPLACE "private:" "public:" GLFW_ADAPTER_SRC "${GLFW_ADAPTER_SRC}")
+  file(GENERATE OUTPUT "${OUR_GLFW_ADAPTER_HDR}" CONTENT "${GLFW_ADAPTER_SRC}")
 endif()
 
 set(mc_mujoco_lib_SRC

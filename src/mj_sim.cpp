@@ -23,7 +23,7 @@ namespace bfs = boost::filesystem;
 #include <mc_rtc/version.h>
 
 #ifdef USE_UI_ADAPTER
-#  include "glfw_adapter.h"
+#  include "our_glfw_adapter.h"
 #endif
 
 namespace mc_mujoco

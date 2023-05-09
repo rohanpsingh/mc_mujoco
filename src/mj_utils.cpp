@@ -4,7 +4,7 @@
 #ifndef USE_UI_ADAPTER
 #  include "uitools.h"
 #else
-#  include "glfw_adapter.h"
+#  include "our_glfw_adapter.h"
 #endif
 
 #include "mj_utils.h"
@@ -24,26 +24,6 @@
 
 #include <boost/filesystem.hpp>
 namespace bfs = boost::filesystem;
-
-#ifdef USE_UI_ADAPTER
-// Use the trick to get access to GlfwAdapter private member
-// https://stackoverflow.com/questions/424104/can-i-access-private-members-from-outside-the-class-without-using-friends
-struct GlfwAdapter_Window
-{
-  using type = GLFWwindow * mujoco::GlfwAdapter::*;
-  friend type get(GlfwAdapter_Window);
-};
-
-template<typename Tag, typename Tag::type M>
-struct GetPrivateMember
-{
-  friend typename Tag::type get(Tag)
-  {
-    return M;
-  }
-};
-template struct GetPrivateMember<GlfwAdapter_Window, &mujoco::GlfwAdapter::window_>;
-#endif
 
 namespace mc_mujoco
 {
@@ -489,7 +469,7 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   bgColor.w = 0.5f;
 #ifdef USE_UI_ADAPTER
   auto & glfw_adapter = *dynamic_cast<mujoco::GlfwAdapter *>(mj_sim->platform_ui_adapter.get());
-  ImGui_ImplGlfw_InitForOpenGL(glfw_adapter.*get(GlfwAdapter_Window()), true);
+  ImGui_ImplGlfw_InitForOpenGL(glfw_adapter.window_, true);
 #else
   ImGui_ImplGlfw_InitForOpenGL(mj_sim->window, true);
 #endif
