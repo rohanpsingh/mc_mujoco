@@ -330,6 +330,7 @@ bool mujoco_init(MjSimImpl * mj_sim,
 void mujoco_create_window(MjSimImpl * mj_sim)
 {
 #ifdef USE_UI_ADAPTER
+  mj_sim->platform_ui_adapter.reset(new mujoco::GlfwAdapter());
   mj_sim->platform_ui_adapter->SetWindowTitle("mc_mujoco");
 #else
   // Initialize GLFW

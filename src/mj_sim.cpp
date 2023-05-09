@@ -106,8 +106,7 @@ bool MjRobot::loadGain(const std::string & path_to_pd, const std::vector<std::st
 }
 
 MjSimImpl::MjSimImpl(const MjConfiguration & config)
-: controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config),
-  platform_ui_adapter(new mujoco::GlfwAdapter())
+: controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config)
 {
   auto get_robot_cfg_path = [&](const std::string & robot_name) -> std::string {
     if(bfs::exists(bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")))
