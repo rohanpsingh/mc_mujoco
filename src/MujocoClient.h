@@ -6,7 +6,9 @@
 #include "imgui.h"
 #include "mujoco.h"
 
-#include "platform_ui_adapter.h"
+#ifdef USE_UI_ADAPTER
+#  include "platform_ui_adapter.h"
+#endif
 
 namespace mc_mujoco
 {
