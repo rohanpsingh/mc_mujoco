@@ -29,6 +29,17 @@ struct MjObject
   std::string name;
   /** Initial pose in world frame */
   sva::PTransformd init_pose;
+  /** Root body name in MuJoCo */
+  std::string root_body;
+  /** Root body id */
+  int root_body_id = -1;
+  /** Free joint in MuJoCo */
+  std::string root_joint;
+  /** Index of robot's root in qpos, -1 if fixed base */
+  int root_qpos_idx = -1;
+
+  /** Initialize some data after the simulation has started */
+  void initialize(mjModel * model);
 };
 
 /** Interface between a Mujoco robot and an mc_rtc robot */

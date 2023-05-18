@@ -232,6 +232,14 @@ void MjSimImpl::cleanup()
   mujoco_cleanup(this);
 }
 
+void MjObject::initialize(mjModel * model)
+{
+  if(root_body.size())
+  {
+    root_body_id = mj_name2id(model, mjOBJ_BODY, root_body.c_str());
+  }
+}
+
 void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
 {
   mj_jnt_ids.resize(0);
@@ -370,19 +378,36 @@ void MjSimImpl::setSimulationInitialState()
 
     for(auto & o : objects)
     {
-      sva::PTransformd pose = o.init_pose;
-      const auto & t = pose.translation();
-      for(size_t i = 0; i < 3; ++i)
+      o.initialize(model);
+      if(o.root_joint.size())
       {
-        qInit.push_back(t[i]);
-        alphaInit.push_back(0);
-        alphaInit.push_back(0);
+        o.root_qpos_idx = qInit.size();
+        sva::PTransformd pose = o.init_pose;
+        const auto & t = pose.translation();
+        for(size_t i = 0; i < 3; ++i)
+        {
+          qInit.push_back(t[i]);
+          alphaInit.push_back(0);
+          alphaInit.push_back(0);
+        }
+        Eigen::Quaterniond q = Eigen::Quaterniond(pose.rotation()).inverse();
+        qInit.push_back(q.w());
+        qInit.push_back(q.x());
+        qInit.push_back(q.y());
+        qInit.push_back(q.z());
       }
-      Eigen::Quaterniond q = Eigen::Quaterniond(pose.rotation()).inverse();
-      qInit.push_back(q.w());
-      qInit.push_back(q.x());
-      qInit.push_back(q.y());
-      qInit.push_back(q.z());
+      else if(o.root_body_id != -1)
+      {
+        const auto & t = o.init_pose.translation();
+        model->body_pos[3 * o.root_body_id + 0] = t.x();
+        model->body_pos[3 * o.root_body_id + 1] = t.y();
+        model->body_pos[3 * o.root_body_id + 2] = t.z();
+        Eigen::Quaterniond q = Eigen::Quaterniond(o.init_pose.rotation()).inverse();
+        model->body_quat[4 * o.root_body_id + 0] = q.w();
+        model->body_quat[4 * o.root_body_id + 1] = q.x();
+        model->body_quat[4 * o.root_body_id + 2] = q.y();
+        model->body_quat[4 * o.root_body_id + 3] = q.z();
+      }
     }
 
     for(auto & r : robots)

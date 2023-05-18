@@ -448,6 +448,27 @@ static void get_motor_names(const pugi::xml_node & in,
   joint_to_act("velocity", vel_acts);
 }
 
+static void mj_object_from_xml(const std::string & name, const std::string & xmlFile, MjObject & object)
+{
+  pugi::xml_document in;
+  if(!in.load_file(xmlFile.c_str()))
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("Failed to load {}", xmlFile);
+  }
+  auto root = in.child("mujoco");
+  if(!root)
+  {
+    mc_rtc::log::error_and_throw<std::runtime_error>("No mujoco root node in {}", xmlFile);
+  }
+  auto root_body = root.child("worldbody").child("body");
+  if(root_body)
+  {
+    object.root_body = fmt::format("{}_{}", name, root_body.attribute("name").value());
+  }
+  std::vector<std::string> mj_jnt_names;
+  get_joint_names(root.child("worldbody"), name, mj_jnt_names, object.root_joint);
+}
+
 static MjRobot mj_robot_from_xml(const std::string & name, const std::string & xmlFile, const std::string & prefix = "")
 {
   MjRobot out;
@@ -480,6 +501,7 @@ static MjRobot mj_robot_from_xml(const std::string & name, const std::string & x
 
 std::string merge_mujoco_models(const std::map<std::string, std::string> & mujocoObjects,
                                 const std::map<std::string, std::string> & mcrtcObjects,
+                                std::vector<MjObject> & mjObjects,
                                 std::vector<MjRobot> & mjRobots)
 {
   mjRobots.clear();
@@ -490,6 +512,15 @@ std::string merge_mujoco_models(const std::map<std::string, std::string> & mujoc
   for(const auto & [name, xmlFile] : mujocoObjects)
   {
     merge_mujoco_model(name, xmlFile, out);
+    // FIXME This is required pre-C++20 to capture structured binding value
+    const auto & name2 = name;
+    auto it = std::find_if(mjObjects.begin(), mjObjects.end(), [&](const auto & obj) { return obj.name == name2; });
+    if(it == mjObjects.end())
+    {
+      mc_rtc::log::error_and_throw(
+          "merge_mujoco_models given an object to load that's not in mjObjects, this should not happen");
+    }
+    mj_object_from_xml(name, xmlFile, *it);
   }
   for(const auto & [name, xmlFile] : mcrtcObjects)
   {
