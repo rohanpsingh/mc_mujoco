@@ -245,6 +245,12 @@ void MjObject::initialize(mjModel * model)
   {
     root_body_id = mj_name2id(model, mjOBJ_BODY, root_body.c_str());
   }
+  if(root_joint.size())
+  {
+    auto root_joint_id = mj_name2id(model, mjOBJ_JOINT, root_joint.c_str());
+    root_qpos_idx = model->jnt_qposadr[root_joint_id];
+    root_qvel_idx = model->jnt_dofadr[root_joint_id];
+  }
 }
 
 void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
@@ -386,9 +392,10 @@ void MjSimImpl::setSimulationInitialState()
     for(auto & o : objects)
     {
       o.initialize(model);
-      if(o.root_joint.size())
+      auto start_q = 0;
+      auto start_dof = 0;
+      if(o.root_joint_type == mjJNT_FREE)
       {
-        o.root_qpos_idx = qInit.size();
         sva::PTransformd pose = o.init_pose;
         const auto & t = pose.translation();
         for(size_t i = 0; i < 3; ++i)
@@ -402,6 +409,8 @@ void MjSimImpl::setSimulationInitialState()
         qInit.push_back(q.x());
         qInit.push_back(q.y());
         qInit.push_back(q.z());
+        start_q = 7;
+        start_dof = 6;
       }
       else if(o.root_body_id != -1)
       {
@@ -414,6 +423,14 @@ void MjSimImpl::setSimulationInitialState()
         model->body_quat[4 * o.root_body_id + 1] = q.x();
         model->body_quat[4 * o.root_body_id + 2] = q.y();
         model->body_quat[4 * o.root_body_id + 3] = q.z();
+      }
+      for(int i = start_q; i < o.nq; ++i)
+      {
+        qInit.push_back(0.0);
+      }
+      for(int i = start_dof; i < o.ndof; ++i)
+      {
+        alphaInit.push_back(0.0);
       }
     }
 
