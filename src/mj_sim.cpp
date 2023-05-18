@@ -108,14 +108,20 @@ bool MjRobot::loadGain(const std::string & path_to_pd, const std::vector<std::st
 MjSimImpl::MjSimImpl(const MjConfiguration & config)
 : controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config)
 {
+  auto get_robot_cfg_path_local = [&](const std::string & robot_name) {
+    return bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml");
+  };
+  auto get_robot_cfg_path_global = [&](const std::string & robot_name) {
+    return bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml");
+  };
   auto get_robot_cfg_path = [&](const std::string & robot_name) -> std::string {
-    if(bfs::exists(bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")))
+    if(bfs::exists(get_robot_cfg_path_local(robot_name)))
     {
-      return (bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")).string();
+      return get_robot_cfg_path_local(robot_name).string();
     }
-    else if(bfs::exists(bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml")))
+    else if(bfs::exists(get_robot_cfg_path_global(robot_name)))
     {
-      return (bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml")).string();
+      return get_robot_cfg_path_global(robot_name).string();
     }
     else
     {
@@ -144,15 +150,16 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   {
     MjObject object;
     object.name = static_cast<std::string>(co.first);
-    object.init_pose = static_cast<sva::PTransformd>(co.second("init_pos"));
+    object.init_pose = static_cast<sva::PTransformd>(co.second("init_pos", sva::PTransformd::Identity()));
     objects.push_back(object);
 
     std::string module = co.second("module");
-    auto object_cfg_path = (bfs::path(mc_mujoco::SHARE_FOLDER) / (module + ".yaml")).string();
-    if(!bfs::exists(object_cfg_path))
+    auto object_cfg_path = get_robot_cfg_path(module);
+    if(object_cfg_path.empty())
     {
-      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] config cannot be found at {} for {} object",
-                                                       object_cfg_path, co.first);
+      mc_rtc::log::error_and_throw<std::runtime_error>(
+          "[mc_mujoco] Module ({}) cannot be found at for object {}.\nTried:\n- {}\n- {}", module, co.first,
+          get_robot_cfg_path_local(module).string(), get_robot_cfg_path_global(module).string());
     }
     auto object_cfg = mc_rtc::Configuration(object_cfg_path);
     if(!object_cfg.has("xmlModelPath"))
