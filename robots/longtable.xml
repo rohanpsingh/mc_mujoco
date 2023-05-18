@@ -17,13 +17,12 @@
 
     <worldbody>
       <body name="base_link">
-	<light mode="fixed" directional="false" diffuse=".8 .8 .8" specular="0.3 0.3 0.3" pos="0 0 -4.0" dir="0 0 1" />
-        <freejoint name="root" />
+        <light mode="fixed" directional="false" diffuse=".8 .8 .8" specular="0.3 0.3 0.3" pos="0 0 -4.0" dir="0 0 1" />
         <geom class="collision" type="box" size="0.5 0.75 .02" rgba="0.266754 0.174546 0.0644028 1" />
-        <geom class="collision" type="cylinder" size="0.03 0.2" pos="0.4 -0.7 0.58"  rgba="0.266754 0.174546 0.0644028 1" />
-        <geom class="collision" type="cylinder" size="0.03 0.2" pos="-0.4 -0.7 0.58"  rgba="0.266754 0.174546 0.0644028 1" />
-        <geom class="collision" type="cylinder" size="0.03 0.2" pos="0.4 0.7 0.58"  rgba="0.266754 0.174546 0.0644028 1" />
-        <geom class="collision" type="cylinder" size="0.03 0.2" pos="-0.4 0.7 0.58"  rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="collision" type="cylinder" size="0.03 0.39" pos="0.4 -0.7 0.39"  rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="collision" type="cylinder" size="0.03 0.39" pos="-0.4 -0.7 0.39"  rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="collision" type="cylinder" size="0.03 0.39" pos="0.4 0.7 0.39"  rgba="0.266754 0.174546 0.0644028 1" />
+        <geom class="collision" type="cylinder" size="0.03 0.39" pos="-0.4 0.7 0.39"  rgba="0.266754 0.174546 0.0644028 1" />
         <geom class="visual" type="mesh" mesh="longtable_mesh" material="matmarble" />
       </body>
     </worldbody>
