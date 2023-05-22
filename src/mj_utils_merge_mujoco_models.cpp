@@ -114,7 +114,7 @@ static void add_prefix_recursively(const std::string & prefix,
   }
   for(const auto & attr : attrs)
   {
-    add_prefix(prefix, out, attr.c_str());
+    add_prefix(prefix, out, attr.c_str(), strcmp("freejoint", out.name()) == 0 && attr == "name");
   }
   for(auto & c : out.children())
   {
@@ -481,7 +481,8 @@ static void mj_object_from_xml(const std::string & name, const std::string & xml
   object.root_body = fmt::format("{}_{}", name, root_body);
   if(model->nq > 0)
   {
-    object.root_joint = fmt::format("{}_{}", name, mj_id2name(model, mjOBJ_JOINT, 0));
+    auto root_joint = mj_id2name(model, mjOBJ_JOINT, 0);
+    object.root_joint = fmt::format("{}_{}", name, root_joint ? root_joint : "");
     object.root_joint_type = static_cast<mjtJoint>(model->jnt_type[0]);
   }
   object.nq = model->nq;
