@@ -312,7 +312,7 @@ bool mujoco_init(MjSimImpl * mj_sim,
 #endif
 
   // Load the model;
-  std::string model = merge_mujoco_models(mujocoObjects, mcrtcObjects, mj_sim->robots);
+  std::string model = merge_mujoco_models(mujocoObjects, mcrtcObjects, mj_sim->objects, mj_sim->robots);
   char error[1000] = "Could not load XML model";
   mj_sim->model = mj_loadXML(model.c_str(), 0, error, 1000);
   if(!mj_sim->model)

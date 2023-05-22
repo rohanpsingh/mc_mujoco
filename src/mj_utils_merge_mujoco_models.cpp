@@ -87,9 +87,16 @@ static void merge_mujoco_option(const std::string & fileIn, const pugi::xml_node
   }
 }
 
-static void add_prefix(const std::string & prefix, pugi::xml_node & n, const char * attr)
+static void add_prefix(const std::string & prefix, pugi::xml_node & n, const char * attr, bool force = false)
 {
-  auto n_attr = n.attribute(attr);
+  auto n_attr = [&]() {
+    auto out = n.attribute(attr);
+    if(!out && force)
+    {
+      out = n.append_attribute(attr);
+    }
+    return out;
+  }();
   if(n_attr)
   {
     n_attr.set_value(fmt::format("{}_{}", prefix, n_attr.value()).c_str());
@@ -100,9 +107,14 @@ static void add_prefix_recursively(const std::string & prefix,
                                    pugi::xml_node & out,
                                    const std::vector<std::string> & attrs)
 {
+  // In the composite tag we always want to add a prefix
+  if(strcmp("composite", out.name()) == 0)
+  {
+    add_prefix(prefix, out, "prefix", true);
+  }
   for(const auto & attr : attrs)
   {
-    add_prefix(prefix, out, attr.c_str());
+    add_prefix(prefix, out, attr.c_str(), strcmp("freejoint", out.name()) == 0 && attr == "name");
   }
   for(auto & c : out.children())
   {
@@ -448,6 +460,36 @@ static void get_motor_names(const pugi::xml_node & in,
   joint_to_act("velocity", vel_acts);
 }
 
+static void mj_object_from_xml(const std::string & name, const std::string & xmlFile, MjObject & object)
+{
+  char error[1000] = "Could not load XML model";
+  auto model = mj_loadXML(xmlFile.c_str(), nullptr, error, 1000);
+  if(!model)
+  {
+    mc_rtc::log::error_and_throw("Failed to load MuJoCo model at {}\nError: {}", xmlFile, error);
+  }
+  if(model->nbody < 2)
+  {
+    mc_rtc::log::error_and_throw("Model of {} (loaded from {}) does not have a body beside worldbody", name, xmlFile);
+  }
+  auto root_body = mj_id2name(model, mjOBJ_BODY, 1);
+  if(!root_body)
+  {
+    mc_rtc::log::error_and_throw("First body in model of {} (loaded from {} root body) does not have a name", name,
+                                 xmlFile);
+  }
+  object.root_body = fmt::format("{}_{}", name, root_body);
+  if(model->nq > 0)
+  {
+    auto root_joint = mj_id2name(model, mjOBJ_JOINT, 0);
+    object.root_joint = fmt::format("{}_{}", name, root_joint ? root_joint : "");
+    object.root_joint_type = static_cast<mjtJoint>(model->jnt_type[0]);
+  }
+  object.nq = model->nq;
+  object.ndof = model->nv;
+  mj_deleteModel(model);
+}
+
 static MjRobot mj_robot_from_xml(const std::string & name, const std::string & xmlFile, const std::string & prefix = "")
 {
   MjRobot out;
@@ -480,6 +522,7 @@ static MjRobot mj_robot_from_xml(const std::string & name, const std::string & x
 
 std::string merge_mujoco_models(const std::map<std::string, std::string> & mujocoObjects,
                                 const std::map<std::string, std::string> & mcrtcObjects,
+                                std::vector<MjObject> & mjObjects,
                                 std::vector<MjRobot> & mjRobots)
 {
   mjRobots.clear();
@@ -490,6 +533,15 @@ std::string merge_mujoco_models(const std::map<std::string, std::string> & mujoc
   for(const auto & [name, xmlFile] : mujocoObjects)
   {
     merge_mujoco_model(name, xmlFile, out);
+    // FIXME This is required pre-C++20 to capture structured binding value
+    const auto & name2 = name;
+    auto it = std::find_if(mjObjects.begin(), mjObjects.end(), [&](const auto & obj) { return obj.name == name2; });
+    if(it == mjObjects.end())
+    {
+      mc_rtc::log::error_and_throw(
+          "merge_mujoco_models given an object to load that's not in mjObjects, this should not happen");
+    }
+    mj_object_from_xml(name, xmlFile, *it);
   }
   for(const auto & [name, xmlFile] : mcrtcObjects)
   {

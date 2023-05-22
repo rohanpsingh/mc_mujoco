@@ -108,14 +108,20 @@ bool MjRobot::loadGain(const std::string & path_to_pd, const std::vector<std::st
 MjSimImpl::MjSimImpl(const MjConfiguration & config)
 : controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config)
 {
+  auto get_robot_cfg_path_local = [&](const std::string & robot_name) {
+    return bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml");
+  };
+  auto get_robot_cfg_path_global = [&](const std::string & robot_name) {
+    return bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml");
+  };
   auto get_robot_cfg_path = [&](const std::string & robot_name) -> std::string {
-    if(bfs::exists(bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")))
+    if(bfs::exists(get_robot_cfg_path_local(robot_name)))
     {
-      return (bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml")).string();
+      return get_robot_cfg_path_local(robot_name).string();
     }
-    else if(bfs::exists(bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml")))
+    else if(bfs::exists(get_robot_cfg_path_global(robot_name)))
     {
-      return (bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml")).string();
+      return get_robot_cfg_path_global(robot_name).string();
     }
     else
     {
@@ -144,15 +150,16 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   {
     MjObject object;
     object.name = static_cast<std::string>(co.first);
-    object.init_pose = static_cast<sva::PTransformd>(co.second("init_pos"));
+    object.init_pose = static_cast<sva::PTransformd>(co.second("init_pos", sva::PTransformd::Identity()));
     objects.push_back(object);
 
     std::string module = co.second("module");
-    auto object_cfg_path = (bfs::path(mc_mujoco::SHARE_FOLDER) / (module + ".yaml")).string();
-    if(!bfs::exists(object_cfg_path))
+    auto object_cfg_path = get_robot_cfg_path(module);
+    if(object_cfg_path.empty())
     {
-      mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] config cannot be found at {} for {} object",
-                                                       object_cfg_path, co.first);
+      mc_rtc::log::error_and_throw<std::runtime_error>(
+          "[mc_mujoco] Module ({}) cannot be found at for object {}.\nTried:\n- {}\n- {}", module, co.first,
+          get_robot_cfg_path_local(module).string(), get_robot_cfg_path_global(module).string());
     }
     auto object_cfg = mc_rtc::Configuration(object_cfg_path);
     if(!object_cfg.has("xmlModelPath"))
@@ -230,6 +237,20 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
 void MjSimImpl::cleanup()
 {
   mujoco_cleanup(this);
+}
+
+void MjObject::initialize(mjModel * model)
+{
+  if(root_body.size())
+  {
+    root_body_id = mj_name2id(model, mjOBJ_BODY, root_body.c_str());
+  }
+  if(root_joint.size())
+  {
+    auto root_joint_id = mj_name2id(model, mjOBJ_JOINT, root_joint.c_str());
+    root_qpos_idx = model->jnt_qposadr[root_joint_id];
+    root_qvel_idx = model->jnt_dofadr[root_joint_id];
+  }
 }
 
 void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
@@ -370,19 +391,47 @@ void MjSimImpl::setSimulationInitialState()
 
     for(auto & o : objects)
     {
-      sva::PTransformd pose = o.init_pose;
-      const auto & t = pose.translation();
-      for(size_t i = 0; i < 3; ++i)
+      o.initialize(model);
+      auto start_q = 0;
+      auto start_dof = 0;
+      if(o.root_joint_type == mjJNT_FREE)
       {
-        qInit.push_back(t[i]);
-        alphaInit.push_back(0);
-        alphaInit.push_back(0);
+        sva::PTransformd pose = o.init_pose;
+        const auto & t = pose.translation();
+        for(size_t i = 0; i < 3; ++i)
+        {
+          qInit.push_back(t[i]);
+          alphaInit.push_back(0);
+          alphaInit.push_back(0);
+        }
+        Eigen::Quaterniond q = Eigen::Quaterniond(pose.rotation()).inverse();
+        qInit.push_back(q.w());
+        qInit.push_back(q.x());
+        qInit.push_back(q.y());
+        qInit.push_back(q.z());
+        start_q = 7;
+        start_dof = 6;
       }
-      Eigen::Quaterniond q = Eigen::Quaterniond(pose.rotation()).inverse();
-      qInit.push_back(q.w());
-      qInit.push_back(q.x());
-      qInit.push_back(q.y());
-      qInit.push_back(q.z());
+      else if(o.root_body_id != -1)
+      {
+        const auto & t = o.init_pose.translation();
+        model->body_pos[3 * o.root_body_id + 0] = t.x();
+        model->body_pos[3 * o.root_body_id + 1] = t.y();
+        model->body_pos[3 * o.root_body_id + 2] = t.z();
+        Eigen::Quaterniond q = Eigen::Quaterniond(o.init_pose.rotation()).inverse();
+        model->body_quat[4 * o.root_body_id + 0] = q.w();
+        model->body_quat[4 * o.root_body_id + 1] = q.x();
+        model->body_quat[4 * o.root_body_id + 2] = q.y();
+        model->body_quat[4 * o.root_body_id + 3] = q.z();
+      }
+      for(int i = start_q; i < o.nq; ++i)
+      {
+        qInit.push_back(0.0);
+      }
+      for(int i = start_dof; i < o.ndof; ++i)
+      {
+        alphaInit.push_back(0.0);
+      }
     }
 
     for(auto & r : robots)
