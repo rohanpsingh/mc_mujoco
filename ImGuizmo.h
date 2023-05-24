@@ -216,6 +216,9 @@ namespace IMGUIZMO_NAMESPACE
    IMGUI_API bool IsOver(OPERATION op);
    IMGUI_API void SetGizmoSizeClipSpace(float value);
 
+   // Set a fixed (world-space) size for the widgets
+   IMGUI_API void SetGizmoSizeWorldSpace(float value);
+
    // Allow axis to flip
    // When true (default), the guizmo axis flip for better visibility
    // When false, they always stay along the positive world/local axis
