@@ -59,6 +59,7 @@ bool InteractiveMarker::draw(const std::array<float, 16> & view, const std::arra
     return false;
   }
   ImGuizmo::SetID(id_);
+  ImGuizmo::SetGizmoSizeWorldSpace(0.15f);
   Eigen::Matrix<float, 4, 4> mat = sva::conversions::toHomogeneous(pose_.cast<float>());
   auto op = static_cast<ImGuizmo::OPERATION>(operation_);
   bool changed = ImGuizmo::Manipulate(view.data(), projection.data(), op, ImGuizmo::MODE::LOCAL, mat.data());
