@@ -394,7 +394,7 @@ void MjSimImpl::setSimulationInitialState()
       o.initialize(model);
       auto start_q = 0;
       auto start_dof = 0;
-      if(o.root_joint_type == mjJNT_FREE)
+      if(o.root_qpos_idx != -1 && o.root_joint_type == mjJNT_FREE)
       {
         sva::PTransformd pose = o.init_pose;
         const auto & t = pose.translation();
