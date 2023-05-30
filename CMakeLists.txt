@@ -58,13 +58,11 @@ else()
 endif()
 message(STATUS "MuJoCo lib found at: " ${LIB_MUJOCO})
 
-set(MC_MUJOCO_SHARE_DESTINATION "${CMAKE_INSTALL_PREFIX}/share/mc_mujoco" CACHE PATH "System folder searched for Mujoco models")
-
-set(MC_MUJOCO_USER_DESTINATION_DOC "User folder searched for Mujoco models")
+set(MC_MUJOCO_SHARE_DESTINATION "${CMAKE_INSTALL_PREFIX}/share/mc_mujoco")
 if(WIN32)
-  set(MC_MUJOCO_USER_DESTINATION "$ENV{APPDATA}/mc_rtc/mc_mujoco" CACHE PATH ${MC_MUJOCO_USER_DESTINATION_DOC})
+  set(MC_MUJOCO_USER_DESTINATION "$ENV{APPDATA}/mc_rtc/mc_mujoco")
 else()
-  set(MC_MUJOCO_USER_DESTINATION "$ENV{HOME}/.config/mc_rtc/mc_mujoco" CACHE PATH ${MC_MUJOCO_USER_DESTINATION_DOC})
+  set(MC_MUJOCO_USER_DESTINATION "$ENV{HOME}/.config/mc_rtc/mc_mujoco")
 endif()
 
 add_subdirectory(cmake)
