@@ -3,20 +3,23 @@
 
 
 ## Usage
+First, install the required apt packages:
+```sh
+$ sudo apt install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libglew-dev
+```
 
-Assuming that you have mujoco installed under `${HOME}/.mujoco/mujoco212`,
-
+Then, assuming that you have mujoco installed under `${HOME}/.mujoco/mujoco235`,
 ```sh
 $ git clone --recursive git@github.com:rohanpsingh/mc_mujoco.git
 $ cd mc_mujoco
 $ mkdir build && cd build
-$ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=$HOME/.mujoco/mujoco212
+$ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=$HOME/.mujoco/mujoco235
 $ make
 $ make install
 ```
 Add the following line to your `~/.bashrc`:
 ```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HOME}/.mujoco/mujoco212/lib:${HOME}/.mujoco/mujoco212/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HOME}/.mujoco/mujoco235/lib:${HOME}/.mujoco/mujoco235/bin
 ```
 Then, to run the interface:
 ```sh
