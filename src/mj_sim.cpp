@@ -197,6 +197,9 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     }
   }
 
+  // load MuJoCo plugins
+  loadPlugins(mc_mujoco_cfg);
+
   // initial mujoco here and load XML model
   bool initialized = mujoco_init(this, mjObjects, mcObjects);
   if(!initialized)
@@ -1046,6 +1049,38 @@ void MjSimImpl::saveGUISettings()
   visualize_c.add("contact-split", static_cast<bool>(options.flags[mjVIS_CONTACTSPLIT]));
   config.save(config_path);
   mc_rtc::log::success("[mc_mujoco] Configuration saved to {}", config_path);
+}
+
+void MjSimImpl::loadPlugins(const auto & mc_mujoco_cfg) const
+{
+  // print built-in plugins
+  int nplugin = mjp_pluginCount();
+  if(nplugin)
+  {
+    mc_rtc::log::info("[mc_mujoco] Built-in plugins");
+    for(int i = 0; i < nplugin; ++i)
+    {
+      mc_rtc::log::info("  - {}", mjp_getPluginAtSlot(i)->name);
+    }
+  }
+
+  // scan plugins from the user-specified paths
+  for(const auto & plugin_path : mc_mujoco_cfg("PluginPaths", std::vector<std::string>{}))
+  {
+    mc_rtc::log::info("[mc_mujoco] Scan plugins in {}", plugin_path);
+    mj_loadAllPluginLibraries(
+        plugin_path.c_str(), +[](const char * filename, int first, int count) {
+          if(count == 0)
+          {
+            return;
+          }
+          mc_rtc::log::info("[mc_mujoco] Plugins registered by library {}", filename);
+          for(int i = first; i < first + count; ++i)
+          {
+            mc_rtc::log::info("  - {}", mjp_getPluginAtSlot(i)->name);
+          }
+        });
+  }
 }
 
 MjSim::MjSim(const MjConfiguration & config) : impl(new MjSimImpl(config))
