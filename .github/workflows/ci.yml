@@ -55,7 +55,7 @@ jobs:
         set -e
         mkdir -p /opt
         cd /opt
-        MUJOCO_VERSION=2.3.5
+        MUJOCO_VERSION=2.3.6
         wget --quiet https://github.com/deepmind/mujoco/releases/download/${MUJOCO_VERSION}/mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz
         tar xzf mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz
         mv mujoco-${MUJOCO_VERSION} mujoco
