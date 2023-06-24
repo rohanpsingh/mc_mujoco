@@ -200,12 +200,6 @@ public:
   /** MuJoCo data */
   mjData * data = nullptr;
 
-  /** Initial state */
-  std::vector<double> qInit;
-
-  /** Initial velocity */
-  std::vector<double> alphaInit;
-
 #ifndef USE_UI_ADAPTER
   /** GLFW window, might be null if the visualization is disabled */
   GLFWwindow * window = nullptr;
