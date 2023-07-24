@@ -41,9 +41,6 @@ bool mujoco_init(MjSimImpl * mj_sim,
 /*! Create GLFW window */
 void mujoco_create_window(MjSimImpl * mj_sim);
 
-/*! Sets initial qpos and qvel in mjData */
-bool mujoco_set_const(mjModel * m, mjData * d, const std::vector<double> & qpos, const std::vector<double> & qvel);
-
 /** Returns a sensor id from name, -1 if the type does not match or the sensor does not exist */
 int mujoco_get_sensor_id(const mjModel & m, const std::string & name, mjtSensor type);
 

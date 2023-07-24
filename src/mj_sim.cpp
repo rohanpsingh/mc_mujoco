@@ -281,6 +281,12 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   {
     root_body_id = mj_name2id(model, mjOBJ_BODY, root_body.c_str());
   }
+  if(root_joint.size())
+  {
+    auto root_joint_id = mj_name2id(model, mjOBJ_JOINT, root_joint.c_str());
+    root_qpos_idx = model->jnt_qposadr[root_joint_id];
+    root_qvel_idx = model->jnt_dofadr[root_joint_id];
+  }
   auto init_sensor_id = [&](const char * mj_name, const char * mc_name, const std::string & sensor_name,
                             const char * suffix, mjtSensor type, std::unordered_map<std::string, int> & mapping) {
     auto mj_sensor = prefixed(fmt::format("{}_{}", sensor_name, suffix));
@@ -386,31 +392,23 @@ void MjSimImpl::setSimulationInitialState()
 {
   if(controller)
   {
-    qInit.resize(0);
-    alphaInit.resize(0);
-
     for(auto & o : objects)
     {
       o.initialize(model);
-      auto start_q = 0;
-      auto start_dof = 0;
       if(o.root_qpos_idx != -1 && o.root_joint_type == mjJNT_FREE)
       {
-        sva::PTransformd pose = o.init_pose;
-        const auto & t = pose.translation();
-        for(size_t i = 0; i < 3; ++i)
-        {
-          qInit.push_back(t[i]);
-          alphaInit.push_back(0);
-          alphaInit.push_back(0);
-        }
-        Eigen::Quaterniond q = Eigen::Quaterniond(pose.rotation()).inverse();
-        qInit.push_back(q.w());
-        qInit.push_back(q.x());
-        qInit.push_back(q.y());
-        qInit.push_back(q.z());
-        start_q = 7;
-        start_dof = 6;
+        const auto & t = o.init_pose.translation();
+        data->qpos[o.root_qpos_idx + 0] = t.x();
+        data->qpos[o.root_qpos_idx + 1] = t.y();
+        data->qpos[o.root_qpos_idx + 2] = t.z();
+        Eigen::Quaterniond q = Eigen::Quaterniond(o.init_pose.rotation()).inverse();
+        data->qpos[o.root_qpos_idx + 3] = q.w();
+        data->qpos[o.root_qpos_idx + 4] = q.x();
+        data->qpos[o.root_qpos_idx + 5] = q.y();
+        data->qpos[o.root_qpos_idx + 6] = q.z();
+        // push linear/angular velocities
+        mju_zero3(&data->qvel[o.root_qvel_idx]);
+        mju_zero3(&data->qvel[o.root_qvel_idx + 3]);
       }
       else if(o.root_body_id != -1)
       {
@@ -424,40 +422,26 @@ void MjSimImpl::setSimulationInitialState()
         model->body_quat[4 * o.root_body_id + 2] = q.y();
         model->body_quat[4 * o.root_body_id + 3] = q.z();
       }
-      for(int i = start_q; i < o.nq; ++i)
-      {
-        qInit.push_back(0.0);
-      }
-      for(int i = start_dof; i < o.ndof; ++i)
-      {
-        alphaInit.push_back(0.0);
-      }
     }
 
     for(auto & r : robots)
     {
       const auto & robot = controller->robots().robot(r.name);
       r.initialize(model, robot);
-      if(r.root_joint.size())
+      if(r.root_qpos_idx != -1)
       {
-        r.root_qpos_idx = qInit.size();
-        r.root_qvel_idx = alphaInit.size();
-        if(robot.mb().joint(0).dof() == 6)
-        {
-          const auto & t = robot.posW().translation();
-          for(size_t i = 0; i < 3; ++i)
-          {
-            qInit.push_back(t[i]);
-            // push linear/angular velocities
-            alphaInit.push_back(0);
-            alphaInit.push_back(0);
-          }
-          Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
-          qInit.push_back(q.w());
-          qInit.push_back(q.x());
-          qInit.push_back(q.y());
-          qInit.push_back(q.z());
-        }
+        const auto & t = robot.posW().translation();
+        data->qpos[r.root_qpos_idx + 0] = t.x();
+        data->qpos[r.root_qpos_idx + 1] = t.y();
+        data->qpos[r.root_qpos_idx + 2] = t.z();
+        Eigen::Quaterniond q = Eigen::Quaterniond(robot.posW().rotation()).inverse();
+        data->qpos[r.root_qpos_idx + 3] = q.w();
+        data->qpos[r.root_qpos_idx + 4] = q.x();
+        data->qpos[r.root_qpos_idx + 5] = q.y();
+        data->qpos[r.root_qpos_idx + 6] = q.z();
+        // push linear/angular velocities
+        mju_zero3(&data->qvel[r.root_qvel_idx]);
+        mju_zero3(&data->qvel[r.root_qvel_idx + 3]);
       }
       else if(r.root_body_id != -1)
       {
@@ -471,18 +455,18 @@ void MjSimImpl::setSimulationInitialState()
         model->body_quat[4 * r.root_body_id + 2] = q.y();
         model->body_quat[4 * r.root_body_id + 3] = q.z();
       }
-      for(size_t i = 0; i < r.mj_jnt_names.size(); ++i)
+      for(size_t i = 0; i < r.mj_jnt_ids.size(); ++i)
       {
-        qInit.push_back(r.encoders[r.mj_jnt_to_rjo[i]]);
-        alphaInit.push_back(r.alphas[r.mj_jnt_to_rjo[i]]);
+        if(r.mj_jnt_to_rjo[i] == -1)
+        {
+          continue;
+        }
+        data->qpos[model->jnt_qposadr[r.mj_jnt_ids[i]]] = r.encoders[r.mj_jnt_to_rjo[i]];
+        data->qvel[model->jnt_dofadr[r.mj_jnt_ids[i]]] = r.alphas[r.mj_jnt_to_rjo[i]];
       }
     }
   }
-  // set initial qpos, qvel in mujoco
-  if(!mujoco_set_const(model, data, qInit, alphaInit))
-  {
-    mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] Set inital state failed.");
-  }
+
   mj_forward(model, data);
 }
 

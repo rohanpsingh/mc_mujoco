@@ -477,25 +477,6 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   ImGui_ImplOpenGL3_Init(glsl_version);
 }
 
-bool mujoco_set_const(mjModel * m, mjData * d, const std::vector<double> & qpos, const std::vector<double> & qvel)
-{
-  if(qpos.size() != m->nq || qvel.size() != m->nv)
-  {
-    std::cerr << "qpos size: " << qpos.size() << ". Should be: " << m->nq << std::endl;
-    std::cerr << "qvel size: " << qvel.size() << ". Should be: " << m->nv << std::endl;
-    return false;
-  }
-
-  mj_setConst(m, d);
-  const double * qpos_init = &qpos[0];
-  const double * qvel_init = &qvel[0];
-  mju_copy(d->qpos, qpos_init, m->nq);
-  mju_copy(d->qvel, qvel_init, m->nv);
-  d->time = 0.0;
-  mj_forward(m, d);
-  return true;
-}
-
 void mujoco_cleanup(MjSimImpl * mj_sim)
 {
   if(mj_sim->config.with_visualization)
