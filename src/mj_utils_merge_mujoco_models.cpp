@@ -213,6 +213,7 @@ static void merge_mujoco_asset(const pugi::xml_node & in,
     auto mat_out = out.append_copy(mat);
     update_name(mat_out);
     add_prefix(robot, mat_out, "texture");
+    add_prefix(robot, mat_out, "class");
   }
   copy_assets("texture", texturePath);
   copy_assets("mesh", meshPath);
