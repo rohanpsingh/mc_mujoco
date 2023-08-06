@@ -1,7 +1,14 @@
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/jvrc_mj_description/CMakeLists.txt")
   message(FATAL_ERROR "No CMakeLists.txt in jvrc_mj_description folder, did you run `git submodule update --init`?")
 endif()
-add_subdirectory(jvrc_mj_description)
+
+file(GLOB robot_dirs CONFIGURE_DEPENDS "*")
+foreach(robot_dir ${robot_dirs})
+  if(EXISTS "${robot_dir}/CMakeLists.txt")
+    message(STATUS "Adding robot: ${robot_dir}")
+    add_subdirectory(${robot_dir})
+  endif()
+endforeach()
 
 function(setup_env_object NAME ENV_OBJECT)
   set(YAML_OUT "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.yaml")
