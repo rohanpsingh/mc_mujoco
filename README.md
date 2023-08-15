@@ -50,6 +50,14 @@ objects:
 ```
 ---
 
+#### To load MuJoCo plugins
+
+To load [MuJoCo plugins](https://mujoco.readthedocs.io/en/latest/programming/extension.html#engine-plugins), specify the paths to the directories containing the plugin libraries in the `PluginPaths` entry in `~/.config/mc_rtc/mc_mujoco/mc_mujoco.yaml`.
+```yaml
+PluginPaths: ["<path-to-plugins>"]
+```
+---
+
 #### GUI: Mouse Interaction
 
 An object is selected by left-double-click. The user can then apply forces and torques on the selected object by holding `Ctrl` key and dragging the left-mouse-button for torques and right-mouse-button for forces.

@@ -87,6 +87,16 @@ static void merge_mujoco_option(const std::string & fileIn, const pugi::xml_node
   }
 }
 
+static void merge_mujoco_extension(const std::string & fileIn, const pugi::xml_node & in, pugi::xml_node & out)
+{
+  merge_mujoco_node("extension", fileIn, in, out);
+  for(const auto & plugin : in.children("plugin"))
+  {
+    auto plugin_out = out.append_child("plugin");
+    merge_mujoco_node("extension/plugin", fileIn, plugin, plugin_out);
+  }
+}
+
 static void add_prefix(const std::string & prefix, pugi::xml_node & n, const char * attr, bool force = false)
 {
   auto n_attr = [&]() {
@@ -337,6 +347,11 @@ static void merge_mujoco_model(const std::string & robot, const std::string & xm
   {
     auto option_out = get_child_or_create(out, "option");
     merge_mujoco_option(xmlFile, root.child("option"), option_out);
+  }
+  /** Merge extension flags */
+  {
+    auto extension_out = get_child_or_create(out, "extension");
+    merge_mujoco_extension(xmlFile, root.child("extension"), extension_out);
   }
   /** Merge defaults */
   {

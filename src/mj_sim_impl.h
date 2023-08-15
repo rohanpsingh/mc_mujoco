@@ -289,6 +289,8 @@ public:
 
   void saveGUISettings();
 
+  void loadPlugins(const auto & mc_mujoco_cfg) const;
+
   inline mc_control::MCGlobalController * get_controller() noexcept
   {
     return controller.get();
