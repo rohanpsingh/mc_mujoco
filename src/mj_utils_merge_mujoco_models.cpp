@@ -90,10 +90,9 @@ static void merge_mujoco_option(const std::string & fileIn, const pugi::xml_node
 static void merge_mujoco_extension(const std::string & fileIn, const pugi::xml_node & in, pugi::xml_node & out)
 {
   merge_mujoco_node("extension", fileIn, in, out);
-  const auto & plugin = in.child("plugin");
-  if(plugin)
+  for(const auto & plugin : in.children("plugin"))
   {
-    auto plugin_out = get_child_or_create(out, "plugin");
+    auto plugin_out = out.append_child("plugin");
     merge_mujoco_node("extension/plugin", fileIn, plugin, plugin_out);
   }
 }
