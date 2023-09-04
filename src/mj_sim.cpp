@@ -416,6 +416,38 @@ void MjSimImpl::setPosW(const T & robot, const sva::PTransformd & pos)
   }
 }
 
+sva::PTransformd MjSimImpl::getObjectPosW(const std::string & object) const
+{
+  auto it = std::find_if(objects.begin(), objects.end(), [&](const auto & o) { return o.name == object; });
+  if(it == objects.end())
+  {
+    mc_rtc::log::error_and_throw("Requested position of object {} which is not in this simulation", object);
+  }
+  const auto & o = *it;
+  if(o.root_qpos_idx != -1 && o.root_joint_type == mjJNT_FREE)
+  {
+    Eigen::Vector3d t = Eigen::Map<Eigen::Vector3d>(&data->qpos[o.root_qpos_idx]);
+    // Note: no map here because Eigen::Map wants x, y, z, w
+    Eigen::Quaterniond q;
+    q.w() = data->qpos[o.root_qpos_idx + 3];
+    q.x() = data->qpos[o.root_qpos_idx + 4];
+    q.y() = data->qpos[o.root_qpos_idx + 5];
+    q.z() = data->qpos[o.root_qpos_idx + 6];
+    return {q.inverse(), t};
+  }
+  if(o.root_body_id != -1)
+  {
+    Eigen::Vector3d t = Eigen::Map<Eigen::Vector3d>(&model->body_pos[3 * o.root_body_id]);
+    Eigen::Quaterniond q;
+    q.w() = model->body_quat[4 * o.root_body_id + 0];
+    q.x() = model->body_quat[4 * o.root_body_id + 1];
+    q.y() = model->body_quat[4 * o.root_body_id + 2];
+    q.z() = model->body_quat[4 * o.root_body_id + 3];
+    return {q.inverse(), t};
+  }
+  mc_rtc::log::error_and_throw("Cannot retrieve the position of object {} in simulation", object);
+}
+
 void MjSimImpl::setSimulationInitialState()
 {
   if(controller)
@@ -800,6 +832,10 @@ void MjSimImpl::resetSimulation(const std::map<std::string, std::vector<double>>
   mj_resetData(model, data);
   setSimulationInitialState();
   makeDatastoreCalls();
+  for(auto & marker : markers)
+  {
+    marker.marker.pose(getObjectPosW(marker.name));
+  }
 }
 
 bool MjSimImpl::stepSimulation()
@@ -812,6 +848,7 @@ bool MjSimImpl::stepSimulation()
   // Only run the GUI update if the simulation is paused
   if(config.step_by_step && rem_steps == 0)
   {
+    mj_kinematics(model, data);
     if(controller)
     {
       controller->running = false;
@@ -905,6 +942,13 @@ bool MjSimImpl::render()
     client->draw2D(window);
 #endif
     client->draw3D();
+    for(auto & marker : markers)
+    {
+      if(marker.marker.draw(client->view(), client->projection()))
+      {
+        setObjectPosW(marker.name, marker.marker.pose());
+      }
+    }
   }
   {
     auto right_margin = 5.0f;
@@ -984,6 +1028,22 @@ bool MjSimImpl::render()
     if(ImGui::Button("Reset simulation", ImVec2(-FLT_MIN, 0.0f)))
     {
       reset_simulation_ = true;
+    }
+    for(const auto & o : objects)
+    {
+      auto it = std::find_if(markers.begin(), markers.end(), [&](const auto & m) { return m.name == o.name; });
+      bool active = (it != markers.end());
+      if(ImGui::Checkbox(fmt::format("Set {} position", o.name).c_str(), &active))
+      {
+        if(!active)
+        {
+          markers.erase(it);
+        }
+        else
+        {
+          markers.push_back(MjObjectMarker{o.name, {getObjectPosW(o.name), ControlAxis::ALL}});
+        }
+      }
     }
     ImGui::End();
   }

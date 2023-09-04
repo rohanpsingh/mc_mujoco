@@ -10,6 +10,8 @@
 #  include "platform_ui_adapter.h"
 #endif
 
+#include "widgets/details/InteractiveMarker.h"
+
 #include <condition_variable>
 
 namespace mc_mujoco
@@ -243,6 +245,16 @@ public:
   /** Objects in simulation */
   std::vector<MjObject> objects;
 
+  struct MjObjectMarker
+  {
+    /** Name of the controlled object */
+    std::string name;
+    /** Marker used to manipulate the object */
+    InteractiveMarker marker;
+  };
+  /** Interactive markers to move simulation objects interactively */
+  std::vector<MjObjectMarker> markers;
+
   /*! Simulation wall clock time (seconds) */
   double wallclock;
 
@@ -290,6 +302,10 @@ public:
   // Set the position of an object
   // No-op if the object is not in the simulation
   void setObjectPosW(const std::string & object, const sva::PTransformd & pt);
+
+  // Retrieve the position of an object
+  // Throws if the object does not exist in the simulation
+  sva::PTransformd getObjectPosW(const std::string & object) const;
 
   // Set the position of a robot
   // No-op if the robot is not in the controller
