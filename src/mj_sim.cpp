@@ -942,11 +942,11 @@ bool MjSimImpl::render()
     client->draw2D(window);
 #endif
     client->draw3D();
-    for(auto & marker : markers)
+    for(auto & [name, marker] : markers)
     {
-      if(marker.marker.draw(client->view(), client->projection()))
+      if(marker.draw(client->view(), client->projection()) || marker.active())
       {
-        setObjectPosW(marker.name, marker.marker.pose());
+        setObjectPosW(name, marker.pose());
       }
     }
   }
