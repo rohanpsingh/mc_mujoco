@@ -63,6 +63,8 @@ struct MjRobot
   int root_body_id = -1;
   /** Free joint in MuJoCo */
   std::string root_joint;
+  /** Root joint type */
+  mjtJoint root_joint_type = mjJNT_FREE;
   /** Index of robot's root in qpos, -1 if fixed base */
   int root_qpos_idx = -1;
   /** Index of robot's root in qvel, -1 if fixed base */
@@ -162,7 +164,7 @@ struct MjRobot
   void sendControl(const mjModel & model, mjData & data, size_t interp_idx, size_t frameskip_, bool torque_control);
 
   /** Run PD control for a given joint */
-  double PD(double jnt_id, double q_ref, double q, double qdot_ref, double qdot);
+  double PD(size_t jnt_id, double q_ref, double q, double qdot_ref, double qdot);
 
   /** Load PD gains from a file */
   bool loadGain(const std::string & path_to_pd, const std::vector<std::string> & joints);
@@ -170,14 +172,11 @@ struct MjRobot
   /** From a name returns the prefixed name in MuJoCo */
   inline std::string prefixed(const std::string & name) const noexcept
   {
-    if(prefix.size())
+    if(!prefix.empty())
     {
       return fmt::format("{}_{}", prefix, name);
     }
-    else
-    {
-      return name;
-    }
+    return name;
   }
 };
 
@@ -259,6 +258,9 @@ private:
   /** Mutex used in rendering */
   std::mutex rendering_mutex_;
 
+  template<typename T>
+  void setPosW(const T & robot, const sva::PTransformd & pos);
+
 public:
   MjSimImpl(const MjConfiguration & config);
 
@@ -285,11 +287,19 @@ public:
   void resetSimulation(const std::map<std::string, std::vector<double>> & reset_qs,
                        const std::map<std::string, sva::PTransformd> & reset_pos);
 
+  // Set the position of an object
+  // No-op if the object is not in the simulation
+  void setObjectPosW(const std::string & object, const sva::PTransformd & pt);
+
+  // Set the position of a robot
+  // No-op if the robot is not in the controller
+  void setRobotPosW(const std::string & robot, const sva::PTransformd & pt);
+
   void setSimulationInitialState();
 
   void saveGUISettings();
 
-  void loadPlugins(const auto & mc_mujoco_cfg) const;
+  void loadPlugins(const mc_rtc::Configuration & mc_mujoco_cfg) const;
 
   inline mc_control::MCGlobalController * get_controller() noexcept
   {
