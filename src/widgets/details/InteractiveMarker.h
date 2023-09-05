@@ -17,6 +17,11 @@ struct InteractiveMarker
 
   void pose(const sva::PTransformd & pose);
 
+  inline bool active() const noexcept
+  {
+    return active_;
+  }
+
   inline const sva::PTransformd & pose() const noexcept
   {
     return pose_;
