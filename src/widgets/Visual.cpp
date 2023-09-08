@@ -40,7 +40,8 @@ void Visual::draw3D()
   }
   using Geometry = rbd::parsers::Geometry;
   using Type = rbd::parsers::Geometry::Type;
-  auto handleMesh = [&]() {
+  auto handleMesh = [&]()
+  {
     static bool warned_about_mesh = false;
     if(!warned_about_mesh)
     {
@@ -48,18 +49,21 @@ void Visual::draw3D()
       warned_about_mesh = true;
     }
   };
-  auto handleBox = [&]() {
+  auto handleBox = [&]()
+  {
     const auto & box = boost::get<Geometry::Box>(visual_.geometry.data);
     mclient_.draw_box(pos_.translation(), pos_.rotation(), box.size, internal::color(visual_.material));
   };
-  auto handleCylinder = [&]() {
+  auto handleCylinder = [&]()
+  {
     const auto & cyl = boost::get<Geometry::Cylinder>(visual_.geometry.data);
     const auto & start = sva::PTransformd{Eigen::Vector3d{0, 0, -cyl.length / 2}} * pos_;
     const auto & end = sva::PTransformd{Eigen::Vector3d{0, 0, cyl.length / 2}} * pos_;
     mclient_.draw_arrow(start.translation(), end.translation(), 2 * cyl.radius, 0.0, 0.0,
                         internal::color(visual_.material));
   };
-  auto handleSphere = [&]() {
+  auto handleSphere = [&]()
+  {
     const auto & sphere = boost::get<rbd::parsers::Geometry::Sphere>(visual_.geometry.data);
     mclient_.draw_sphere(pos_.translation(), sphere.radius, internal::color(visual_.material));
   };

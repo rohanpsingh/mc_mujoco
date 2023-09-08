@@ -1,5 +1,8 @@
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/jvrc_mj_description/CMakeLists.txt")
-  message(FATAL_ERROR "No CMakeLists.txt in jvrc_mj_description folder, did you run `git submodule update --init`?")
+  message(
+    FATAL_ERROR
+      "No CMakeLists.txt in jvrc_mj_description folder, did you run `git submodule update --init`?"
+  )
 endif()
 
 file(GLOB robot_dirs CONFIGURE_DEPENDS "*")
@@ -14,8 +17,10 @@ function(setup_env_object NAME ENV_OBJECT)
   set(YAML_OUT "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.yaml")
   configure_file(${NAME}.in.yaml "${YAML_OUT}")
   install(FILES "${YAML_OUT}" DESTINATION "${MC_MUJOCO_SHARE_DESTINATION}")
-  install(FILES "${NAME}.xml" DESTINATION "${MC_MUJOCO_SHARE_DESTINATION}/${ENV_OBJECT}")
-  install(DIRECTORY assets DESTINATION "${MC_MUJOCO_SHARE_DESTINATION}/${ENV_OBJECT}")
+  install(FILES "${NAME}.xml"
+          DESTINATION "${MC_MUJOCO_SHARE_DESTINATION}/${ENV_OBJECT}")
+  install(DIRECTORY assets
+          DESTINATION "${MC_MUJOCO_SHARE_DESTINATION}/${ENV_OBJECT}")
 endfunction()
 
 setup_env_object(ground env)

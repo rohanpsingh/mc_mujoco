@@ -43,7 +43,7 @@ There are several steps needed to be followed:
 - Then, create a simple config file with the `xmlModelPath` attribute. For example, [longtable.in.yaml](robots/longtable.in.yaml)
 - Then, install your object by adding it to the end of `mc_mujoco/robots/CMakeLists.txt`. For example, add [setup_env_object(box object)](robots/CMakeLists.txt#L15)
 
-Your object is now created and installed. Next you want to tell `mc-mujoco` to load it and place it at the desired pose.  
+Your object is now created and installed. Next you want to tell `mc-mujoco` to load it and place it at the desired pose.
 Find `~/.config/mc_rtc/mc_mujoco/mc_mujoco.yaml` (create it manually if needed) and paste the following:
 
 ```yaml

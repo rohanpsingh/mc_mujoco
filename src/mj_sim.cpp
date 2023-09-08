@@ -106,13 +106,12 @@ bool MjRobot::loadGain(const std::string & path_to_pd, const std::vector<std::st
 MjSimImpl::MjSimImpl(const MjConfiguration & config)
 : controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config)
 {
-  auto get_robot_cfg_path_local = [&](const std::string & robot_name) {
-    return bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml");
-  };
-  auto get_robot_cfg_path_global = [&](const std::string & robot_name) {
-    return bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml");
-  };
-  auto get_robot_cfg_path = [&](const std::string & robot_name) -> std::string {
+  auto get_robot_cfg_path_local = [&](const std::string & robot_name)
+  { return bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml"); };
+  auto get_robot_cfg_path_global = [&](const std::string & robot_name)
+  { return bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml"); };
+  auto get_robot_cfg_path = [&](const std::string & robot_name) -> std::string
+  {
     if(bfs::exists(get_robot_cfg_path_local(robot_name)))
     {
       return get_robot_cfg_path_local(robot_name).string();
@@ -133,7 +132,8 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
 
   // load all robots named in mujoco config
   auto mc_mujoco_cfg_path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
-  auto mc_mujoco_cfg = [&mc_mujoco_cfg_path]() -> mc_rtc::Configuration {
+  auto mc_mujoco_cfg = [&mc_mujoco_cfg_path]() -> mc_rtc::Configuration
+  {
     if(bfs::exists(mc_mujoco_cfg_path))
     {
       return {mc_mujoco_cfg_path};
@@ -258,7 +258,8 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
   {
     mj_jnt_ids.push_back(mj_name2id(model, mjOBJ_JOINT, j.c_str()));
   }
-  auto fill_acuator_ids = [&](const std::vector<std::string> & names, std::vector<int> & ids) {
+  auto fill_acuator_ids = [&](const std::vector<std::string> & names, std::vector<int> & ids)
+  {
     ids.resize(0);
     for(const auto & n : names)
     {
@@ -286,7 +287,8 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
     root_qvel_idx = model->jnt_dofadr[root_joint_id];
   }
   auto init_sensor_id = [&](const char * mj_name, const char * mc_name, const std::string & sensor_name,
-                            const char * suffix, mjtSensor type, std::unordered_map<std::string, int> & mapping) {
+                            const char * suffix, mjtSensor type, std::unordered_map<std::string, int> & mapping)
+  {
     auto mj_sensor = prefixed(fmt::format("{}_{}", sensor_name, suffix));
     auto sensor_id = mujoco_get_sensor_id(*model, mj_sensor, type);
     if(sensor_id == -1)
@@ -338,7 +340,8 @@ void MjRobot::reset(const mc_rbdyn::Robot & robot)
   torques = std::vector<double>(rjo.size(), 0.0);
   for(const auto & mj_jn : mj_jnt_names)
   {
-    const auto & jn = [&]() {
+    const auto & jn = [&]()
+    {
       if(!prefix.empty())
       {
         return mj_jn.substr(prefix.size() + 1);
@@ -513,7 +516,8 @@ void MjSimImpl::makeDatastoreCalls()
     ds.make_call(r.name + "::SetPosW", [this, name = r.name](const sva::PTransformd & pt) { setRobotPosW(name, pt); });
     // make_call for setting pd gains (for all joints)
     ds.make_call(r.name + "::SetPDGains",
-                 [this, &r](const std::vector<double> & p_vec, const std::vector<double> & d_vec) {
+                 [this, &r](const std::vector<double> & p_vec, const std::vector<double> & d_vec)
+                 {
                    const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
                    if(p_vec.size() != rjo.size())
                    {
@@ -533,58 +537,64 @@ void MjSimImpl::makeDatastoreCalls()
                  });
 
     // make_call for setting pd gains (by name)
-    ds.make_call(r.name + "::SetPDGainsByName", [this, &r](const std::string & jn, double p, double d) {
-      const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
-      auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
-      if(rjo_it == rjo.end())
-      {
-        mc_rtc::log::warning("[mc_mujoco] {}::SetPDGainsByName failed. Joint {} not found in ref_joint_order.", r.name,
-                             jn);
-        return false;
-      }
-      int rjo_idx = std::distance(rjo.begin(), rjo_it);
-      r.kp[rjo_idx] = p;
-      r.kd[rjo_idx] = d;
-      return true;
-    });
+    ds.make_call(r.name + "::SetPDGainsByName",
+                 [this, &r](const std::string & jn, double p, double d)
+                 {
+                   const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+                   auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
+                   if(rjo_it == rjo.end())
+                   {
+                     mc_rtc::log::warning(
+                         "[mc_mujoco] {}::SetPDGainsByName failed. Joint {} not found in ref_joint_order.", r.name, jn);
+                     return false;
+                   }
+                   int rjo_idx = std::distance(rjo.begin(), rjo_it);
+                   r.kp[rjo_idx] = p;
+                   r.kd[rjo_idx] = d;
+                   return true;
+                 });
 
     // make_call for reading pd gains (for all joints)
-    ds.make_call(r.name + "::GetPDGains", [this, &r](std::vector<double> & p_vec, std::vector<double> & d_vec) {
-      p_vec.resize(0);
-      d_vec.resize(0);
-      p_vec = r.kp;
-      d_vec = r.kd;
-      const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
-      if(p_vec.size() != rjo.size())
-      {
-        mc_rtc::log::warning("[mc_mujoco] {}::GetPDGains failed. p_vec size({})!=ref_joint_order size({})", r.name,
-                             p_vec.size(), rjo.size());
-        return false;
-      }
-      if(d_vec.size() != rjo.size())
-      {
-        mc_rtc::log::warning("[mc_mujoco] {}::GetPDGains failed. d_vec size({})!=ref_joint_order size({})", r.name,
-                             d_vec.size(), rjo.size());
-        return false;
-      }
-      return true;
-    });
+    ds.make_call(r.name + "::GetPDGains",
+                 [this, &r](std::vector<double> & p_vec, std::vector<double> & d_vec)
+                 {
+                   p_vec.resize(0);
+                   d_vec.resize(0);
+                   p_vec = r.kp;
+                   d_vec = r.kd;
+                   const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+                   if(p_vec.size() != rjo.size())
+                   {
+                     mc_rtc::log::warning("[mc_mujoco] {}::GetPDGains failed. p_vec size({})!=ref_joint_order size({})",
+                                          r.name, p_vec.size(), rjo.size());
+                     return false;
+                   }
+                   if(d_vec.size() != rjo.size())
+                   {
+                     mc_rtc::log::warning("[mc_mujoco] {}::GetPDGains failed. d_vec size({})!=ref_joint_order size({})",
+                                          r.name, d_vec.size(), rjo.size());
+                     return false;
+                   }
+                   return true;
+                 });
 
     // make_call for reading pd gains (by name)
-    ds.make_call(r.name + "::GetPDGainsByName", [this, &r](const std::string & jn, double & p, double & d) {
-      const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
-      auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
-      if(rjo_it == rjo.end())
-      {
-        mc_rtc::log::warning("[mc_mujoco] {}::GetPDGainsByName failed. Joint {} not found in ref_joint_order.", r.name,
-                             jn);
-        return false;
-      }
-      int rjo_idx = std::distance(rjo.begin(), rjo_it);
-      p = r.kp[rjo_idx];
-      d = r.kd[rjo_idx];
-      return true;
-    });
+    ds.make_call(r.name + "::GetPDGainsByName",
+                 [this, &r](const std::string & jn, double & p, double & d)
+                 {
+                   const auto & rjo = controller->robots().robot(r.name).module().ref_joint_order();
+                   auto rjo_it = std::find(rjo.begin(), rjo.end(), jn);
+                   if(rjo_it == rjo.end())
+                   {
+                     mc_rtc::log::warning(
+                         "[mc_mujoco] {}::GetPDGainsByName failed. Joint {} not found in ref_joint_order.", r.name, jn);
+                     return false;
+                   }
+                   int rjo_idx = std::distance(rjo.begin(), rjo_it);
+                   p = r.kp[rjo_idx];
+                   d = r.kd[rjo_idx];
+                   return true;
+                 });
   }
 }
 
@@ -866,7 +876,8 @@ bool MjSimImpl::stepSimulation()
     mj_sim_dt[(iterCount_ - 1) % mj_sim_dt.size()] = dt.count();
   }
   mj_sim_start_t = start_step;
-  auto do_step = [this, &start_step]() {
+  auto do_step = [this, &start_step]()
+  {
     {
       std::lock_guard<std::mutex> lock(rendering_mutex_);
       simStep();
@@ -981,7 +992,8 @@ bool MjSimImpl::render()
     ImGui::Checkbox("Step-by-step", &config.step_by_step);
     if(config.step_by_step)
     {
-      auto doNStepsButton = [&](size_t n, bool final_) {
+      auto doNStepsButton = [&](size_t n, bool final_)
+      {
         size_t n_ms = std::ceil(n * 1000 * (controller ? controller->timestep() : model->opt.timestep));
         if(ImGui::Button(fmt::format("+{}ms", n_ms).c_str()))
         {
@@ -998,7 +1010,8 @@ bool MjSimImpl::render()
       doNStepsButton(50, false);
       doNStepsButton(100, true);
     }
-    auto flag_to_gui = [&](const char * label, mjtVisFlag flag) {
+    auto flag_to_gui = [&](const char * label, mjtVisFlag flag)
+    {
       bool show = options.flags[flag];
       if(ImGui::Checkbox(label, &show))
       {
@@ -1009,7 +1022,8 @@ bool MjSimImpl::render()
     flag_to_gui("Show contact forces [F]", mjVIS_CONTACTFORCE);
     flag_to_gui("Make Transparent [T]", mjVIS_TRANSPARENT);
     flag_to_gui("Convex Hull rendering [V]", mjVIS_CONVEXHULL);
-    auto group_to_checkbox = [&](size_t group, bool last) {
+    auto group_to_checkbox = [&](size_t group, bool last)
+    {
       bool show = options.geomgroup[group];
       if(ImGui::Checkbox(fmt::format("{}", group).c_str(), &show))
       {
@@ -1080,7 +1094,8 @@ void MjSimImpl::saveGUISettings()
   }
 
   auto config_path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
-  auto config = [&]() -> mc_rtc::Configuration {
+  auto config = [&]() -> mc_rtc::Configuration
+  {
     if(bfs::exists(config_path))
     {
       return {config_path};
@@ -1128,7 +1143,9 @@ void MjSimImpl::loadPlugins(const mc_rtc::Configuration & mc_mujoco_cfg) const
   {
     mc_rtc::log::info("[mc_mujoco] Scan plugins in {}", plugin_path);
     mj_loadAllPluginLibraries(
-        plugin_path.c_str(), +[](const char * filename, int first, int count) {
+        plugin_path.c_str(),
+        +[](const char * filename, int first, int count)
+        {
           if(count == 0)
           {
             return;

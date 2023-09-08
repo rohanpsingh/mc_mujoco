@@ -99,7 +99,8 @@ static void merge_mujoco_extension(const std::string & fileIn, const pugi::xml_n
 
 static void add_prefix(const std::string & prefix, pugi::xml_node & n, const char * attr, bool force = false)
 {
-  auto n_attr = [&]() {
+  auto n_attr = [&]()
+  {
     auto out = n.attribute(attr);
     if(!out && force)
     {
@@ -184,7 +185,8 @@ static void merge_mujoco_asset(const pugi::xml_node & in,
                                const std::string & robot)
 {
   auto update_name = [&](pugi::xml_node & n) { add_prefix(robot, n, "name"); };
-  auto update_file = [&](pugi::xml_node & n, const bfs::path & dir) {
+  auto update_file = [&](pugi::xml_node & n, const bfs::path & dir)
+  {
     auto n_file = n.attribute("file");
     if(n_file)
     {
@@ -200,7 +202,8 @@ static void merge_mujoco_asset(const pugi::xml_node & in,
     auto hf_out = out.append_copy(hf);
     update_name(hf_out);
   }
-  auto copy_assets = [&](const char * type, const bfs::path & dir) {
+  auto copy_assets = [&](const char * type, const bfs::path & dir)
+  {
     for(const auto & n : in.children(type))
     {
       auto n_out = out.append_copy(n);
@@ -407,7 +410,8 @@ static void get_joint_names(const pugi::xml_node & in,
                             std::vector<std::string> & joints,
                             std::string & free_joint)
 {
-  auto prefixed = [&prefix](const char * name) -> std::string {
+  auto prefixed = [&prefix](const char * name) -> std::string
+  {
     if(prefix.size())
     {
       return fmt::format("{}_{}", prefix, name);
@@ -445,7 +449,8 @@ static void get_motor_names(const pugi::xml_node & in,
                             std::vector<std::string> & pos_acts,
                             std::vector<std::string> & vel_acts)
 {
-  auto joint_to_act = [&](const char * type, std::vector<std::string> & acts) {
+  auto joint_to_act = [&](const char * type, std::vector<std::string> & acts)
+  {
     std::unordered_map<std::string, std::string> joint_to_act;
     for(const auto & m : in.children(type))
     {

@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(TestMcMuJoCo LANGUAGES CXX VERSION 1.0.0)
+project(
+  TestMcMuJoCo
+  LANGUAGES CXX
+  VERSION 1.0.0)
 
 include(CTest)
 enable_testing()

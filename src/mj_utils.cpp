@@ -299,7 +299,8 @@ bool mujoco_init(MjSimImpl * mj_sim,
   {
     // Activate MuJoCo
     const char * key_buf_ptr = getenv("MUJOCO_KEY_PATH");
-    std::string key_buf = [&]() -> std::string {
+    std::string key_buf = [&]() -> std::string
+    {
       if(key_buf_ptr)
       {
         return key_buf_ptr;
@@ -355,7 +356,8 @@ void mujoco_create_window(MjSimImpl * mj_sim)
 #endif
 
   // initialize visualization data structures
-  auto config = [&]() -> mc_rtc::Configuration {
+  auto config = [&]() -> mc_rtc::Configuration
+  {
     auto path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
     if(bfs::exists(path))
     {

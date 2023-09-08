@@ -104,4 +104,3 @@ StatementMacros: [MC_RTC_diagnostic_push,MC_RTC_diagnostic_pop,MC_RTC_diagnostic
 TabWidth:        2
 UseTab:          Never
 ...
-
