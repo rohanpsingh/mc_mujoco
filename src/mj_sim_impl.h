@@ -151,7 +151,7 @@ struct MjRobot
   std::vector<double> mj_next_ctrl_jointTorque;
 
   /** Initialize some data after the simulation has started */
-  void initialize(mjModel * model, const mc_rbdyn::Robot & robot);
+  void initialize(mjModel * model, const mc_rbdyn::Robot & robot, bool fix_base);
 
   /** Reset the state based on the mc_rtc robot state */
   void reset(const mc_rbdyn::Robot & robot);
