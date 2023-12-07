@@ -176,9 +176,9 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     // fix base if needed
     if(config.fix_base_link)
     {
-      if (r.name()=="ground")
+      if(r.name() == "ground")
       {
-	continue;
+        continue;
       }
     }
 
@@ -260,7 +260,7 @@ void MjObject::initialize(mjModel * model)
   }
 }
 
-void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot, bool fix_base=false)
+void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot, bool fix_base = false)
 {
   mj_jnt_ids.resize(0);
   for(const auto & j : mj_jnt_names)
@@ -299,15 +299,15 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot, bool fi
   // fix base if needed
   if(fix_base)
   {
-    if (!root_joint.empty())
+    if(!root_joint.empty())
     {
       auto root_joint_id = mj_name2id(model, mjOBJ_JOINT, root_joint.c_str());
-      for (unsigned int j = 0; j < model->nv; j++)
+      for(unsigned int j = 0; j < model->nv; j++)
       {
-	if (model->dof_jntid[j] == root_joint_id)
-	{
-	  model->dof_damping[j] = mjMAXVAL;
-	}
+        if(model->dof_jntid[j] == root_joint_id)
+        {
+          model->dof_damping[j] = mjMAXVAL;
+        }
       }
     }
   }
