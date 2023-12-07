@@ -17,16 +17,23 @@ if(NOT DEFINED MUJOCO_ROOT_DIR)
   # FetchContent from CMake >= 3.11
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.11")
     set(MUJOCO_DOWNLOAD_DIR "$ENV{HOME}/.mujoco/mujoco301")
-    message(STATUS "MUJOCO_ROOT_DIR is not provided. Will be automatically downloaded to ${MUJOCO_DOWNLOAD_DIR}.")
+    message(
+      STATUS
+        "MUJOCO_ROOT_DIR is not provided. Will be automatically downloaded to ${MUJOCO_DOWNLOAD_DIR}."
+    )
     include(FetchContent)
-    FetchContent_Declare(mujoco
+    FetchContent_Declare(
+      mujoco
       URL https://github.com/google-deepmind/mujoco/releases/download/3.0.1/mujoco-3.0.1-linux-x86_64.tar.gz
-      SOURCE_DIR ${MUJOCO_DOWNLOAD_DIR}
-      )
+          SOURCE_DIR
+          ${MUJOCO_DOWNLOAD_DIR})
     FetchContent_MakeAvailable(mujoco)
     set(MUJOCO_ROOT_DIR "${MUJOCO_DOWNLOAD_DIR}")
   else()
-    message(FATAL_ERROR "MUJOCO_ROOT_DIR is not provided. Download MuJoCo from mujoco.org and provide MUJOCO_ROOT_DIR.")
+    message(
+      FATAL_ERROR
+        "MUJOCO_ROOT_DIR is not provided. Download MuJoCo from mujoco.org and provide MUJOCO_ROOT_DIR."
+    )
   endif()
 endif()
 
