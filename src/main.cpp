@@ -46,6 +46,7 @@ int main(int argc, char * argv[])
       ("without-mc-rtc-gui", po::bool_switch(), "Disable mc_rtc GUI")
       ("with-collisions", po::bool_switch(), "Visualize collisions model")
       ("without-visuals", po::bool_switch(), "Disable visuals display")
+      ("fix-base-link", po::bool_switch(), "Freeze the root joint of all mc_rtc robots.")
       ("sync", po::bool_switch(&config.sync_real_time), "Synchronize mc_mujoco simulation time with real time");
     // clang-format on
     po::variables_map vm;
@@ -67,6 +68,7 @@ int main(int argc, char * argv[])
     {
       config.visualize_collisions = vm["with-collisions"].as<bool>();
     }
+    config.fix_base_link = vm["fix-base-link"].as<bool>();
   }
   mc_mujoco::MjSim mj_sim(config);
 
