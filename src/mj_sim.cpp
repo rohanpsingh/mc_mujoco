@@ -173,15 +173,6 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   // load all robots named in mc-rtc config
   for(const auto & r : controller->robots())
   {
-    // fix base if needed
-    if(config.fix_base_link)
-    {
-      if(r.name() == "ground")
-      {
-        continue;
-      }
-    }
-
     const auto & robot_cfg_path = get_robot_cfg_path(r.module().name);
     if(!robot_cfg_path.empty())
     {
