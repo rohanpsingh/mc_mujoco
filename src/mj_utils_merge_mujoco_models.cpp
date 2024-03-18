@@ -340,6 +340,34 @@ static void merge_mujoco_model(const std::string & robot, const std::string & xm
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("No mujoco root node in {}", xmlFile);
   }
+  auto handle_mujoco_includes = [&](pugi::xml_node & out, const char * attr)
+  {
+    for(const auto & inc : root.child(attr).children("include"))
+    {
+      bfs::path include_file_path(inc.attribute("file").value());
+      if(!include_file_path.is_absolute())
+      {
+	bfs::path xmlPath = bfs::path(xmlFile).parent_path();
+	include_file_path = xmlPath / include_file_path;
+      }
+      pugi::xml_document includeDoc;
+      if (!includeDoc.load_file(include_file_path.c_str()))
+      {
+	mc_rtc::log::error_and_throw<std::runtime_error>("Failed to load {}", include_file_path.c_str());
+      }
+      for(pugi::xml_node include_node : includeDoc.child("mujoco").children())
+      {
+	out.append_copy(include_node);
+      }
+    }
+  };
+  /** Handle includes here (non-exhaustive list for now) */
+  static const char * elements[] = {"asset", "contact", "actuator", "sensor"};
+  for(const auto & element : elements)
+  {
+    auto out = root.child(element);
+    handle_mujoco_includes(out, element);
+  }
   /** Merge compiler flags */
   {
     auto compiler_out = get_child_or_create(out, "compiler");
