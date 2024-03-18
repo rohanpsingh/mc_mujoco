@@ -140,16 +140,17 @@ static void merge_mujoco_default(const std::string & fileIn,
 {
   for(const auto & c : in.children())
   {
+    pugi::xml_node c_out;
     if(strcmp(c.name(), "default") == 0)
     {
-      auto c_out = out.append_copy(c);
-      add_prefix_recursively(robot, c_out, {"class", "material", "hfield", "mesh", "target"});
+      c_out = out.append_copy(c);
     }
     else
     {
-      auto c_out = get_child_or_create(out, c.name());
+      c_out = get_child_or_create(out, c.name());
       merge_mujoco_node(fmt::format("default/{}", c.name()), fileIn, c, c_out);
     }
+    add_prefix_recursively(robot, c_out, {"class", "material", "hfield", "mesh", "target"});
   }
 }
 
@@ -173,7 +174,10 @@ static void copy_and_add_prefix(const pugi::xml_node & in,
     auto c_out = out.append_copy(c);
     for(const auto & attr : attrs)
     {
-      add_prefix(prefix, c_out, attr.c_str());
+      if(prefix.size())
+      {
+        add_prefix(prefix, c_out, attr.c_str());
+      }
     }
   }
 }
