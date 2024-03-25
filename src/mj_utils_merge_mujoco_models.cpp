@@ -347,17 +347,17 @@ static void merge_mujoco_model(const std::string & robot, const std::string & xm
       bfs::path include_file_path(inc.attribute("file").value());
       if(!include_file_path.is_absolute())
       {
-	bfs::path xmlPath = bfs::path(xmlFile).parent_path();
-	include_file_path = xmlPath / include_file_path;
+        bfs::path xmlPath = bfs::path(xmlFile).parent_path();
+        include_file_path = xmlPath / include_file_path;
       }
       pugi::xml_document includeDoc;
-      if (!includeDoc.load_file(include_file_path.c_str()))
+      if(!includeDoc.load_file(include_file_path.c_str()))
       {
-	mc_rtc::log::error_and_throw<std::runtime_error>("Failed to load {}", include_file_path.c_str());
+        mc_rtc::log::error_and_throw<std::runtime_error>("Failed to load {}", include_file_path.c_str());
       }
       for(pugi::xml_node include_node : includeDoc.child("mujoco").children())
       {
-	out.append_copy(include_node);
+        out.append_copy(include_node);
       }
     }
   };
