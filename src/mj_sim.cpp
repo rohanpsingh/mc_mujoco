@@ -770,7 +770,7 @@ void MjRobot::sendControl(const mjModel & model,
       }
       else
       {
-        mj_ctrl[i] = PD(i, q_ref, encoders[rjo_id], alpha_ref, alphas[rjo_id]);
+        mj_ctrl[i] = PD(rjo_id, q_ref, encoders[rjo_id], alpha_ref, alphas[rjo_id]);
       }
       double ratio = model.actuator_gear[6 * mot_id];
       data.ctrl[mot_id] = mj_ctrl[i] / ratio;
