@@ -14,18 +14,20 @@ bool render_state = true;
 
 #define MUJOCO_PLUGIN_DIR "mujoco_plugin"
 
-
-void scanPluginLibraries(){
-  // define platform-specific strings
-  #if defined(_WIN32) || defined(__CYGWIN__)
-    const std::string sep = "\\";
-  #else
-    const std::string sep = "/";
-  #endif
+void scanPluginLibraries()
+{
+// define platform-specific strings
+#if defined(_WIN32) || defined(__CYGWIN__)
+  const std::string sep = "\\";
+#else
+  const std::string sep = "/";
+#endif
 
   const std::string plugin_dir = MUJOCO_BIN_DIR + sep + MUJOCO_PLUGIN_DIR;
   mj_loadAllPluginLibraries(
-      plugin_dir.c_str(), +[](const char * filename, int first, int count) {
+      plugin_dir.c_str(),
+      +[](const char * filename, int first, int count)
+      {
         std::printf("Plugins registered by library '%s':\n", filename);
         for(int i = first; i < first + count; ++i)
         {
