@@ -210,6 +210,8 @@ void uiEvent(mjuiState * state)
           mjv_select(mj_sim->model, mj_sim->data, &mj_sim->options, (mjtNum)r.width / (mjtNum)r.height,
                      (mjtNum)(state->x - r.left) / (mjtNum)r.width, (mjtNum)(state->y - r.bottom) / (mjtNum)r.height,
                      &mj_sim->scene, selpnt, &selgeom, &selflex, &selskin);
+
+      selbody >= 0 ? mj_sim->pert.flexselect = selflex : mj_sim->pert.flexselect = -1;
 #endif
 
       // set lookat point, start tracking is requested
