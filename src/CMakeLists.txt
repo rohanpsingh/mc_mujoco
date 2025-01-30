@@ -46,6 +46,7 @@ set(mc_mujoco_lib_SRC
     widgets/MujocoWidget.h
     widgets/Point3D.h
     widgets/Polygon.h
+    widgets/Polyhedron.h
     widgets/Rotation.h
     widgets/Trajectory.h
     widgets/Transform.h
