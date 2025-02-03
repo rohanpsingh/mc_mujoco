@@ -71,6 +71,11 @@ struct MujocoClient : public mc_rtc::imgui::Client
                     const mc_rtc::gui::Color & color,
                     double thickness) noexcept;
 
+  void draw_triangle(const std::array<Eigen::Vector3d, 3> & triangle_, const mc_rtc::gui::Color & color_) noexcept;
+
+  void draw_polyhedron(const std::vector<std::array<Eigen::Vector3d, 3>> & triangles_,
+                       mc_rtc::gui::Color & color_) noexcept;
+
 protected:
   void point3d(const ElementId & id,
                const ElementId & requestId,
@@ -98,6 +103,11 @@ protected:
   {
     polygon(id, points, mc_rtc::gui::LineConfig(color));
   }
+
+  void polyhedron(const ElementId & id,
+                  const std::vector<std::array<Eigen::Vector3d, 3>> & triangles,
+                  const std::vector<std::array<mc_rtc::gui::Color, 3>> & colors,
+                  const mc_rtc::gui::PolyhedronConfig & config) override;
 
   void force(const ElementId & id,
              const ElementId & requestId,

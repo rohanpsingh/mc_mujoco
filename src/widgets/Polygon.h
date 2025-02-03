@@ -20,6 +20,11 @@ struct Polygon : public MujocoWidget
 
   void draw3D() override
   {
+    if(!show_)
+    {
+      return;
+    }
+
     for(const auto & p : points_)
     {
       // FIXME Style is not supported by imgui drawing API
@@ -27,9 +32,15 @@ struct Polygon : public MujocoWidget
     }
   }
 
+  void draw2D() override
+  {
+    ImGui::Checkbox(label(fmt::format("Show {}", id.name)).c_str(), &show_);
+  }
+
 private:
   std::vector<std::vector<Eigen::Vector3d>> points_;
   mc_rtc::gui::LineConfig config_;
+  bool show_ = true;
 };
 
 } // namespace mc_mujoco

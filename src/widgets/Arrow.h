@@ -25,6 +25,8 @@ struct Arrow : public MujocoWidget
 
   void draw3D() override
   {
+    if(!show_) return;
+
     const auto & start = startMarker_.pose().translation();
     const auto & end = endMarker_.pose().translation();
     mclient_.draw_arrow(start, end, config_.shaft_diam, config_.head_diam, config_.head_len, config_.color);
@@ -37,11 +39,17 @@ struct Arrow : public MujocoWidget
     }
   }
 
+  void draw2D() override
+  {
+    ImGui::Checkbox(label(fmt::format("Show {}", id.name)).c_str(), &show_);
+  }
+
 private:
   ElementId requestId_;
   mc_rtc::gui::ArrowConfig config_;
   InteractiveMarker startMarker_;
   InteractiveMarker endMarker_;
+  bool show_ = true;
 };
 
 } // namespace mc_mujoco

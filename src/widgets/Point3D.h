@@ -19,12 +19,23 @@ struct Point3D : public TransformBase<ControlAxis::TRANSLATION>
 
   void draw3D() override
   {
+    if(!show_)
+    {
+      return;
+    }
+
     TransformBase::draw3D();
     mclient_.draw_sphere(marker_.pose().translation(), config_.scale, config_.color);
   }
 
+  void draw2D() override
+  {
+    ImGui::Checkbox(label(fmt::format("Show {}", id.name)).c_str(), &show_);
+  }
+
 private:
   mc_rtc::gui::PointConfig config_;
+  bool show_ = true;
 };
 
 } // namespace mc_mujoco
