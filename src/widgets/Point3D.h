@@ -19,6 +19,11 @@ struct Point3D : public TransformBase<ControlAxis::TRANSLATION>
 
   void draw3D() override
   {
+    if(!show_)
+    {
+      return;
+    }
+
     TransformBase::draw3D();
     mclient_.draw_sphere(marker_.pose().translation(), config_.scale, config_.color);
   }
