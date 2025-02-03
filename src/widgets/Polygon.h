@@ -24,7 +24,7 @@ struct Polygon : public MujocoWidget
     {
       return;
     }
-    
+
     for(const auto & p : points_)
     {
       // FIXME Style is not supported by imgui drawing API

@@ -25,9 +25,8 @@ struct Arrow : public MujocoWidget
 
   void draw3D() override
   {
-    if(!show_)
-      return;
-    
+    if(!show_) return;
+
     const auto & start = startMarker_.pose().translation();
     const auto & end = endMarker_.pose().translation();
     mclient_.draw_arrow(start, end, config_.shaft_diam, config_.head_diam, config_.head_len, config_.color);

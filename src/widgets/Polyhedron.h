@@ -9,8 +9,9 @@ struct Polyhedron : public MujocoWidget
 {
   Polyhedron(Client & client, const ElementId & id) : MujocoWidget(client, id) {}
 
-
-  void data(const std::vector<std::array<Eigen::Vector3d, 3>> & triangles, const std::vector<std::array<mc_rtc::gui::Color, 3>> &color, const mc_rtc::gui::PolyhedronConfig & config)
+  void data(const std::vector<std::array<Eigen::Vector3d, 3>> & triangles,
+            const std::vector<std::array<mc_rtc::gui::Color, 3>> & color,
+            const mc_rtc::gui::PolyhedronConfig & config)
   {
     if(triangles_ != triangles)
     {

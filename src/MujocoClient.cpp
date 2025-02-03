@@ -167,13 +167,13 @@ void MujocoClient::polygon(const ElementId & id,
   widget<Polygon>(id).data(points, config);
 }
 
-void MujocoClient::polyhedron(const ElementId & id, const std::vector<std::array<Eigen::Vector3d, 3>> & triangles,
-                              const std::vector<std::array<mc_rtc::gui::Color, 3>> &colors, 
+void MujocoClient::polyhedron(const ElementId & id,
+                              const std::vector<std::array<Eigen::Vector3d, 3>> & triangles,
+                              const std::vector<std::array<mc_rtc::gui::Color, 3>> & colors,
                               const mc_rtc::gui::PolyhedronConfig & config)
 {
   widget<Polyhedron>(id).data(triangles, colors, config);
 }
-
 
 void MujocoClient::arrow(const ElementId & id,
                          const ElementId & requestId,
@@ -321,9 +321,11 @@ void MujocoClient::draw_polygon(const std::vector<Eigen::Vector3d> & points,
     }
 }
 
-void MujocoClient::draw_triangle(const std::array<Eigen::Vector3d, 3> &triangle_, const mc_rtc::gui::Color &color_) noexcept {
+void MujocoClient::draw_triangle(const std::array<Eigen::Vector3d, 3> & triangle_,
+                                 const mc_rtc::gui::Color & color_) noexcept
+{
   geoms_.push_back({});
-  auto &geom = geoms_.back();
+  auto & geom = geoms_.back();
   Eigen::Vector3d e1 = triangle_[1] - triangle_[0];
   Eigen::Vector3d e2 = triangle_[2] - triangle_[0];
   Eigen::Vector3d normal = e1.cross(e2);
@@ -334,16 +336,17 @@ void MujocoClient::draw_triangle(const std::array<Eigen::Vector3d, 3> &triangle_
   normal.normalize();
 
   Eigen::Matrix<double, 3, 3, Eigen::RowMajor> xmat;
-  xmat << e1[0], e2[0], normal[0], 
-          e1[1], e2[1], normal[1],
-          e1[2], e2[2], normal[2];
+  xmat << e1[0], e2[0], normal[0], e1[1], e2[1], normal[1], e1[2], e2[2], normal[2];
 
   auto color = internal::to_rgba(color_);
   mjv_initGeom(&geom, mjGEOM_TRIANGLE, lengths.data(), triangle_[0].data(), xmat.data(), color.data());
 }
 
-void MujocoClient::draw_polyhedron(const std::vector<std::array<Eigen::Vector3d, 3>> &triangles_, mc_rtc::gui::Color & color_) noexcept {
-  for(int i = 0; i < triangles_.size(); i++){
+void MujocoClient::draw_polyhedron(const std::vector<std::array<Eigen::Vector3d, 3>> & triangles_,
+                                   mc_rtc::gui::Color & color_) noexcept
+{
+  for(int i = 0; i < triangles_.size(); i++)
+  {
     draw_triangle(triangles_[i], color_);
   }
 }
