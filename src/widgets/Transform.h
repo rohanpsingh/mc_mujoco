@@ -15,7 +15,7 @@ struct TransformWidget : public TransformBase<ControlAxis::ALL>
     {
       return;
     }
-    
+
     TransformBase::draw3D();
     mclient_.draw_frame(marker_.pose());
   }
@@ -25,9 +25,8 @@ struct TransformWidget : public TransformBase<ControlAxis::ALL>
     ImGui::Checkbox(label(fmt::format("Show {}", id.name)).c_str(), &show_);
   }
 
-  private:
-    bool show_ = true;
+private:
+  bool show_ = true;
 };
 
 } // namespace mc_mujoco
-
