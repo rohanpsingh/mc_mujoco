@@ -1,0 +1,15 @@
+<mujoco model="table">
+    <compiler angle="radian" meshdir="assets" />
+    <size njmax="500" nconmax="100" />
+    <asset>
+        <mesh name="table" file="table.stl" />
+    </asset>
+    <worldbody>
+        <body name="base" pos="0 0 0">
+            <!-- <freejoint name="root" /> -->
+            <!-- The second geom tag each time is the collision one -->
+            <geom type="mesh" contype="0" conaffinity="0" group="1" mesh="table" />
+            <geom type="mesh" mesh="table" />
+        </body>
+    </worldbody>
+</mujoco>
