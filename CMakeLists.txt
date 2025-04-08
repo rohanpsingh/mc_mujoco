@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 
 # These variables have to be defined before running setup_project
 set(PROJECT_NAME mc_mujoco)
