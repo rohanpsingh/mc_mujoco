@@ -16,7 +16,7 @@ Then, execute the following command to install mujoco (`$HOME/.mujoco/mujoco301`
 $ git clone --recursive git@github.com:rohanpsingh/mc_mujoco.git
 $ cd mc_mujoco
 $ mkdir build && cd build
-$ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo 
+$ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
 $ make
 $ make install
 ```
