@@ -27,6 +27,8 @@ struct MjConfiguration
   std::string mc_config = "";
   /** Use torque-control rather than position control */
   bool torque_control = false;
+  /** Freeze root joints of all mc_rtc robots by increasing damping and removing ground */
+  bool fix_base_link = false;
 };
 
 } // namespace mc_mujoco
