@@ -251,7 +251,7 @@ void MjObject::initialize(mjModel * model)
   }
 }
 
-void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
+void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot, bool fix_base = false)
 {
   mj_jnt_ids.resize(0);
   for(const auto & j : mj_jnt_names)
@@ -286,6 +286,23 @@ void MjRobot::initialize(mjModel * model, const mc_rbdyn::Robot & robot)
     root_qpos_idx = model->jnt_qposadr[root_joint_id];
     root_qvel_idx = model->jnt_dofadr[root_joint_id];
   }
+
+  // fix base if needed
+  if(fix_base)
+  {
+    if(!root_joint.empty())
+    {
+      auto root_joint_id = mj_name2id(model, mjOBJ_JOINT, root_joint.c_str());
+      for(unsigned int j = 0; j < model->nv; j++)
+      {
+        if(model->dof_jntid[j] == root_joint_id)
+        {
+          model->dof_damping[j] = mjMAXVAL;
+        }
+      }
+    }
+  }
+
   auto init_sensor_id = [&](const char * mj_name, const char * mc_name, const std::string & sensor_name,
                             const char * suffix, mjtSensor type, std::unordered_map<std::string, int> & mapping)
   {
@@ -464,7 +481,7 @@ void MjSimImpl::setSimulationInitialState()
     for(auto & r : robots)
     {
       const auto & robot = controller->robots().robot(r.name);
-      r.initialize(model, robot);
+      r.initialize(model, robot, config.fix_base_link);
       setPosW(r, robot.posW());
       for(size_t i = 0; i < r.mj_jnt_ids.size(); ++i)
       {
@@ -617,7 +634,7 @@ void MjSimImpl::startSimulation()
 
   for(auto & r : robots)
   {
-    r.initialize(model, controller->robot(r.name));
+    r.initialize(model, controller->robot(r.name), config.fix_base_link);
     controller->setEncoderValues(r.name, r.encoders);
   }
   for(const auto & r : robots)
