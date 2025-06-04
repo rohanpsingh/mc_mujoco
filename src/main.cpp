@@ -61,8 +61,8 @@ int main(int argc, char * argv[])
     p.add("mc-config", 1);
     // clang-format off
     desc.add_options()
-      ("help", "Show this help message")
-      ("mc-config", po::value<std::string>(&config.mc_config), "Configuration given to mc_rtc")
+      ("help,h", "Show this help message")
+      ("mc-config,f", po::value<std::string>(&config.mc_config), "Configuration given to mc_rtc")
       ("step-by-step", po::bool_switch(&config.step_by_step), "Start the simulation in step-by-step mode")
       ("torque-control", po::bool_switch(&config.torque_control), "Enable torque control")
       ("without-controller", po::bool_switch(), "Disable mc_rtc controller inside mc_mujoco")
@@ -70,7 +70,7 @@ int main(int argc, char * argv[])
       ("without-mc-rtc-gui", po::bool_switch(), "Disable mc_rtc GUI")
       ("with-collisions", po::bool_switch(), "Visualize collisions model")
       ("without-visuals", po::bool_switch(), "Disable visuals display")
-      ("sync", po::bool_switch(&config.sync_real_time), "Synchronize mc_mujoco simulation time with real time");
+      ("sync,s", po::bool_switch(&config.sync_real_time), "Synchronize mc_mujoco simulation time with real time");
     // clang-format on
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
