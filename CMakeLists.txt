@@ -38,29 +38,31 @@ if(NOT DEFINED MUJOCO_ROOT_DIR)
 endif()
 
 # Prefer ROS Humble Pinocchio over stray /usr configs
-set(pinocchio_DIR "/opt/ros/humble/lib/x86_64-linux-gnu/cmake/pinocchio" CACHE PATH "")
+set(pinocchio_DIR
+    "/opt/ros/humble/lib/x86_64-linux-gnu/cmake/pinocchio"
+    CACHE PATH "")
 
-list(PREPEND CMAKE_PREFIX_PATH
-  "/opt/ros/humble/lib/x86_64-linux-gnu/cmake"
-  "/opt/ros/humble/lib/x86_64-linux-gnu/urdfdom/cmake/"
-  "/usr/lib/x86_64-linux-gnu/cmake"      # keep, but after ROS
+list(PREPEND CMAKE_PREFIX_PATH "/opt/ros/humble/lib/x86_64-linux-gnu/cmake"
+     "/opt/ros/humble/lib/x86_64-linux-gnu/urdfdom/cmake/"
+     "/usr/lib/x86_64-linux-gnu/cmake" # keep, but after ROS
 )
 
-# urdfdom (keep what you had)
-# set(urdfdom_DIR "/usr/lib/x86_64-linux-gnu/urdfdom/cmake" CACHE PATH "")
+# urdfdom (keep what you had) set(urdfdom_DIR
+# "/usr/lib/x86_64-linux-gnu/urdfdom/cmake" CACHE PATH "")
 find_package(urdfdom CONFIG REQUIRED)
 find_package(urdfdom_headers REQUIRED)
 
 if(TARGET urdfdom::urdfdom_model)
-  set_target_properties(urdfdom::urdfdom_model PROPERTIES
-    IMPORTED_LOCATION "/opt/ros/humble/lib/x86_64-linux-gnu/liburdfdom_model.so.3.0")
+  set_target_properties(
+    urdfdom::urdfdom_model
+    PROPERTIES IMPORTED_LOCATION
+               "/opt/ros/humble/lib/x86_64-linux-gnu/liburdfdom_model.so.3.0")
 endif()
 
 # (optional) silence Boost policy warnings you’re seeing
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
 endif()
-
 
 find_package(mc_rtc REQUIRED)
 
