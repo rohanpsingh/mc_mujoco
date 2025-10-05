@@ -177,17 +177,52 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     if(!robot_cfg_path.empty())
     {
       auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
-      if(!robot_cfg.has("xmlModelPath"))
+      const auto main_robot_name = controller->configuration().config.find<std::string>("MainRobot");
+      auto setObjectXML = [&](const std::string & xmlFile)
+      {
+        std::string pdGainsPath = "";
+        mcObjects[r.name()] = xmlFile;
+        if(main_robot_name && robot_cfg.find(main_robot_name->c_str())
+           && robot_cfg(main_robot_name->c_str()).find("pdGainsPath"))
+        {
+          pdGainsPath = robot_cfg(main_robot_name->c_str())("pdGainsPath", std::string(""));
+        }
+        else if(robot_cfg.find(r.name().c_str()) && robot_cfg(r.name().c_str()).find("pdGainsPath")
+                && !robot_cfg(r.name().c_str())("pdGainsPath", std::string("")).empty())
+        {
+          pdGainsPath = robot_cfg(r.name().c_str())("pdGainsPath", std::string(""));
+        }
+        else if(robot_cfg.find("pdGainsPath"))
+        {
+          pdGainsPath = robot_cfg("pdGainsPath", std::string(""));
+        }
+
+        if(!bfs::exists(xmlFile))
+        {
+          mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}",
+                                                           xmlFile, r.name());
+        }
+
+        pdGainsFiles[r.name()] = pdGainsPath;
+      };
+
+      std::cout << "main robot name " << main_robot_name->c_str() << std::endl;
+
+      if(!robot_cfg.has("xmlModelPath") && (!robot_cfg.has(r.name()) || robot_cfg.has(main_robot_name->c_str())))
       {
         mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath in {}", robot_cfg_path);
       }
-      std::string xmlFile = static_cast<std::string>(robot_cfg("xmlModelPath"));
-      mcObjects[r.name()] = xmlFile;
-      pdGainsFiles[r.name()] = robot_cfg("pdGainsPath", std::string(""));
-      if(!bfs::exists(xmlFile))
+      else if(robot_cfg.has(main_robot_name->c_str()))
       {
-        mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}", xmlFile,
-                                                         r.name());
+        setObjectXML(static_cast<std::string>(robot_cfg(main_robot_name->c_str())("xmlModelPath")));
+      }
+      else if(robot_cfg.has(r.name()))
+      {
+        setObjectXML(static_cast<std::string>(robot_cfg(r.name())("xmlModelPath")));
+      }
+      else
+      {
+        setObjectXML(static_cast<std::string>(robot_cfg("xmlModelPath")));
       }
     }
   }
