@@ -21,10 +21,11 @@ $ make
 $ make install
 ```
 
-> If mujoco is already installed, you can add the following   option to specify the path :\
-    ```
-      cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=$HOME/.mujoco/mujoco301
-    ```
+If mujoco is already installed, you can add the following   option to specify the path :
+
+```sh
+$ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=$HOME/.mujoco/mujoco301
+```
 
 Add the following line to your `~/.bashrc`:
 
@@ -33,6 +34,22 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HOME}/.mujoco/mujoco301/lib:${HOME}/.m
 ```
 
 Then, to run the interface:
+
+```sh
+$ mc_mujoco
+```
+
+## Docker
+
+Assuming [docker](https://docs.docker.com/engine/install/) has been installed, the easiest way to get started is as follows:
+
+```sh
+$ git clone --recursive git@github.com:rohanpsingh/mc_mujoco.git
+$ cd mc_mujoco/docker
+$ make run
+```
+
+Then, inside the docker container:
 
 ```sh
 $ mc_mujoco
