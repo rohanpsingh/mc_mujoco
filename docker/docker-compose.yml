@@ -1,0 +1,17 @@
+services:
+  mc-rtc-mujoco:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mc-rtc-mujoco:latest
+    container_name: mc-rtc-mujoco-container
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - ROS_DISTRO=humble
+    devices:
+      - /dev/dri:/dev/dri
+    network_mode: host
+    stdin_open: true
+    tty: true
