@@ -139,6 +139,12 @@ protected:
 
   void visual(const ElementId & id, const rbd::parsers::Visual & visual, const sva::PTransformd & pos) override;
 
+  mc_rtc::imgui::InteractiveMarkerPtr make_marker(const sva::PTransformd & pose,
+                                                  mc_rtc::imgui::ControlAxis mask) override
+  {
+    return {};
+  };
+
 private:
   std::array<float, 16> view_;
   std::array<float, 16> projection_;
