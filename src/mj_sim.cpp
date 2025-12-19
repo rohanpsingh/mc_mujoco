@@ -177,15 +177,39 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     if(!robot_cfg_path.empty())
     {
       auto robot_cfg = mc_rtc::Configuration(robot_cfg_path);
-      const auto main_robot_name = controller->configuration().config.find<std::string>("MainRobot");
+
+      auto main_robot_params = [&]() -> std::vector<std::string>
+      {
+        auto main_robot_cfg = robot_cfg.find("MainRobot");
+        if(!main_robot_cfg)
+        {
+          return {"JVRC1"};
+        }
+        if(main_robot_cfg->isArray())
+        {
+          return main_robot_cfg->operator std::vector<std::string>();
+        }
+        if(main_robot_cfg->isObject())
+        {
+          auto module_cfg = (*main_robot_cfg)("module");
+          if(module_cfg.isArray())
+          {
+            return module_cfg.operator std::vector<std::string>();
+          }
+          return {module_cfg.operator std::string()};
+        }
+        return {main_robot_cfg->operator std::string()};
+      }();
+
+      const auto & main_robot_name = main_robot_params[0];
       auto setObjectXML = [&](const std::string & xmlFile)
       {
         std::string pdGainsPath = "";
         mcObjects[r.name()] = xmlFile;
-        if(main_robot_name && robot_cfg.find(main_robot_name->c_str())
-           && robot_cfg(main_robot_name->c_str()).find("pdGainsPath"))
+        if(!main_robot_name.empty() && robot_cfg.find(main_robot_name)
+           && robot_cfg(main_robot_name).find("pdGainsPath"))
         {
-          pdGainsPath = robot_cfg(main_robot_name->c_str())("pdGainsPath", std::string(""));
+          pdGainsPath = robot_cfg(main_robot_name)("pdGainsPath", std::string(""));
         }
         else if(robot_cfg.find(r.name().c_str()) && robot_cfg(r.name().c_str()).find("pdGainsPath")
                 && !robot_cfg(r.name().c_str())("pdGainsPath", std::string("")).empty())
@@ -206,15 +230,13 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
         pdGainsFiles[r.name()] = pdGainsPath;
       };
 
-      std::cout << "main robot name " << main_robot_name->c_str() << std::endl;
-
-      if(!robot_cfg.has("xmlModelPath") && (!robot_cfg.has(r.name()) || robot_cfg.has(main_robot_name->c_str())))
+      if(!robot_cfg.has("xmlModelPath") && (!robot_cfg.has(r.name()) || robot_cfg.has(main_robot_name)))
       {
         mc_rtc::log::error_and_throw<std::runtime_error>("Missing xmlModelPath in {}", robot_cfg_path);
       }
-      else if(robot_cfg.has(main_robot_name->c_str()))
+      else if(robot_cfg.has(main_robot_name))
       {
-        setObjectXML(static_cast<std::string>(robot_cfg(main_robot_name->c_str())("xmlModelPath")));
+        setObjectXML(static_cast<std::string>(robot_cfg(main_robot_name)("xmlModelPath")));
       }
       else if(robot_cfg.has(r.name()))
       {
