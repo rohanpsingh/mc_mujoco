@@ -18,6 +18,7 @@ ci-test:
 		bash -c "rm -rf build && mkdir -p build && cd build && \
 			cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=/opt/mujoco && \
 			cmake --build . --config RelWithDebInfo && \
+			cmake --install . && \
 			echo 'Build passed! Running standalone test...' && \
 			cd /workspace/.github/workflows/test-standalone && \
 			rm -rf build && mkdir build && cd build && \
