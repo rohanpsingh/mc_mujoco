@@ -1,8 +1,8 @@
 services:
   mc-rtc-mujoco:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     image: mc-rtc-mujoco:latest
     container_name: mc-rtc-mujoco-container
     volumes:

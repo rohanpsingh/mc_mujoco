@@ -28,8 +28,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install MuJoCo
-ARG MUJOCO_VERSION=3.0.0
-RUN mkdir -p /opt && cd /opt && \
+COPY MUJOCO_VERSION /tmp/MUJOCO_VERSION
+RUN MUJOCO_VERSION=$(cat /tmp/MUJOCO_VERSION | tr -d '[:space:]') && \
+    mkdir -p /opt && cd /opt && \
     wget --quiet https://github.com/deepmind/mujoco/releases/download/${MUJOCO_VERSION}/mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz && \
     tar xzf mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz && \
     mv mujoco-${MUJOCO_VERSION} mujoco && \
