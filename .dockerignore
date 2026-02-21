@@ -1,0 +1,21 @@
+# Build artifacts
+build/
+cmake-build-*/
+
+# Git
+.git/
+.gitignore
+.gitmodules
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Docker backup files
+docker/*.~
+docker/*~
+
+# Claude
+.claude/
