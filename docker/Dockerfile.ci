@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install base dependencies
 RUN apt-get update && apt-get install -y \
     curl gnupg lsb-release wget ca-certificates \
-    build-essential cmake git
+    build-essential cmake ninja-build ccache git
 
 # Setup ROS 2 apt repository
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
@@ -15,8 +15,14 @@ RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o 
 RUN curl -1sLf 'https://dl.cloudsmith.io/public/mc-rtc/head/setup.deb.sh' | bash
 
 # Install dependencies
+# Note: libmc-rtc-dev excluded — binary was built against old RBDyn 128-byte Joint.
+# We build mc_rtc from source instead.
 RUN apt-get update && apt-get install -y \
-    libmc-rtc-dev \
+    libeigen3-dev libboost-all-dev libtinyxml2-dev \
+    libyaml-cpp-dev libspdlog-dev libnanomsg-dev libltdl-dev libnotify-dev \
+    libtasks-dev libtvm-dev libeigen-quadprog-dev libstate-observation-dev \
+    libndcurves-dev libmesh-sampling-dev libgeos++-inline-dev \
+    mc-rtc-data \
     libxi-dev \
     libxcursor-dev \
     libxkbcommon-dev \
@@ -26,6 +32,28 @@ RUN apt-get update && apt-get install -y \
     libboost-program-options-dev \
     ros-humble-ament-index-cpp \
     && rm -rf /var/lib/apt/lists/*
+
+# Rebuild Tasks from source against RBDyn 1.9.3 (fixes 128->144 byte Joint ABI mismatch)
+RUN git clone --depth=1 --recurse-submodules --branch v1.8.2 https://github.com/jrl-umi3218/Tasks.git /tmp/Tasks && \
+    cmake -S /tmp/Tasks -B /tmp/Tasks/build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DPYTHON_BINDING=OFF && \
+    cmake --build /tmp/Tasks/build && \
+    cmake --install /tmp/Tasks/build && \
+    ldconfig && \
+    rm -rf /tmp/Tasks
+
+# Build mc_rtc from source against RBDyn 1.9.3
+RUN git clone --depth=1 --recurse-submodules https://github.com/jrl-umi3218/mc_rtc.git /tmp/mc_rtc && \
+    cmake -S /tmp/mc_rtc -B /tmp/mc_rtc/build -G Ninja \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DPYTHON_BINDING=OFF && \
+    cmake --build /tmp/mc_rtc/build && \
+    cmake --install /tmp/mc_rtc/build && \
+    ldconfig && \
+    rm -rf /tmp/mc_rtc
 
 # Install MuJoCo
 COPY MUJOCO_VERSION /tmp/MUJOCO_VERSION
