@@ -96,6 +96,20 @@ RUN MUJOCO_VERSION=$(cat /tmp/MUJOCO_VERSION | tr -d '[:space:]') && \
 ENV LD_LIBRARY_PATH=/opt/mujoco/lib:$LD_LIBRARY_PATH
 ENV MUJOCO_ROOT_DIR=/opt/mujoco
 
+# Install libtorch CPU (cached — update LIBTORCH_VERSION to re-download)
+COPY LIBTORCH_VERSION /tmp/LIBTORCH_VERSION
+RUN LIBTORCH_VERSION=$(cat /tmp/LIBTORCH_VERSION | tr -d '[:space:]') && \
+    wget --quiet \
+        "https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-${LIBTORCH_VERSION}%2Bcpu.zip" \
+        -O /tmp/libtorch.zip && \
+    unzip -q /tmp/libtorch.zip -d /opt && \
+    mv /opt/libtorch /opt/libtorch-${LIBTORCH_VERSION} && \
+    ln -s /opt/libtorch-${LIBTORCH_VERSION} /opt/libtorch && \
+    rm /tmp/libtorch.zip
+
+ENV LIBTORCH_ROOT=/opt/libtorch
+ENV LD_LIBRARY_PATH=/opt/libtorch/lib:$LD_LIBRARY_PATH
+
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

@@ -82,22 +82,31 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
 # find torch
-if(NOT EXISTS ${PROJECT_SOURCE_DIR}/ext/libtorch)
-  # FetchContent from CMake >= 3.11
+# Prefer an explicit LIBTORCH_ROOT (e.g. set by Docker), then ext/libtorch,
+# then auto-download via FetchContent.
+set(LIBTORCH_ROOT "" CACHE PATH "Path to a pre-installed libtorch (overrides auto-download)")
+if(LIBTORCH_ROOT)
+  message(STATUS "Using provided libtorch at: ${LIBTORCH_ROOT}")
+  set(MC_MUJOCO_LIBTORCH_PATH ${LIBTORCH_ROOT})
+  set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${LIBTORCH_ROOT})
+elseif(EXISTS ${PROJECT_SOURCE_DIR}/ext/libtorch)
+  message(STATUS "Using local ext/libtorch")
+  set(MC_MUJOCO_LIBTORCH_PATH ${PROJECT_SOURCE_DIR}/ext/libtorch)
+  set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${PROJECT_SOURCE_DIR}/ext/libtorch)
+else()
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.11")
-    message(STATUS "libtorch is missing. Will be automatically downloaded.")
+    message(STATUS "libtorch not found. Downloading nightly CPU build...")
     include(FetchContent)
     FetchContent_Declare(libtorch
       URL https://download.pytorch.org/libtorch/nightly/cpu/libtorch-cxx11-abi-shared-with-deps-latest.zip
-      SOURCE_DIR ${PROJECT_SOURCE_DIR}/ext/libtorch
-      )
+      SOURCE_DIR ${PROJECT_SOURCE_DIR}/ext/libtorch)
     FetchContent_Populate(libtorch)
+    set(MC_MUJOCO_LIBTORCH_PATH ${PROJECT_SOURCE_DIR}/ext/libtorch)
+    set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${PROJECT_SOURCE_DIR}/ext/libtorch)
   else()
-    message(FATAL_ERROR "libtorch is missing at ${PROJECT_SOURCE_DIR}/ext/libtorch. Download from https://download.pytorch.org/libtorch/nightly/cpu/libtorch-cxx11-abi-shared-with-deps-latest.zip")
+    message(FATAL_ERROR "libtorch not found. Set LIBTORCH_ROOT or provide ext/libtorch. CMake >= 3.11 required for auto-download.")
   endif()
 endif()
-
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${PROJECT_SOURCE_DIR}/ext/libtorch)
 find_package(Torch REQUIRED)
 
 # find mujoco library
@@ -123,3 +132,8 @@ add_subdirectory(src)
 add_subdirectory(robots)
 
 enable_testing()
+
+add_executable(test_torch tests/test_torch.cpp)
+target_link_libraries(test_torch PRIVATE "${TORCH_LIBRARIES}")
+target_compile_options(test_torch PRIVATE ${TORCH_CXX_FLAGS})
+add_test(NAME test_torch COMMAND test_torch)
