@@ -1,9 +1,6 @@
 services:
   mc-mujoco-ci:
-    build:
-      context: .
-      dockerfile: Dockerfile.ci
-    image: mc-mujoco-ci:latest
+    image: mc-rtc-mujoco:latest
     volumes:
       - ..:/workspace
     working_dir: /workspace
