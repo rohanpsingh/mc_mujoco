@@ -19,13 +19,8 @@ SampleNeckPolicy::SampleNeckPolicy(mc_rbdyn::RobotModulePtr rm, double dt, const
   solver().addTask(postureTask);
 
   // Build a small dummy MLP: 2 inputs (sin, cos) -> 64 -> 64 -> 1 output
-  model_ = torch::nn::Sequential(
-      torch::nn::Linear(2, 64),
-      torch::nn::Tanh(),
-      torch::nn::Linear(64, 64),
-      torch::nn::Tanh(),
-      torch::nn::Linear(64, 1),
-      torch::nn::Tanh());
+  model_ = torch::nn::Sequential(torch::nn::Linear(2, 64), torch::nn::Tanh(), torch::nn::Linear(64, 64),
+                                 torch::nn::Tanh(), torch::nn::Linear(64, 1), torch::nn::Tanh());
   model_->eval();
 
   // Find NECK_Y joint index in posture task ordering
@@ -41,7 +36,7 @@ SampleNeckPolicy::SampleNeckPolicy(mc_rbdyn::RobotModulePtr rm, double dt, const
   }
 
   mc_rtc::log::info("[SampleNeckPolicy] init done — period={}, amplitude={}, NECK_Y index={}", period_, amplitude_,
-                     jointIndex_);
+                    jointIndex_);
 }
 
 void SampleNeckPolicy::reset(const mc_control::ControllerResetData & reset_data)
