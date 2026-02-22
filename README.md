@@ -41,7 +41,7 @@ $ mc_mujoco
 
 ## Docker
 
-Assuming [docker](https://docs.docker.com/engine/install/) has been installed, the easiest way to get started is as follows:
+Assuming [Docker](https://docs.docker.com/engine/install/) (Compose v2) has been installed:
 
 ```sh
 $ git clone --recursive git@github.com:rohanpsingh/mc_mujoco.git
@@ -49,11 +49,13 @@ $ cd mc_mujoco/docker
 $ make run
 ```
 
-Then, inside the docker container:
+This builds the environment image, compiles mc_mujoco, and drops you into a shell. Then:
 
 ```sh
 $ mc_mujoco
 ```
+
+See [docker/README.md](docker/README.md) for details on development workflow, using the image for your own mc_rtc controllers, running CI locally, and version management.
 
 ---
 
