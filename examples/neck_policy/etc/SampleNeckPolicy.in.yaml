@@ -3,4 +3,4 @@
 # amplitude: max neck yaw angle in radians
 
 period: 3.0
-amplitude: 0.5
+amplitude: 15.0
