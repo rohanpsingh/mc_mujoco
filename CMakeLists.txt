@@ -103,4 +103,6 @@ add_subdirectory(ext/pugixml)
 add_subdirectory(src)
 add_subdirectory(robots)
 
+add_subdirectory(examples)
+
 enable_testing()

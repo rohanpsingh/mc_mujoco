@@ -1,0 +1,6 @@
+# SampleNeckPolicy controller configuration
+# period: oscillation period in seconds
+# amplitude: max neck yaw angle in radians
+
+period: 3.0
+amplitude: 0.5

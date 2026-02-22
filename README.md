@@ -57,6 +57,12 @@ $ mc_mujoco
 
 See [docker/README.md](docker/README.md) for details on development workflow, using the image for your own mc_rtc controllers, running CI locally, and version management.
 
+## Examples
+
+Example controllers live under [`examples/`](examples/). Built by default (disable with `-DBUILD_EXAMPLES=OFF`).
+
+- **[neck_policy](examples/neck_policy/)** — Minimal libtorch NN policy that drives JVRC1's neck yaw joint. Good starting point for running NN policies in mc_mujoco.
+
 ---
 
 #### To load additional objects in the scene
