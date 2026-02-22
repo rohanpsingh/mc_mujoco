@@ -8,7 +8,7 @@ mkdir -p ~/.config/mc_rtc/
 cat > ~/.config/mc_rtc/mc_rtc.yaml << EOF
 MainRobot: JVRC1
 Timestep: 0.002
-Enabled: [Posture, EndEffector, CoM]
+Enabled: [Posture, EndEffector, CoM, SampleNeckPolicy]
 EOF
 
 # Source ROS setup
