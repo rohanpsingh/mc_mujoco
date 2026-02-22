@@ -6,10 +6,11 @@ set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
-if(NOT Torch_FOUND)
-  list(APPEND CMAKE_PREFIX_PATH "@MC_MUJOCO_LIBTORCH_PATH@")
-  find_package(Torch REQUIRED)
-endif()
+# Expose the libtorch path so consumers can find torch without knowing where it is.
+# Controllers that use torch directly should call find_package(Torch REQUIRED) after
+# finding mc_mujoco.
+set(MC_MUJOCO_LIBTORCH_PATH "@MC_MUJOCO_LIBTORCH_PATH@")
+list(APPEND CMAKE_PREFIX_PATH "${MC_MUJOCO_LIBTORCH_PATH}")
 
 set(MC_MUJOCO_SHARE_DESTINATION "@MC_MUJOCO_SHARE_DESTINATION@")
 set(MC_MUJOCO_USER_DESTINATION "@MC_MUJOCO_USER_DESTINATION@")
