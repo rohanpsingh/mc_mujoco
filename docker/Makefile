@@ -18,8 +18,8 @@ run:
 	@xhost -local:docker >/dev/null
 
 ci-test:
-	@echo "Building CI container..."
-	@docker compose -f docker-compose.ci.yml build
+	@echo "Building environment image..."
+	@docker compose -f docker-compose.yml build
 	@echo "Running CI build..."
 	@docker compose -f docker-compose.ci.yml run --rm mc-mujoco-ci \
 		bash -c "cmake -S /workspace -B /ci-build -G Ninja \
