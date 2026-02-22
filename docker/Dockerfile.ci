@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
     libglew-dev \
     libboost-program-options-dev \
     ros-humble-ament-index-cpp \
+    ros-humble-mc-rtc-msgs \
     && rm -rf /var/lib/apt/lists/*
 
 # Rebuild Tasks from source against RBDyn 1.9.3 (fixes 128->144 byte Joint ABI mismatch)

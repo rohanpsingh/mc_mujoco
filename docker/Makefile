@@ -11,7 +11,8 @@ run:
 	@docker compose -f docker-compose.yml run --rm mc-rtc-mujoco bash -c "\
 		cmake -S /workspace/mc_mujoco -B /workspace/mc_mujoco/build -G Ninja \
 		    -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=/opt/mujoco && \
-		cmake --build /workspace/mc_mujoco/build ; \
+		cmake --build /workspace/mc_mujoco/build && \
+		cmake --install /workspace/mc_mujoco/build ; \
 		exec bash"
 	@echo "Revoking X11 access..."
 	@xhost -local:docker >/dev/null

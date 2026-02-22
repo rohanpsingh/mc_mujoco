@@ -34,7 +34,7 @@ The image is cached after the first build. Subsequent `make run` calls are fast 
 The repo is live-mounted at `/workspace/mc_mujoco` inside the container. Edit files on your host normally. To rebuild, first enter the container via `make run`, then from the shell it drops you into:
 
 ```sh
-cmake --build /workspace/mc_mujoco/build
+cmake --build /workspace/mc_mujoco/build && cmake --install /workspace/mc_mujoco/build
 ```
 
 Build artifacts are stored in a Docker-managed volume, so incremental builds persist across container restarts without cluttering your working tree.

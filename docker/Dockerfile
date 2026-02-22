@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     ros-${ROS_DISTRO}-tf2-ros \
     ros-${ROS_DISTRO}-rosbag2 \
     ros-${ROS_DISTRO}-ament-index-cpp \
+    ros-${ROS_DISTRO}-mc-rtc-msgs \
     python3-colcon-common-extensions \
     # mc-rtc build dependencies (JRL libs from cloudsmith, system libs from Ubuntu)
     # libgeos++-inline-dev provides missing .inl files for Ubuntu 22.04 GEOS
