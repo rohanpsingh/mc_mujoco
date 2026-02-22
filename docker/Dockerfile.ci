@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -34,9 +35,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Rebuild Tasks from source against RBDyn 1.9.3 (fixes 128->144 byte Joint ABI mismatch)
-RUN git clone --depth=1 --recurse-submodules --branch v1.8.2 https://github.com/jrl-umi3218/Tasks.git /tmp/Tasks && \
+RUN --mount=type=cache,target=/root/.ccache \
+    git clone --depth=1 --recurse-submodules --branch v1.8.2 \
+        https://github.com/jrl-umi3218/Tasks.git /tmp/Tasks && \
     cmake -S /tmp/Tasks -B /tmp/Tasks/build -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DPYTHON_BINDING=OFF && \
     cmake --build /tmp/Tasks/build && \
     cmake --install /tmp/Tasks/build && \
@@ -44,7 +49,13 @@ RUN git clone --depth=1 --recurse-submodules --branch v1.8.2 https://github.com/
     rm -rf /tmp/Tasks
 
 # Build mc_rtc from source against RBDyn 1.9.3
-RUN git clone --depth=1 --recurse-submodules https://github.com/jrl-umi3218/mc_rtc.git /tmp/mc_rtc && \
+# Update MC_RTC_VERSION to a branch, tag, or commit SHA to pin and invalidate
+# this layer's cache.
+COPY MC_RTC_VERSION /tmp/MC_RTC_VERSION
+RUN --mount=type=cache,target=/root/.ccache \
+    MC_RTC_VERSION=$(cat /tmp/MC_RTC_VERSION | tr -d '[:space:]') && \
+    git clone --depth=1 --recurse-submodules --branch ${MC_RTC_VERSION} \
+        https://github.com/jrl-umi3218/mc_rtc.git /tmp/mc_rtc && \
     cmake -S /tmp/mc_rtc -B /tmp/mc_rtc/build -G Ninja \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -55,14 +66,14 @@ RUN git clone --depth=1 --recurse-submodules https://github.com/jrl-umi3218/mc_r
     ldconfig && \
     rm -rf /tmp/mc_rtc
 
-# Install MuJoCo
+# Install MuJoCo (cached — update MUJOCO_VERSION to re-download)
 COPY MUJOCO_VERSION /tmp/MUJOCO_VERSION
 RUN MUJOCO_VERSION=$(cat /tmp/MUJOCO_VERSION | tr -d '[:space:]') && \
-    mkdir -p /opt && cd /opt && \
+    cd /opt && \
     wget --quiet https://github.com/deepmind/mujoco/releases/download/${MUJOCO_VERSION}/mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz && \
     tar xzf mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz && \
     mv mujoco-${MUJOCO_VERSION} mujoco && \
-    rm -rf *.tar.gz
+    rm -f mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz
 
 ENV LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH
 ENV CMAKE_PREFIX_PATH=/opt/ros/humble:$CMAKE_PREFIX_PATH
