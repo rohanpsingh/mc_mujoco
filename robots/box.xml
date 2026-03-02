@@ -7,7 +7,7 @@
 
     <default>
         <default class="shape">
-	    <geom type="box" size="0.04 0.06 0.15"/>
+	    <geom type="box" size="0.1105 0.1155 0.05"/>
 	    <default class="collision">
 		<geom condim="3" group="0" rgba="0.266754 0.174546 0.0644028 1" />
 	    </default>
@@ -20,8 +20,8 @@
     <worldbody>
       <light mode="targetbodycom" target="base_link" directional="false" diffuse=".8 .8 .8" specular="0.3 0.3 0.3" pos="0 0 4.0" dir="0 0 -1" />
       <body name="base_link">
-        <freejoint name="root" />
-        <inertial pos="0 0 0" mass="3" diaginertia="0.050112 0.046272 0.009984"/>
+        <joint name="root" type="free" />
+        <inertial pos="0 0 0" mass="3" diaginertia="0.01584025 0.01471025 0.0255505"/>
         <geom class="collision" />
         <geom class="visual" />
       </body>
