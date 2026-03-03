@@ -180,7 +180,7 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
 
       auto main_robot_params = [&]() -> std::vector<std::string>
       {
-        auto main_robot_cfg = robot_cfg.find("MainRobot");
+        auto main_robot_cfg = controller->configuration().config.find("MainRobot");
         if(!main_robot_cfg)
         {
           return {"JVRC1"};
