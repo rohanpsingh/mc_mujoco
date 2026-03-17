@@ -1,3 +1,5 @@
+ci:
+  autoupdate_schedule: quarterly
 exclude: |
   (?x)^(
     ext/.*|
