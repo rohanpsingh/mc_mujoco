@@ -2,9 +2,9 @@
 
 #include "Client.h"
 
-#include "glfw3.h"
 #include "imgui.h"
-#include "mujoco.h"
+#include <GLFW/glfw3.h>
+#include <mujoco/mujoco.h>
 
 #ifdef USE_UI_ADAPTER
 #  include "platform_ui_adapter.h"

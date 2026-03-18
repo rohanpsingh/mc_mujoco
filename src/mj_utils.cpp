@@ -1,8 +1,9 @@
-#include "glfw3.h"
-#include "mujoco.h"
+#include <GLFW/glfw3.h>
+#include <mujoco/mujoco.h>
 
 #ifndef USE_UI_ADAPTER
-#  include "uitools.h"
+// MuJoCo < 2.1
+// #  include "uitools.h"
 #else
 #  include "our_glfw_adapter.h"
 #endif
