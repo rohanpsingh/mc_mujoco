@@ -4,7 +4,7 @@
 
 #include "MujocoClient.h"
 
-#include "mujoco.h"
+#include <mujoco/mujoco.h>
 
 #ifdef USE_UI_ADAPTER
 #  include "platform_ui_adapter.h"

@@ -1,34 +1,20 @@
-set(uitools_is_platform_ui_adapter OFF)
-if(EXISTS ${MUJOCO_INCLUDE_DIR}/uitools.c)
-  set(uitools_SRC ${MUJOCO_INCLUDE_DIR}/uitools.c
-                  ${MUJOCO_INCLUDE_DIR}/uitools.h)
-elseif(EXISTS ${MUJOCO_ROOT_DIR}/simulate/uitools.cc)
-  set(uitools_SRC
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.cc
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.h
-      ${MUJOCO_ROOT_DIR}/simulate/uitools.cc
-      ${MUJOCO_ROOT_DIR}/simulate/uitools.h)
-elseif(EXISTS ${MUJOCO_SAMPLE_DIR}/uitools.c)
-  set(uitools_SRC ${MUJOCO_SAMPLE_DIR}/uitools.c ${MUJOCO_SAMPLE_DIR}/uitools.h)
-else()
-  set(uitools_is_platform_ui_adapter ON)
-  set(OUR_GLFW_ADAPTER_HDR
-      ${CMAKE_CURRENT_BINARY_DIR}/include/our_glfw_adapter.h)
-  set(uitools_SRC
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.cc
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.h
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.cc
-      ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.h
-      ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.cc
-      ${OUR_GLFW_ADAPTER_HDR})
-  # Make private members public so we can access the window_ field
-  file(READ "${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.h" GLFW_ADAPTER_SRC)
-  string(REPLACE "private:" "public:" GLFW_ADAPTER_SRC "${GLFW_ADAPTER_SRC}")
-  file(
-    GENERATE
-    OUTPUT "${OUR_GLFW_ADAPTER_HDR}"
-    CONTENT "${GLFW_ADAPTER_SRC}")
-endif()
+set(OUR_GLFW_ADAPTER_HDR ${CMAKE_CURRENT_BINARY_DIR}/include/our_glfw_adapter.h)
+set(MUJOCO_ROOT_DIR ${PROJECT_SOURCE_DIR})
+set(MUJOCO_SIMULATE_DIR "${MUJOCO_ROOT_DIR}/simulate")
+set(uitools_SRC
+    ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.cc
+    ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.h
+    ${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.cc
+    ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.h
+    ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.cc
+    ${OUR_GLFW_ADAPTER_HDR})
+# Make private members public so we can access the window_ field
+file(READ "${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.h" GLFW_ADAPTER_SRC)
+string(REPLACE "private:" "public:" GLFW_ADAPTER_SRC "${GLFW_ADAPTER_SRC}")
+file(
+  GENERATE
+  OUTPUT "${OUR_GLFW_ADAPTER_HDR}"
+  CONTENT "${GLFW_ADAPTER_SRC}")
 
 set(mc_mujoco_lib_SRC
     mj_configuration.h
@@ -95,9 +81,8 @@ add_library(
   ${mc_rtc-imgui-SRC}
   ${mc_rtc-imgui-HDR}
   $<TARGET_OBJECTS:pugixml>)
-if(uitools_is_platform_ui_adapter)
-  target_compile_definitions(mc_mujoco_lib PRIVATE USE_UI_ADAPTER)
-endif()
+target_link_libraries(mc_mujoco_lib PUBLIC mujoco::mujoco)
+target_compile_definitions(mc_mujoco_lib PRIVATE USE_UI_ADAPTER)
 target_include_directories(
   mc_mujoco_lib
   PUBLIC ${MUJOCO_INCLUDE_DIR} $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}>
@@ -121,8 +106,8 @@ endif()
 target_link_libraries(
   mc_mujoco_lib PRIVATE ${NO_AS_NEEDED} GLEW::GLEW OpenGL::GL ${AS_NEEDED}
                         ${LIB_MUJOCO})
-if(GLFW)
-  target_link_libraries(mc_mujoco_lib PRIVATE ${GLFW})
+if(TARGET glfw)
+  target_link_libraries(mc_mujoco_lib PRIVATE glfw)
 else()
   target_include_directories(
     mc_mujoco_lib PRIVATE "${PROJECT_SOURCE_DIR}/ext/glfw/include/GLFW")
