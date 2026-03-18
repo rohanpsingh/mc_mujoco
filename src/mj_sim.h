@@ -4,7 +4,7 @@
 #include <mc_rtc/config.h>
 #include <mc_rtc/logging.h>
 
-#include "mujoco.h"
+#include <mujoco/mujoco.h>
 
 #include "mj_configuration.h"
 
