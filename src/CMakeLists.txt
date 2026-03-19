@@ -82,7 +82,6 @@ add_library(
   ${mc_rtc-imgui-HDR}
   $<TARGET_OBJECTS:pugixml>)
 target_link_libraries(mc_mujoco_lib PUBLIC mujoco::mujoco)
-target_compile_definitions(mc_mujoco_lib PRIVATE USE_UI_ADAPTER)
 target_include_directories(
   mc_mujoco_lib
   PUBLIC ${MUJOCO_INCLUDE_DIR} $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}>
