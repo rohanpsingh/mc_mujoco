@@ -1,62 +1,60 @@
-set(uitools_is_platform_ui_adapter OFF)
-if(EXISTS ${MUJOCO_INCLUDE_DIR}/uitools.c)
-  set(uitools_SRC ${MUJOCO_INCLUDE_DIR}/uitools.c
-                  ${MUJOCO_INCLUDE_DIR}/uitools.h)
-elseif(EXISTS ${MUJOCO_ROOT_DIR}/simulate/uitools.cc)
-  set(uitools_SRC
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.cc
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.h
-      ${MUJOCO_ROOT_DIR}/simulate/uitools.cc
-      ${MUJOCO_ROOT_DIR}/simulate/uitools.h)
-elseif(EXISTS ${MUJOCO_SAMPLE_DIR}/uitools.c)
-  set(uitools_SRC ${MUJOCO_SAMPLE_DIR}/uitools.c ${MUJOCO_SAMPLE_DIR}/uitools.h)
+set(OUR_GLFW_ADAPTER_HDR
+    ${CMAKE_BINARY_DIR}/include/mc_mujoco/our_glfw_adapter.h)
+if(USE_BUNDLED_SIMULATE_ADAPTER)
+  message(STATUS "Using bundled GLFW adapter from mc_mujoco")
+  # MuJoCo simulate folder imported from MuJoCo We need to do this as it is not
+  # installed by MuJoCo but provides a sensible default adapter for displaying
+  # the scene with GLFW, but MuJoCo's cmake install does not install it
+  set(MUJOCO_SIMULATE_DIR "${PROJECT_SOURCE_DIR}/ext/mujoco_simulate/simulate")
 else()
-  set(uitools_is_platform_ui_adapter ON)
-  set(OUR_GLFW_ADAPTER_HDR
-      ${CMAKE_CURRENT_BINARY_DIR}/include/our_glfw_adapter.h)
-  set(uitools_SRC
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.cc
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_dispatch.h
-      ${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.cc
-      ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.h
-      ${MUJOCO_ROOT_DIR}/simulate/platform_ui_adapter.cc
-      ${OUR_GLFW_ADAPTER_HDR})
-  # Make private members public so we can access the window_ field
-  file(READ "${MUJOCO_ROOT_DIR}/simulate/glfw_adapter.h" GLFW_ADAPTER_SRC)
-  string(REPLACE "private:" "public:" GLFW_ADAPTER_SRC "${GLFW_ADAPTER_SRC}")
-  file(
-    GENERATE
-    OUTPUT "${OUR_GLFW_ADAPTER_HDR}"
-    CONTENT "${GLFW_ADAPTER_SRC}")
+  set(MUJOCO_SIMULATE_DIR "${MUJOCO_ROOT_DIR}/simulate")
 endif()
+set(platform_adapter_HDR
+    ${MUJOCO_SIMULATE_DIR}/glfw_dispatch.h
+    ${MUJOCO_SIMULATE_DIR}/glfw_adapter.h
+    ${MUJOCO_SIMULATE_DIR}/platform_ui_adapter.h ${OUR_GLFW_ADAPTER_HDR})
+set(platform_adapter_SRC
+    ${MUJOCO_SIMULATE_DIR}/glfw_dispatch.cc
+    ${MUJOCO_SIMULATE_DIR}/glfw_adapter.cc
+    ${MUJOCO_SIMULATE_DIR}/platform_ui_adapter.cc)
+# NOTE: Make private members public so we can access the window_ field
+file(READ "${MUJOCO_SIMULATE_DIR}/glfw_adapter.h" GLFW_ADAPTER_SRC)
+string(REPLACE "private:" "public:" GLFW_ADAPTER_SRC "${GLFW_ADAPTER_SRC}")
+file(
+  GENERATE
+  OUTPUT "${OUR_GLFW_ADAPTER_HDR}"
+  CONTENT "${GLFW_ADAPTER_SRC}")
 
 set(mc_mujoco_lib_SRC
-    mj_configuration.h
     mj_sim.cpp
     mj_utils.cpp
     mj_utils_merge_mujoco_models.cpp
-    mj_sim.h
-    mj_sim_impl.h
-    mj_utils.h
-    ${uitools_SRC}
+    ${platform_adapter_SRC}
     MujocoClient.cpp
-    MujocoClient.h
-    widgets/Arrow.h
-    widgets/Force.h
-    widgets/MujocoWidget.h
-    widgets/Point3D.h
-    widgets/Polygon.h
-    widgets/Polyhedron.h
-    widgets/Rotation.h
-    widgets/Trajectory.h
-    widgets/Transform.h
-    widgets/Visual.h
-    widgets/Visual.cpp
-    widgets/XYTheta.h
-    widgets/details/ControlAxis.h
-    widgets/details/InteractiveMarker.h
-    widgets/details/InteractiveMarker.cpp
-    widgets/details/TransformBase.h)
+    ../include/mc_mujoco/widgets/Visual.cpp
+    ../include/mc_mujoco/widgets/details/InteractiveMarker.cpp)
+
+set(mc_mujoco_lib_HDR
+    ${platform_adapter_HDR}
+    include/mc_mujoco/MujocoClient.h
+    include/mc_mujoco/mj_configuration.h
+    include/mc_mujoco/mj_sim_impl.h
+    include/mc_mujoco/mj_sim.h
+    include/mc_mujoco/mj_utils.h
+    include/mc_mujoco/widgets/Arrow.h
+    include/mc_mujoco/widgets/Force.h
+    include/mc_mujoco/widgets/MujocoWidget.h
+    include/mc_mujoco/widgets/Point3D.h
+    include/mc_mujoco/widgets/Polygon.h
+    include/mc_mujoco/widgets/Polyhedron.h
+    include/mc_mujoco/widgets/Rotation.h
+    include/mc_mujoco/widgets/Trajectory.h
+    include/mc_mujoco/widgets/Transform.h
+    include/mc_mujoco/widgets/Visual.h
+    include/mc_mujoco/widgets/XYTheta.h
+    include/mc_mujoco/widgets/details/ControlAxis.h
+    include/mc_mujoco/widgets/details/InteractiveMarker.h
+    include/mc_mujoco/widgets/details/TransformBase.h)
 
 set(assets_DIR "${PROJECT_SOURCE_DIR}/assets")
 
@@ -84,10 +82,8 @@ set(mc_rtc-imgui_DIR "${PROJECT_SOURCE_DIR}/ext/mc_rtc-imgui")
 add_subdirectory("${mc_rtc-imgui_DIR}"
                  "${CMAKE_CURRENT_BINARY_DIR}/mc_rtc-imgui/")
 
-configure_file(config.in.h "${CMAKE_CURRENT_BINARY_DIR}/include/config.h")
-
 add_library(
-  mc_mujoco_lib STATIC
+  mc_mujoco_lib SHARED
   ${mc_mujoco_lib_SRC}
   ${imgui_SRC}
   ${implot_SRC}
@@ -95,16 +91,16 @@ add_library(
   ${mc_rtc-imgui-SRC}
   ${mc_rtc-imgui-HDR}
   $<TARGET_OBJECTS:pugixml>)
-if(uitools_is_platform_ui_adapter)
-  target_compile_definitions(mc_mujoco_lib PRIVATE USE_UI_ADAPTER)
-endif()
+jrl_target_headers(mc_mujoco_lib PUBLIC HEADERS ${mc_mujoco_lib_HDR} BASE_DIRS
+                   include)
+target_link_libraries(mc_mujoco_lib PUBLIC mujoco::mujoco)
 target_include_directories(
   mc_mujoco_lib
-  PUBLIC ${MUJOCO_INCLUDE_DIR} $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}>
-         $<BUILD_INTERFACE:${MUJOCO_SIMULATE_DIR}> $<INSTALL_INTERFACE:include>)
-if(DEFINED MUJOCO_ROOT_INCLUDE_DIR)
-  target_include_directories(mc_mujoco_lib PUBLIC ${MUJOCO_ROOT_INCLUDE_DIR})
-endif()
+  PUBLIC $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}>
+         $<BUILD_INTERFACE:${MUJOCO_SIMULATE_DIR}>
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+         $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+         $<INSTALL_INTERFACE:include>)
 target_include_directories(mc_mujoco_lib
                            PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 target_include_directories(
@@ -114,40 +110,9 @@ target_include_directories(
 target_link_libraries(
   mc_mujoco_lib PUBLIC mc_rtc::mc_control mc_rtc::mc_control_client
                        ${CMAKE_DL_LIBS})
-if(UNIX)
-  set(NO_AS_NEEDED "-Wl,--no-as-needed")
-  set(AS_NEEDED "-Wl,--as-needed")
-endif()
-target_link_libraries(
-  mc_mujoco_lib PRIVATE ${NO_AS_NEEDED} GLEW::GLEW OpenGL::GL ${AS_NEEDED}
-                        ${LIB_MUJOCO})
-if(GLFW)
-  target_link_libraries(mc_mujoco_lib PRIVATE ${GLFW})
-else()
-  target_include_directories(
-    mc_mujoco_lib PRIVATE "${PROJECT_SOURCE_DIR}/ext/glfw/include/GLFW")
-  target_link_libraries(mc_mujoco_lib PRIVATE $<BUILD_INTERFACE:glfw>)
-  if(UNIX)
-    set(mc_mujoco_lib_combined_OUT
-        ${CMAKE_CURRENT_BINARY_DIR}/combined/libmc_mujoco_lib_combined.a)
-    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/combined)
-    add_custom_command(
-      OUTPUT ${mc_mujoco_lib_combined_OUT}
-      COMMAND ar -x $<TARGET_FILE:mc_mujoco_lib>
-      COMMAND ar -x $<TARGET_FILE:glfw>
-      COMMAND ar -qcs ${mc_mujoco_lib_combined_OUT} *.o
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/combined
-      DEPENDS mc_mujoco_lib glfw)
-    add_custom_target(mc_mujoco_lib_combined ALL
-                      DEPENDS ${mc_mujoco_lib_combined_OUT})
-    install(FILES ${mc_mujoco_lib_combined_OUT} DESTINATION lib)
-  endif()
-endif()
-if(NOT COMBINED_MC_MUJOCO_LIB)
-  set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
-endif()
-
-find_package(Boost REQUIRED COMPONENTS program_options)
+target_link_libraries(mc_mujoco_lib PUBLIC GLEW::GLEW OpenGL::GL)
+target_link_libraries(mc_mujoco_lib PUBLIC glfw)
+set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
 
 add_executable(mc_mujoco main.cpp)
 target_compile_definitions(mc_mujoco PUBLIC MUJOCO_BIN_DIR="${MUJOCO_BIN_DIR}")
@@ -160,17 +125,4 @@ install(
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
 
-install(FILES mj_sim.h mj_configuration.h DESTINATION include/mc_mujoco)
-
-install(
-  TARGETS mc_mujoco_lib
-  EXPORT mc_mujocoTargets
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
-
-install(
-  EXPORT mc_mujocoTargets
-  FILE mc_mujocoTargets.cmake
-  NAMESPACE mc_mujoco::
-  DESTINATION lib/cmake/mc_mujoco)
+jrl_add_export_component(NAME mc_mujoco_lib TARGETS mc_mujoco_lib)

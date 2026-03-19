@@ -4,11 +4,9 @@
 
 #include "MujocoClient.h"
 
-#include "mujoco.h"
+#include <mujoco/mujoco.h>
 
-#ifdef USE_UI_ADAPTER
-#  include "platform_ui_adapter.h"
-#endif
+#include "platform_ui_adapter.h"
 
 #include "widgets/details/InteractiveMarker.h"
 
@@ -201,19 +199,8 @@ public:
   /** MuJoCo data */
   mjData * data = nullptr;
 
-#ifndef USE_UI_ADAPTER
-  /** GLFW window, might be null if the visualization is disabled */
-  GLFWwindow * window = nullptr;
-
-  /** GPU context */
-  mjrContext context;
-
-  /** Keyboard and mouse states */
-  mjuiState uistate;
-#else
   /** Platform UI adapter */
   std::unique_ptr<mujoco::PlatformUIAdapter> platform_ui_adapter;
-#endif
 
   /** Camera */
   mjvCamera camera;

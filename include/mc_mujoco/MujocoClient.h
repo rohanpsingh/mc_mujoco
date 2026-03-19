@@ -2,13 +2,11 @@
 
 #include "Client.h"
 
-#include "glfw3.h"
 #include "imgui.h"
-#include "mujoco.h"
+#include <GLFW/glfw3.h>
+#include <mujoco/mujoco.h>
 
-#ifdef USE_UI_ADAPTER
-#  include "platform_ui_adapter.h"
-#endif
+#include "platform_ui_adapter.h"
 
 namespace mc_mujoco
 {
@@ -24,11 +22,7 @@ struct MujocoClient : public mc_rtc::imgui::Client
 {
   using mc_rtc::imgui::Client::Client;
 
-#ifdef USE_UI_ADAPTER
   void draw2D(mujoco::PlatformUIAdapter & window);
-#else
-  void draw2D(GLFWwindow * window);
-#endif
 
   void draw3D();
 
