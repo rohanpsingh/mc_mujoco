@@ -17,7 +17,7 @@ set(platform_adapter_SRC
     ${MUJOCO_SIMULATE_DIR}/glfw_dispatch.cc
     ${MUJOCO_SIMULATE_DIR}/glfw_adapter.cc
     ${MUJOCO_SIMULATE_DIR}/platform_ui_adapter.cc)
-# Make private members public so we can access the window_ field
+# NOTE: Make private members public so we can access the window_ field
 file(READ "${MUJOCO_SIMULATE_DIR}/glfw_adapter.h" GLFW_ADAPTER_SRC)
 string(REPLACE "private:" "public:" GLFW_ADAPTER_SRC "${GLFW_ADAPTER_SRC}")
 file(
