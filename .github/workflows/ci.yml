@@ -33,13 +33,24 @@ jobs:
         sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
         sudo apt-get update
+        # Setup ROS 2 library paths for linking
+        echo "LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=/opt/ros/humble:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+    - name: Get MuJoCo Version
+      id: mujoco_version
+      shell: bash
+      run: |
+        set -x
+        set -e
+        MUJOCO_VERSION=$(cat $GITHUB_WORKSPACE/MUJOCO_VERSION | tr -d '[:space:]')
+        echo "MUJOCO_VERSION=$MUJOCO_VERSION" >> $GITHUB_OUTPUT
     - name: Install dependencies
       uses: jrl-umi3218/github-actions/install-dependencies@master
       with:
         compiler: ${{ matrix.compiler }}
         build-type: ${{ matrix.build-type }}
         ubuntu: |
-          apt: libmc-rtc-dev libxi-dev libxcursor-dev libxkbcommon-dev libxinerama-dev libxrandr-dev libglew-dev libboost-program-options-dev ros-humble-ament-index-cpp
+          apt: libmc-rtc-dev libxi-dev libxcursor-dev libxkbcommon-dev libxinerama-dev libxrandr-dev libglew-dev libboost-program-options-dev ros-humble-ament-index-cpp libglfw3-dev libcereal-dev libspdlog-dev
           apt-mirrors:
             mc-rtc:
               cloudsmith: mc-rtc/head
@@ -54,28 +65,15 @@ jobs:
             registries:
             - repo: mc-rtc/vcpkg-registry
               packages: [ spacevecalg, rbdyn, eigen-qld, sch-core, tasks, mc-rbdyn-urdf, mc-rtc-data, eigen-quadprog, state-observation, hpp-spline, mc-rtc ]
-    - name: Install MuJoCo
-      shell: bash
-      run: |
-        set -x
-        set -e
-        mkdir -p /opt
-        cd /opt
-        MUJOCO_VERSION=$(cat $GITHUB_WORKSPACE/MUJOCO_VERSION | tr -d '[:space:]')
-        wget --quiet https://github.com/deepmind/mujoco/releases/download/${MUJOCO_VERSION}/mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz
-        tar xzf mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz
-        mv mujoco-${MUJOCO_VERSION} mujoco
-        rm -rf *.tar.gz
-        echo "MUJOCO_ROOT_DIR=/opt/mujoco" >> $GITHUB_ENV
-        # Setup ROS 2 library paths for linking
-        echo "LD_LIBRARY_PATH=/opt/ros/humble/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=/opt/ros/humble:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+        github: |
+            - path: google-deepmind/mujoco
+              ref: ${{ steps.mujoco_version.outputs.MUJOCO_VERSION }}
+              options: -DMUJOCO_BUILD_TESTS:BOOL=OFF -DMUJOCO_BUILD_EXAMPLES:BOOL=OFF -DMUJOCO_BUILD_SIMULATE=OFF
     - name: Build and test
       uses: jrl-umi3218/github-actions/build-cmake-project@master
       with:
         compiler: ${{ matrix.compiler }}
         build-type: ${{ matrix.build-type }}
-        options: -DMUJOCO_ROOT_DIR="${{ env.MUJOCO_ROOT_DIR }}"
     - name: Check usage
       shell: bash
       run: |
