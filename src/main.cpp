@@ -1,4 +1,4 @@
-#include "mj_sim.h"
+#include <mc_mujoco/mj_sim.h>
 
 #include <mc_rtc/logging.h>
 #include <mc_rtc/version.h>

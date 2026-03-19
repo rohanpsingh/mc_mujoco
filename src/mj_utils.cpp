@@ -1,10 +1,10 @@
-#include "our_glfw_adapter.h"
+#include <mc_mujoco/our_glfw_adapter.h>
 #include <GLFW/glfw3.h>
 #include <mujoco/mujoco.h>
 
-#include "mj_utils.h"
+#include <mc_mujoco/mj_utils.h>
 
-#include "config.h"
+#include <mc_mujoco/config.h>
 
 #include "imgui.h"
 
