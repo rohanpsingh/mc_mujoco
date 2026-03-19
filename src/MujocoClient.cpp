@@ -4,16 +4,16 @@
 #include "imgui.h"
 #include "imgui_internal.h" // for ImVec2 operations
 
-#include "widgets/Arrow.h"
-#include "widgets/Force.h"
-#include "widgets/Point3D.h"
-#include "widgets/Polygon.h"
-#include "widgets/Polyhedron.h"
-#include "widgets/Rotation.h"
-#include "widgets/Trajectory.h"
-#include "widgets/Transform.h"
-#include "widgets/Visual.h"
-#include "widgets/XYTheta.h"
+#include <mc_mujoco/widgets/Arrow.h>
+#include <mc_mujoco/widgets/Force.h>
+#include <mc_mujoco/widgets/Point3D.h>
+#include <mc_mujoco/widgets/Polygon.h>
+#include <mc_mujoco/widgets/Polyhedron.h>
+#include <mc_mujoco/widgets/Rotation.h>
+#include <mc_mujoco/widgets/Trajectory.h>
+#include <mc_mujoco/widgets/Transform.h>
+#include <mc_mujoco/widgets/Visual.h>
+#include <mc_mujoco/widgets/XYTheta.h>
 
 namespace mc_mujoco
 {
