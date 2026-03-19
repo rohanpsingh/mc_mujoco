@@ -24,7 +24,12 @@ jrl_configure_defaults()
 jrl_option(USE_BUNDLED_SIMULATE_ADAPTER
            "Whether to use the GLFW adapter bundled with mc_mujoco" ON)
 
-# jrl_option(USE_GL "Use Mujoco with OpenGL" ON)
+# XXX: this option used to exist, but wasn't doing much except linking against
+# different mujoco libraries gl/nogl, but it seems that mc_mujoco_lib would
+# always link against glfw/opengl anyways, was this used? It would make sense to
+# have the option if we want to run in headless environments, in which case we
+# would most likely want the EGL backend jrl_option(USE_GL "Use Mujoco with
+# OpenGL" ON)
 
 jrl_find_package(mc_rtc REQUIRED)
 jrl_find_package(mujoco 3.3.6 REQUIRED)
