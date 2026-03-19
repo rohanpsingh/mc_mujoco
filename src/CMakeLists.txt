@@ -83,7 +83,7 @@ add_subdirectory("${mc_rtc-imgui_DIR}"
                  "${CMAKE_CURRENT_BINARY_DIR}/mc_rtc-imgui/")
 
 add_library(
-  mc_mujoco_lib STATIC
+  mc_mujoco_lib SHARED
   ${mc_mujoco_lib_SRC}
   ${imgui_SRC}
   ${implot_SRC}
