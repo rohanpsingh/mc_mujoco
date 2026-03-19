@@ -5,7 +5,7 @@ namespace bfs = boost::filesystem;
 
 #include <mc_rtc/logging.h>
 
-#include "mj_sim_impl.h"
+#include <mc_mujoco/mj_sim_impl.h>
 
 namespace mc_mujoco
 {

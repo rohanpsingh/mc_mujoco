@@ -1,12 +1,12 @@
-#include "mj_sim_impl.h"
-#include "mj_utils.h"
+#include <mc_mujoco/mj_sim_impl.h>
+#include <mc_mujoco/mj_utils.h>
 
 #include <cassert>
 #include <chrono>
 #include <type_traits>
 
-#include "MujocoClient.h"
-#include "config.h"
+#include <mc_mujoco/MujocoClient.h>
+#include <mc_mujoco/config.h>
 
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
@@ -20,7 +20,7 @@ namespace bfs = boost::filesystem;
 
 #include <mc_rtc/version.h>
 
-#include "our_glfw_adapter.h"
+#include <mc_mujoco/our_glfw_adapter.h>
 
 namespace mc_mujoco
 {
