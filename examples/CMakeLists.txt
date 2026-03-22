@@ -1,4 +1,5 @@
 option(BUILD_EXAMPLES "Build example controllers" ON)
 if(BUILD_EXAMPLES)
+  message(STATUS "Adding example neck_policy")
   add_subdirectory(neck_policy)
 endif()
