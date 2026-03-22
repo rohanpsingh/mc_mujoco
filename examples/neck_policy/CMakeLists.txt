@@ -17,9 +17,9 @@ if(NOT Torch_FOUND)
   find_package(Torch REQUIRED)
 endif()
 
-find_package(mc_rtc REQUIRED)
-
-mc_rtc_set_prefix(CONTROLLER mc_controller)
+if(NOT TARGET mc_rtc::mc_rtc)
+  find_package(mc_rtc REQUIRED)
+endif()
 
 add_subdirectory(src)
 
