@@ -18,7 +18,7 @@ if(NOT Torch_FOUND)
 endif()
 
 if(NOT TARGET mc_rtc::mc_rtc)
-find_package(mc_rtc REQUIRED)
+  find_package(mc_rtc REQUIRED)
 endif()
 
 add_subdirectory(src)
