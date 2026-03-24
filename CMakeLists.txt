@@ -66,6 +66,8 @@ set(COMBINED_MC_MUJOCO_LIB OFF)
 set(OpenGL_GL_PREFERENCE "GLVND")
 jrl_find_package(OpenGL REQUIRED)
 jrl_find_package(GLEW REQUIRED)
+jrl_find_package(mc_rtc-imgui REQUIRED)
+jrl_find_package(ImGuizmo REQUIRED)
 
 add_subdirectory(ext/pugixml)
 add_subdirectory(src)

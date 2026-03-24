@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Client.h"
+#include <mc_rtc-imgui/Client.h>
 
-#include "imgui.h"
 #include <GLFW/glfw3.h>
 #include <mujoco/mujoco.h>
 

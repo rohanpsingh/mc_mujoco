@@ -8,12 +8,15 @@
 #include <mc_mujoco/MujocoClient.h>
 #include <mc_mujoco/config.h>
 
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
+// FIXME: imgui install paths are silly really
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+// #include "backends/imgui_impl_glfw.h"
+// #include "backends/imgui_impl_opengl3.h"
 
-#include "implot.h"
+#include <implot.h>
 
-#include "ImGuizmo.h"
+#include <ImGuizmo.h>
 
 #include <boost/filesystem.hpp>
 namespace bfs = boost::filesystem;

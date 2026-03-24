@@ -58,42 +58,39 @@ set(mc_mujoco_lib_HDR
 
 set(assets_DIR "${PROJECT_SOURCE_DIR}/assets")
 
-set(imgui_DIR "${PROJECT_SOURCE_DIR}/ext/imgui")
-set(imgui_SRC
-    ${imgui_DIR}/imgui.h
-    ${imgui_DIR}/imgui.cpp
-    ${imgui_DIR}/imgui_demo.cpp
-    ${imgui_DIR}/imgui_draw.cpp
-    ${imgui_DIR}/imgui_tables.cpp
-    ${imgui_DIR}/imgui_widgets.cpp
-    ${imgui_DIR}/backends/imgui_impl_glfw.h
-    ${imgui_DIR}/backends/imgui_impl_glfw.cpp
-    ${imgui_DIR}/backends/imgui_impl_opengl3.h
-    ${imgui_DIR}/backends/imgui_impl_opengl3.cpp)
-
-set(implot_DIR "${PROJECT_SOURCE_DIR}/ext/implot")
-set(implot_SRC ${implot_DIR}/implot.h ${implot_DIR}/implot.cpp
-               ${implot_DIR}/implot_items.cpp ${implot_DIR}/implot_demo.cpp)
-
-set(ImGuizmo_DIR ${PROJECT_SOURCE_DIR}/ext/ImGuizmo)
-set(ImGuizmo_SRC ${ImGuizmo_DIR}/ImGuizmo.h ${ImGuizmo_DIR}/ImGuizmo.cpp)
-
-set(mc_rtc-imgui_DIR "${PROJECT_SOURCE_DIR}/ext/mc_rtc-imgui")
-add_subdirectory("${mc_rtc-imgui_DIR}"
-                 "${CMAKE_CURRENT_BINARY_DIR}/mc_rtc-imgui/")
+# set(imgui_DIR "${PROJECT_SOURCE_DIR}/ext/imgui") set(imgui_SRC
+# ${imgui_DIR}/imgui.h ${imgui_DIR}/imgui.cpp ${imgui_DIR}/imgui_demo.cpp
+# ${imgui_DIR}/imgui_draw.cpp ${imgui_DIR}/imgui_tables.cpp
+# ${imgui_DIR}/imgui_widgets.cpp ${imgui_DIR}/backends/imgui_impl_glfw.h
+# ${imgui_DIR}/backends/imgui_impl_glfw.cpp
+# ${imgui_DIR}/backends/imgui_impl_opengl3.h
+# ${imgui_DIR}/backends/imgui_impl_opengl3.cpp)
+#
+# set(implot_DIR "${PROJECT_SOURCE_DIR}/ext/implot") set(implot_SRC
+# ${implot_DIR}/implot.h ${implot_DIR}/implot.cpp ${implot_DIR}/implot_items.cpp
+# ${implot_DIR}/implot_demo.cpp)
+#
+# set(ImGuizmo_DIR ${PROJECT_SOURCE_DIR}/ext/ImGuizmo) set(ImGuizmo_SRC
+# ${ImGuizmo_DIR}/ImGuizmo.h ${ImGuizmo_DIR}/ImGuizmo.cpp)
+#
+# set(mc_rtc-imgui_DIR "${PROJECT_SOURCE_DIR}/ext/mc_rtc-imgui")
+# add_subdirectory("${mc_rtc-imgui_DIR}"
+# "${CMAKE_CURRENT_BINARY_DIR}/mc_rtc-imgui/")
 
 add_library(
   mc_mujoco_lib SHARED
   ${mc_mujoco_lib_SRC}
-  ${imgui_SRC}
-  ${implot_SRC}
-  ${ImGuizmo_SRC}
-  ${mc_rtc-imgui-SRC}
-  ${mc_rtc-imgui-HDR}
+  # ${imgui_SRC}
+  # ${implot_SRC}
+  # ${ImGuizmo_SRC}
+  # ${mc_rtc-imgui-SRC}
+  # ${mc_rtc-imgui-HDR}
   $<TARGET_OBJECTS:pugixml>)
 jrl_target_headers(mc_mujoco_lib PUBLIC HEADERS ${mc_mujoco_lib_HDR} BASE_DIRS
                    include)
 target_link_libraries(mc_mujoco_lib PUBLIC mujoco::mujoco)
+target_link_libraries(mc_mujoco_lib PUBLIC mc_rtc-imgui::mc_rtc-imgui
+                                           ImGuizmo::ImGuizmo)
 target_include_directories(
   mc_mujoco_lib
   PUBLIC $<BUILD_INTERFACE:${MUJOCO_SAMPLE_DIR}>
@@ -104,9 +101,7 @@ target_include_directories(
 target_include_directories(mc_mujoco_lib
                            PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 target_include_directories(
-  mc_mujoco_lib
-  PRIVATE "${imgui_DIR}" "${implot_DIR}" "${mc_rtc-imgui_DIR}" "${assets_DIR}"
-          "${ImGuizmo_DIR}" "${PROJECT_SOURCE_DIR}/ext/pugixml")
+  mc_mujoco_lib PRIVATE "${assets_DIR}" "${PROJECT_SOURCE_DIR}/ext/pugixml")
 target_link_libraries(
   mc_mujoco_lib PUBLIC mc_rtc::mc_control mc_rtc::mc_control_client
                        ${CMAKE_DL_LIBS})
