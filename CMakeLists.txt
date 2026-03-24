@@ -1,108 +1,111 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.22)
 
-# These variables have to be defined before running setup_project
 set(PROJECT_NAME mc_mujoco)
-set(PROJECT_DESCRIPTION "Mujoco interface for mc-rtc")
-
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 project(
-  ${PROJECT_NAME}
+  mc_mujoco
   LANGUAGES C CXX
-  VERSION 1.0.0)
+  VERSION 1.0.0
+  DESCRIPTION "Mujoco interface for mc-rtc"
+  HOMEPAGE_URL "https://github.com/rohanpsingh/mc_mujoco")
 
-# Read MuJoCo version from single source of truth
-file(STRINGS "${CMAKE_SOURCE_DIR}/MUJOCO_VERSION" MUJOCO_VERSION)
-string(STRIP "${MUJOCO_VERSION}" MUJOCO_VERSION)
+include(cmake/get-jrl-cmakemodules.cmake)
 
-if(NOT DEFINED MUJOCO_ROOT_DIR)
-  # FetchContent from CMake >= 3.11
-  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.11")
-    set(MUJOCO_DOWNLOAD_DIR "$ENV{HOME}/.mujoco/mujoco-${MUJOCO_VERSION}")
-    message(
-      STATUS
-        "MUJOCO_ROOT_DIR is not provided. Will be automatically downloaded to ${MUJOCO_DOWNLOAD_DIR}."
-    )
-    include(FetchContent)
-    FetchContent_Declare(
-      mujoco
-      URL https://github.com/google-deepmind/mujoco/releases/download/${MUJOCO_VERSION}/mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz
-          SOURCE_DIR
-          ${MUJOCO_DOWNLOAD_DIR})
-    FetchContent_MakeAvailable(mujoco)
-    set(MUJOCO_ROOT_DIR "${MUJOCO_DOWNLOAD_DIR}")
+jrl_configure_defaults()
+
+# This is kept as an option to allow testing building against MuJoCo's official
+# simulate/ folder, should there be updates there However, for consistency we
+# intend to use the bundled ext/mujoco_simulate/simulate folder, that is -
+# currently - a copy of MuJoCo's official relase. We need to bundle our own as
+# MuJoCo's cmake install does not export it, and relying on building it from
+# MuJoCo's source tree is brittle (e.g would require tricks in Nix) When
+# updating MuJoCo, we should check that this bundled version remains up-to-date.
+jrl_option(USE_BUNDLED_SIMULATE_ADAPTER
+           "Whether to use the GLFW adapter bundled with mc_mujoco" ON)
+jrl_option(BUILD_EXAMPLES "Whether to build examples" ON)
+jrl_option(STANDALONE_ROBOTS "Whether to build robots as standalone packages"
+           OFF)
+set(MC_MUJOCO_SHARE_DESTINATION
+    ""
+    CACHE STRING "Install location for mc_mujoco shared files")
+
+# XXX: this option used to exist, but wasn't doing much except linking against
+# different mujoco libraries gl/nogl, but it seems that mc_mujoco_lib would
+# always link against glfw/opengl anyways, was this used? It would make sense to
+# have the option if we want to run in headless environments, in which case we
+# would most likely want the EGL backend jrl_option(USE_GL "Use Mujoco with
+# OpenGL" ON)
+
+jrl_find_package(mc_rtc REQUIRED)
+jrl_find_package(mujoco 3.3.6 REQUIRED)
+# TODO: replace with cli11
+jrl_find_package(Boost REQUIRED COMPONENTS program_options)
+
+if(NOT TARGET pugixml::pugixml)
+  jrl_find_package(pugixml QUIET)
+
+  if(pugixml_FOUND)
+    message(STATUS "Found pugixml: ${pugixml_DIR}")
   else()
-    message(
-      FATAL_ERROR
-        "MUJOCO_ROOT_DIR is not provided. Download MuJoCo from mujoco.org and provide MUJOCO_ROOT_DIR."
-    )
+    message(STATUS "pugixml not found, building from source")
+    add_subdirectory(ext/pugixml)
+    FetchContent_Declare(
+      pugixml
+      GIT_REPOSITORY https://github.com/zeux/pugixml.git
+      GIT_TAG v1.15)
+    FetchContent_MakeAvailable(pugixml)
   endif()
 endif()
 
-find_package(mc_rtc REQUIRED)
-
-option(USE_GL "Use Mujoco with OpenGL" ON)
-set(MUJOCO_BIN_DIR "${MUJOCO_ROOT_DIR}/bin")
-set(MUJOCO_INCLUDE_DIR "${MUJOCO_ROOT_DIR}/include")
-if(NOT EXISTS "${MUJOCO_INCLUDE_DIR}/mujoco.h")
-  set(MUJOCO_ROOT_INCLUDE_DIR "${MUJOCO_INCLUDE_DIR}")
-  set(MUJOCO_INCLUDE_DIR "${MUJOCO_INCLUDE_DIR}/mujoco")
-endif()
-set(MUJOCO_LIB_DIR "${MUJOCO_ROOT_DIR}/lib")
-set(MUJOCO_SAMPLE_DIR "${MUJOCO_ROOT_DIR}/sample")
+get_target_property(MUJOCO_INCLUDE_DIR mujoco::mujoco
+                    INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "MuJoCo include directory: ${MUJOCO_INCLUDE_DIR}")
+# remove the last component (`include/`) from the path to get MuJoCo's root path
+# NOTE: this may be a bit brittle should MuJoCo decide to change it's include
+# paths.
+get_filename_component(MUJOCO_ROOT_DIR "${MUJOCO_INCLUDE_DIR}" DIRECTORY)
+set(MUJOCO_ROOT_DIR "${MUJOCO_INCLUDE_DIR}")
+message(STATUS "MuJoCo detected in MUJOCO_ROOT_DIR: ${MUJOCO_ROOT_DIR}")
 set(MUJOCO_SIMULATE_DIR "${MUJOCO_ROOT_DIR}/simulate")
-message("${MUJOCO_INCLUDE_DIR}")
-message(STATUS "MuJoCo root dir: " ${MUJOCO_ROOT_DIR})
-
-set(COMBINED_MC_MUJOCO_LIB OFF)
-# find glfw library
-find_library(
-  GLFW
-  NAMES libglfw.so.3
-  PATHS ${MUJOCO_BIN_DIR}
-  NO_DEFAULT_PATH)
-if(NOT GLFW)
-  if(UNIX)
-    set(COMBINED_MC_MUJOCO_LIB ON)
-  endif()
-  set(BUILD_STATIC
-      ON
-      CACHE BOOL "" FORCE)
-  add_subdirectory(ext/glfw EXCLUDE_FROM_ALL)
-else()
-  message(STATUS "GLFW lib found at: " ${GLFW})
-  file(COPY "${MUJOCO_INCLUDE_DIR}/glfw3.h"
-       DESTINATION "${PROJECT_BINARY_DIR}/src/include/GLFW/")
+set(MUJOCO_BIN_DIR "${MUJOCO_ROOT_DIR}/bin")
+if(MUJOCO_SHARE_DESTINATION STREQUAL "")
+  set(MUJOCO_SHARE_DESTINATION "${MUJOCO_ROOT_DIR}/share/mc_mujoco")
 endif()
-
-set(OpenGL_GL_PREFERENCE "GLVND")
-find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
-
-# find mujoco library
-if(USE_GL)
-  file(GLOB LIB_MUJOCO ${MUJOCO_BIN_DIR}/libmujoco[0-9][0-9][0-9].so
-       ${MUJOCO_LIB_DIR}/libmujoco.so.*)
-else()
-  file(GLOB LIB_MUJOCO ${MUJOCO_BIN_DIR}/libmujoco[0-9][0-9][0-9]nogl.so
-       ${MUJOCO_LIB_DIR}/libmujoco_nogl.so.*)
-endif()
-message(STATUS "MuJoCo lib found at: " ${LIB_MUJOCO})
-
-set(MC_MUJOCO_SHARE_DESTINATION "${CMAKE_INSTALL_PREFIX}/share/mc_mujoco")
+# FIXME this won't work under nix as the home path is not available at build
+# time in the sandbox
 if(WIN32)
   set(MC_MUJOCO_USER_DESTINATION "$ENV{APPDATA}/mc_rtc/mc_mujoco")
 else()
   set(MC_MUJOCO_USER_DESTINATION "$ENV{HOME}/.config/mc_rtc/mc_mujoco")
 endif()
 
-add_subdirectory(cmake)
-add_subdirectory(ext/pugixml)
+# TODO check if paths here make sense/are really needed
+configure_file(include/mc_mujoco/config.in.h
+               "${CMAKE_CURRENT_BINARY_DIR}/include/mc_mujoco/config.h")
+
+jrl_find_package(glfw3 REQUIRED)
+set(COMBINED_MC_MUJOCO_LIB OFF)
+
+set(OpenGL_GL_PREFERENCE "GLVND")
+jrl_find_package(OpenGL REQUIRED)
+jrl_find_package(GLEW REQUIRED)
+jrl_find_package(mc_rtc-imgui REQUIRED)
+jrl_find_package(ImGuizmo REQUIRED)
+
 add_subdirectory(src)
-add_subdirectory(robots)
 
-add_subdirectory(examples)
+# FIXME: re-add env robots
+if(NOT STANDALONE_ROBOTS)
+  add_subdirectory(robots)
+endif()
 
-enable_testing()
+if(BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
+
+# Exporting targets and installing
+jrl_export_package()
+
+# jrl_print_dependencies_summary()
+jrl_print_options_summary()
