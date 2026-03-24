@@ -42,6 +42,22 @@ jrl_find_package(mujoco 3.3.6 REQUIRED)
 # TODO: replace with cli11
 jrl_find_package(Boost REQUIRED COMPONENTS program_options)
 
+if(NOT TARGET pugixml::pugixml)
+  jrl_find_package(pugixml QUIET)
+
+  if(pugixml_FOUND)
+    message(STATUS "Found pugixml: ${pugixml_DIR}")
+  else()
+    message(STATUS "pugixml not found, building from source")
+    add_subdirectory(ext/pugixml)
+    FetchContent_Declare(
+      pugixml
+      GIT_REPOSITORY https://github.com/zeux/pugixml.git
+      GIT_TAG v1.15)
+    FetchContent_MakeAvailable(pugixml)
+  endif()
+endif()
+
 get_target_property(MUJOCO_INCLUDE_DIR mujoco::mujoco
                     INTERFACE_INCLUDE_DIRECTORIES)
 message(STATUS "MuJoCo include directory: ${MUJOCO_INCLUDE_DIR}")
@@ -77,7 +93,6 @@ jrl_find_package(GLEW REQUIRED)
 jrl_find_package(mc_rtc-imgui REQUIRED)
 jrl_find_package(ImGuizmo REQUIRED)
 
-add_subdirectory(ext/pugixml)
 add_subdirectory(src)
 
 # FIXME: re-add env robots
