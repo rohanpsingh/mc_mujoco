@@ -1,7 +1,7 @@
 #include <boost/filesystem.hpp>
 namespace bfs = boost::filesystem;
 
-#include "pugixml/pugixml.hpp"
+#include <pugixml.hpp>
 
 #include <mc_rtc/logging.h>
 
