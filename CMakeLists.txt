@@ -23,6 +23,12 @@ jrl_configure_defaults()
 # updating MuJoCo, we should check that this bundled version remains up-to-date.
 jrl_option(USE_BUNDLED_SIMULATE_ADAPTER
            "Whether to use the GLFW adapter bundled with mc_mujoco" ON)
+jrl_option(BUILD_EXAMPLES "Whether to build examples" ON)
+jrl_option(STANDALONE_ROBOTS "Whether to build robots as standalone packages"
+           OFF)
+set(MC_MUJOCO_SHARE_DESTINATION
+    ""
+    CACHE STRING "Install location for mc_mujoco shared files")
 
 # XXX: this option used to exist, but wasn't doing much except linking against
 # different mujoco libraries gl/nogl, but it seems that mc_mujoco_lib would
@@ -47,7 +53,9 @@ set(MUJOCO_ROOT_DIR "${MUJOCO_INCLUDE_DIR}")
 message(STATUS "MuJoCo detected in MUJOCO_ROOT_DIR: ${MUJOCO_ROOT_DIR}")
 set(MUJOCO_SIMULATE_DIR "${MUJOCO_ROOT_DIR}/simulate")
 set(MUJOCO_BIN_DIR "${MUJOCO_ROOT_DIR}/bin")
-set(MC_MUJOCO_SHARE_DESTINATION "${CMAKE_INSTALL_PREFIX}/share/mc_mujoco")
+if(MUJOCO_SHARE_DESTINATION STREQUAL "")
+  set(MUJOCO_SHARE_DESTINATION "${MUJOCO_ROOT_DIR}/share/mc_mujoco")
+endif()
 # FIXME this won't work under nix as the home path is not available at build
 # time in the sandbox
 if(WIN32)
@@ -71,9 +79,15 @@ jrl_find_package(ImGuizmo REQUIRED)
 
 add_subdirectory(ext/pugixml)
 add_subdirectory(src)
-add_subdirectory(robots)
 
-add_subdirectory(examples)
+# FIXME: re-add env robots
+if(NOT STANDALONE_ROBOTS)
+  add_subdirectory(robots)
+endif()
+
+if(BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 # Exporting targets and installing
 jrl_export_package()
