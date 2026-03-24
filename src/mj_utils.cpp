@@ -6,14 +6,15 @@
 
 #include <mc_mujoco/config.h>
 
-#include "imgui.h"
+// FIXME imgui should be installed in imgui/...
+#include <imgui.h>
+// #include <backends/imgui_impl_glfw.h>
+// #include <backends/imgui_impl_opengl3.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
-
-#include "implot.h"
-
-#include "ImGuizmo.h"
+#include <ImGuizmo.h>
+#include <implot.h>
 
 #include "Robot_Regular_ttf.h"
 

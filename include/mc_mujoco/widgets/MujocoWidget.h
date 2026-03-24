@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../MujocoClient.h"
-#include "Widget.h"
+#include <mc_rtc-imgui/Widget.h>
 
 namespace mc_mujoco
 {
