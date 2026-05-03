@@ -8,7 +8,7 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ..:/workspace/mc_mujoco
-      - mc_mujoco_build:/workspace/mc_mujoco/build
+      - mc_mujoco_build:/build
     environment:
       - DISPLAY=${DISPLAY:-:0}
       - ROS_DISTRO=humble
@@ -19,4 +19,9 @@ services:
     tty: true
 
 volumes:
+  # Versioned build cache: name encodes MUJOCO_VERSION so a version bump
+  # automatically targets a fresh volume. Lifecycle (create + prune of stale
+  # versions) is owned by the Makefile, hence external: true.
   mc_mujoco_build:
+    external: true
+    name: mc_mujoco_build_${MUJOCO_VERSION:?MUJOCO_VERSION must be set (run via make)}

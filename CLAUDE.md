@@ -20,10 +20,12 @@ cd docker && make ci-test
 
 Inside the container:
 - Source is mounted at `/workspace/mc_mujoco`
-- Build dir: `/workspace/mc_mujoco/build` (persistent Docker volume)
+- Build dir: `/build` — backed by Docker volume `mc_mujoco_build_<MUJOCO_VERSION>`.
+  Volume name encodes the `MUJOCO_VERSION` pin so a version bump automatically
+  points at a fresh cache; `make` prunes stale-version volumes on each run.
 - MuJoCo at `/opt/mujoco`
-- Rebuild: `cmake --build /workspace/mc_mujoco/build`
-- Reinstall: `cmake --install /workspace/mc_mujoco/build`
+- Rebuild: `cmake --build /build`
+- Reinstall: `cmake --install /build`
 - Run standalone tests: `ctest -V --test-dir /ci-build-standalone`
 
 To run arbitrary commands in the dev container:
