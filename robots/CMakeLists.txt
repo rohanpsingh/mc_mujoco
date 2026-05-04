@@ -25,5 +25,6 @@ endfunction()
 
 setup_env_object(ground env)
 setup_env_object(box object)
+setup_env_object(tallbox object)
 setup_env_object(longtable object)
 setup_env_object(table object)
