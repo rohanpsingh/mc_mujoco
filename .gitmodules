@@ -4,3 +4,6 @@
 [submodule "ext/mc_rtc-imgui"]
 	path = ext/mc_rtc-imgui
 	url = https://github.com/mc-rtc/mc_rtc-imgui
+[submodule "examples/grasp-fsm"]
+	path = examples/grasp-fsm
+	url = https://github.com/rohanpsingh/grasp-fsm-sample-controller.git

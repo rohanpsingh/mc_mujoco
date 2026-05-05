@@ -27,3 +27,8 @@ configure_file(etc/SampleNeckPolicy.in.yaml
                "${CMAKE_CURRENT_BINARY_DIR}/etc/SampleNeckPolicy.yaml")
 install_controller_configuration(
   "${CMAKE_CURRENT_BINARY_DIR}/etc/SampleNeckPolicy.yaml")
+
+configure_file(etc/mc_rtc.in.yaml "${CMAKE_CURRENT_BINARY_DIR}/etc/mc_rtc.yaml"
+               @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/etc/mc_rtc.yaml"
+        DESTINATION "${MC_CONTROLLER_RUNTIME_INSTALL_PREFIX}/etc/neck_policy")

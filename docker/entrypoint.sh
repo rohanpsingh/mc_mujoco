@@ -1,15 +1,17 @@
 #!/bin/bash
 set -e
 
-# Create mc_rtc config directory if it doesn't exist
+# Write a default mc_rtc.yaml if the user hasn't provided one. Idempotent so
+# that copying in a sample's preset (e.g. examples/grasp-fsm/etc/mc_rtc.in.yaml)
+# survives subsequent `make run` invocations.
 mkdir -p ~/.config/mc_rtc/
-
-# Create mc_rtc.yaml with MainRobot configuration
-cat > ~/.config/mc_rtc/mc_rtc.yaml << EOF
+if [ ! -f ~/.config/mc_rtc/mc_rtc.yaml ]; then
+  cat > ~/.config/mc_rtc/mc_rtc.yaml << EOF
 MainRobot: JVRC1
 Timestep: 0.002
-Enabled: [Posture, EndEffector, CoM, SampleNeckPolicy]
+Enabled: [Posture, EndEffector, CoM]
 EOF
+fi
 
 # Source ROS setup
 source /opt/ros/humble/setup.bash

@@ -71,6 +71,7 @@ RUN --mount=type=cache,target=/root/.ccache \
 # this layer's cache.
 COPY MC_RTC_VERSION /tmp/MC_RTC_VERSION
 RUN --mount=type=cache,target=/root/.ccache \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && \
     MC_RTC_VERSION=$(cat /tmp/MC_RTC_VERSION | tr -d '[:space:]') && \
     git clone --depth=1 --recurse-submodules --branch ${MC_RTC_VERSION} \
         https://github.com/jrl-umi3218/mc_rtc.git /tmp/mc_rtc && \
@@ -81,8 +82,42 @@ RUN --mount=type=cache,target=/root/.ccache \
         -DPYTHON_BINDING=OFF && \
     cmake --build /tmp/mc_rtc/build && \
     cmake --install /tmp/mc_rtc/build && \
+    # Disable autoload of the ROS plugin: rclcpp's static teardown segfaults
+    # at process exit. Users who want the plugin can opt in via mc_rtc.yaml.
+    rm -f /usr/local/lib/mc_plugins/autoload/ROS.yaml && \
     ldconfig && \
     rm -rf /tmp/mc_rtc
+
+# Build the mc_rtc-ecosystem libraries that example controllers depend on
+# (BaselineWalkingController and its transitive deps). Pinned via
+# examples/MC_RTC_DEPS_VERSION — bump that file to invalidate this stack.
+# SHAs match grasp-fsm-sample-controller/README.md "Tested with" table.
+COPY docker/build-cmake-dep.sh /usr/local/bin/build-cmake-dep
+RUN chmod +x /usr/local/bin/build-cmake-dep
+COPY examples/MC_RTC_DEPS_VERSION /tmp/MC_RTC_DEPS_VERSION
+
+RUN --mount=type=cache,target=/root/.ccache \
+    build-cmake-dep https://github.com/arntanguy/gram_savitzky_golay.git
+RUN --mount=type=cache,target=/root/.ccache \
+    build-cmake-dep https://github.com/jrl-umi3218/mc_state_observation.git
+RUN --mount=type=cache,target=/root/.ccache \
+    build-cmake-dep https://github.com/isri-aist/QpSolverCollection.git \
+        42cb58674e692bea0bf64c7ab7a4a80137023aee -DENABLE_QUADPROG=ON
+RUN --mount=type=cache,target=/root/.ccache \
+    build-cmake-dep https://github.com/isri-aist/TrajectoryCollection.git \
+        3f18e7a8748e40dbccdd28b0b3ec98353a33f58d
+RUN --mount=type=cache,target=/root/.ccache \
+    build-cmake-dep https://github.com/isri-aist/ForceControlCollection.git \
+        55de5119347987e9e3bc76783aec439748202cf5
+RUN --mount=type=cache,target=/root/.ccache \
+    build-cmake-dep https://github.com/isri-aist/NMPC.git \
+        d88792ccb1a77e78bca7572ba2afd35b0418cd71
+RUN --mount=type=cache,target=/root/.ccache \
+    build-cmake-dep https://github.com/isri-aist/CentroidalControlCollection.git \
+        a874f6a09e4f1431509c166fb622af25781fe396
+RUN --mount=type=cache,target=/root/.ccache \
+    build-cmake-dep https://github.com/isri-aist/BaselineWalkingController.git \
+        9cba7e2fcc95b990774599f405471b86cc0f9e07
 
 # Install MuJoCo (cached — update MUJOCO_VERSION to re-download)
 COPY MUJOCO_VERSION /tmp/MUJOCO_VERSION
