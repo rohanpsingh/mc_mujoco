@@ -75,7 +75,7 @@ jobs:
       with:
         compiler: ${{ matrix.compiler }}
         build-type: ${{ matrix.build-type }}
-        options: -DMUJOCO_ROOT_DIR="${{ env.MUJOCO_ROOT_DIR }}"
+        options: -DMUJOCO_ROOT_DIR="${{ env.MUJOCO_ROOT_DIR }}" -DBUILD_EXAMPLES=OFF
     - name: Check usage
       shell: bash
       run: |
