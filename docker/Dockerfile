@@ -92,117 +92,32 @@ RUN --mount=type=cache,target=/root/.ccache \
 # (BaselineWalkingController and its transitive deps). Pinned via
 # examples/MC_RTC_DEPS_VERSION — bump that file to invalidate this stack.
 # SHAs match grasp-fsm-sample-controller/README.md "Tested with" table.
+COPY docker/build-cmake-dep.sh /usr/local/bin/build-cmake-dep
+RUN chmod +x /usr/local/bin/build-cmake-dep
 COPY examples/MC_RTC_DEPS_VERSION /tmp/MC_RTC_DEPS_VERSION
 
 RUN --mount=type=cache,target=/root/.ccache \
-    git clone --depth=1 --recurse-submodules \
-        https://github.com/arntanguy/gram_savitzky_golay.git /tmp/gsg && \
-    cmake -S /tmp/gsg -B /tmp/gsg/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DBUILD_TESTING=OFF && \
-    cmake --build /tmp/gsg/build && \
-    cmake --install /tmp/gsg/build && \
-    ldconfig && rm -rf /tmp/gsg
-
+    build-cmake-dep https://github.com/arntanguy/gram_savitzky_golay.git
 RUN --mount=type=cache,target=/root/.ccache \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    git clone --depth=1 --recurse-submodules \
-        https://github.com/jrl-umi3218/mc_state_observation.git /tmp/mso && \
-    cmake -S /tmp/mso -B /tmp/mso/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DBUILD_TESTING=OFF -DINSTALL_DOCUMENTATION=OFF && \
-    cmake --build /tmp/mso/build && \
-    cmake --install /tmp/mso/build && \
-    ldconfig && rm -rf /tmp/mso
-
+    build-cmake-dep https://github.com/jrl-umi3218/mc_state_observation.git
 RUN --mount=type=cache,target=/root/.ccache \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    git clone --recurse-submodules \
-        https://github.com/isri-aist/QpSolverCollection.git /tmp/qsc && \
-    git -C /tmp/qsc checkout 42cb58674e692bea0bf64c7ab7a4a80137023aee && \
-    cmake -S /tmp/qsc -B /tmp/qsc/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DBUILD_TESTING=OFF -DINSTALL_DOCUMENTATION=OFF \
-        -DENABLE_QUADPROG=ON && \
-    cmake --build /tmp/qsc/build && \
-    cmake --install /tmp/qsc/build && \
-    ldconfig && rm -rf /tmp/qsc
-
+    build-cmake-dep https://github.com/isri-aist/QpSolverCollection.git \
+        42cb58674e692bea0bf64c7ab7a4a80137023aee -DENABLE_QUADPROG=ON
 RUN --mount=type=cache,target=/root/.ccache \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    git clone --recurse-submodules \
-        https://github.com/isri-aist/TrajectoryCollection.git /tmp/tc && \
-    git -C /tmp/tc checkout 3f18e7a8748e40dbccdd28b0b3ec98353a33f58d && \
-    cmake -S /tmp/tc -B /tmp/tc/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DBUILD_TESTING=OFF -DINSTALL_DOCUMENTATION=OFF && \
-    cmake --build /tmp/tc/build && \
-    cmake --install /tmp/tc/build && \
-    ldconfig && rm -rf /tmp/tc
-
+    build-cmake-dep https://github.com/isri-aist/TrajectoryCollection.git \
+        3f18e7a8748e40dbccdd28b0b3ec98353a33f58d
 RUN --mount=type=cache,target=/root/.ccache \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    git clone --recurse-submodules \
-        https://github.com/isri-aist/ForceControlCollection.git /tmp/fcc && \
-    git -C /tmp/fcc checkout 55de5119347987e9e3bc76783aec439748202cf5 && \
-    cmake -S /tmp/fcc -B /tmp/fcc/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DBUILD_TESTING=OFF -DINSTALL_DOCUMENTATION=OFF && \
-    cmake --build /tmp/fcc/build && \
-    cmake --install /tmp/fcc/build && \
-    ldconfig && rm -rf /tmp/fcc
-
+    build-cmake-dep https://github.com/isri-aist/ForceControlCollection.git \
+        55de5119347987e9e3bc76783aec439748202cf5
 RUN --mount=type=cache,target=/root/.ccache \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    git clone --recurse-submodules \
-        https://github.com/isri-aist/NMPC.git /tmp/nmpc && \
-    git -C /tmp/nmpc checkout d88792ccb1a77e78bca7572ba2afd35b0418cd71 && \
-    cmake -S /tmp/nmpc -B /tmp/nmpc/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DBUILD_TESTING=OFF -DINSTALL_DOCUMENTATION=OFF && \
-    cmake --build /tmp/nmpc/build && \
-    cmake --install /tmp/nmpc/build && \
-    ldconfig && rm -rf /tmp/nmpc
-
+    build-cmake-dep https://github.com/isri-aist/NMPC.git \
+        d88792ccb1a77e78bca7572ba2afd35b0418cd71
 RUN --mount=type=cache,target=/root/.ccache \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    git clone --recurse-submodules \
-        https://github.com/isri-aist/CentroidalControlCollection.git /tmp/ccc && \
-    git -C /tmp/ccc checkout a874f6a09e4f1431509c166fb622af25781fe396 && \
-    cmake -S /tmp/ccc -B /tmp/ccc/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DBUILD_TESTING=OFF -DINSTALL_DOCUMENTATION=OFF && \
-    cmake --build /tmp/ccc/build && \
-    cmake --install /tmp/ccc/build && \
-    ldconfig && rm -rf /tmp/ccc
-
+    build-cmake-dep https://github.com/isri-aist/CentroidalControlCollection.git \
+        a874f6a09e4f1431509c166fb622af25781fe396
 RUN --mount=type=cache,target=/root/.ccache \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    git clone --recurse-submodules \
-        https://github.com/isri-aist/BaselineWalkingController.git /tmp/bwc && \
-    git -C /tmp/bwc checkout 9cba7e2fcc95b990774599f405471b86cc0f9e07 && \
-    cmake -S /tmp/bwc -B /tmp/bwc/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DBUILD_TESTING=OFF -DINSTALL_DOCUMENTATION=OFF && \
-    cmake --build /tmp/bwc/build && \
-    cmake --install /tmp/bwc/build && \
-    ldconfig && rm -rf /tmp/bwc
+    build-cmake-dep https://github.com/isri-aist/BaselineWalkingController.git \
+        9cba7e2fcc95b990774599f405471b86cc0f9e07
 
 # Install MuJoCo (cached — update MUJOCO_VERSION to re-download)
 COPY MUJOCO_VERSION /tmp/MUJOCO_VERSION
