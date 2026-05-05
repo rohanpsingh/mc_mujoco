@@ -22,6 +22,8 @@ run:
 	    fi; \
 	  fi; \
 	done
+	@echo "Initializing example submodules..."
+	@git -C .. submodule update --init --recursive
 	@echo "Granting X11 access to docker..."
 	@xhost +local:docker >/dev/null
 	@echo "Building container..."
@@ -42,7 +44,8 @@ ci-test:
 	@echo "Running CI build..."
 	@docker compose -f docker-compose.ci.yml run --rm mc-mujoco-ci \
 		bash -c "cmake -S /workspace -B /ci-build -G Ninja \
-		    -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=/opt/mujoco && \
+		    -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=/opt/mujoco \
+		    -DBUILD_EXAMPLES=OFF && \
 		cmake --build /ci-build && \
 		cmake --install /ci-build && \
 		echo 'Build passed! Running standalone test...' && \
