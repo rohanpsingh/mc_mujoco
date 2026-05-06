@@ -1079,6 +1079,10 @@ bool MjSimImpl::render()
     flag_to_gui("Show contact forces [F]", mjVIS_CONTACTFORCE);
     flag_to_gui("Make Transparent [T]", mjVIS_TRANSPARENT);
     flag_to_gui("Convex Hull rendering [V]", mjVIS_CONVEXHULL);
+    if(client)
+    {
+      ImGui::Checkbox("Show mc_rtc visuals", &client->show_visuals);
+    }
     auto group_to_checkbox = [&](size_t group, bool last)
     {
       bool show = options.geomgroup[group];

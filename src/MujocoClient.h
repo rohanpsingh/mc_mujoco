@@ -34,6 +34,8 @@ struct MujocoClient : public mc_rtc::imgui::Client
 
   void updateScene(mjvScene & scene);
 
+  bool show_visuals = true;
+
   inline const std::array<float, 16> & view() const noexcept
   {
     return view_;
