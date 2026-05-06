@@ -106,6 +106,10 @@ void MujocoClient::draw2D(GLFWwindow * window)
 void MujocoClient::draw3D()
 {
   geoms_.clear();
+  if(!show_visuals)
+  {
+    return;
+  }
   mc_rtc::imgui::Client::draw3D();
 }
 
