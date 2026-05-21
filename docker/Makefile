@@ -31,7 +31,7 @@ run:
 	@echo "Building mc_mujoco and starting shell..."
 	@docker compose -f docker-compose.yml run --rm mc-rtc-mujoco bash -c "\
 		cmake -S /workspace/mc_mujoco -B /build -G Ninja \
-		    -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=/opt/mujoco && \
+		    -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMUJOCO_ROOT_DIR=/opt/mujoco -DBUILD_EXAMPLES=ON && \
 		cmake --build /build && \
 		cmake --install /build ; \
 		exec bash"
@@ -50,7 +50,7 @@ ci-test:
 		cmake --install /ci-build && \
 		echo 'Build passed! Running standalone test...' && \
 		cmake -S /workspace/.github/workflows/test-standalone \
-		    -B /ci-build-standalone -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+		    -B /ci-build-standalone -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_EXAMPLES=ON && \
 		cmake --build /ci-build-standalone && \
 		ctest -V --test-dir /ci-build-standalone && \
 		echo 'CI test passed!'"

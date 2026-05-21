@@ -59,7 +59,7 @@ See [docker/README.md](docker/README.md) for details on development workflow, us
 
 ## Examples
 
-Example controllers live under [`examples/`](examples/). Built by default (disable with `-DBUILD_EXAMPLES=OFF`). See [`examples/README.md`](examples/README.md) for the convention and how to activate a sample's config inside the container.
+Example controllers live under [`examples/`](examples/). Not built by default (enable with `-DBUILD_EXAMPLES=ON`). See [`examples/README.md`](examples/README.md) for the convention and how to activate a sample's config inside the container.
 
 - **[neck_policy](examples/neck_policy/)** — Minimal libtorch NN policy that drives JVRC1's neck yaw joint. Good starting point for running NN policies in mc_mujoco.
 - **[grasp-fsm](examples/grasp-fsm/)** *(submodule)* — FSM controller that grasps an object on a table using BaselineWalkingController. Pulled from [grasp-fsm-sample-controller](https://github.com/rohanpsingh/grasp-fsm-sample-controller).
