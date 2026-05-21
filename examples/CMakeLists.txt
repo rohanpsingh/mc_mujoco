@@ -1,4 +1,4 @@
-option(BUILD_EXAMPLES "Build example controllers" ON)
+option(BUILD_EXAMPLES "Build example controllers" OFF)
 if(NOT BUILD_EXAMPLES)
   return()
 endif()
