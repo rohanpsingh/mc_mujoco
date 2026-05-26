@@ -70,6 +70,9 @@ if(NOT GLFW)
   set(BUILD_STATIC
       ON
       CACHE BOOL "" FORCE)
+  set(BUILD_SHARED_LIBS
+      OFF
+      CACHE BOOL "" FORCE)
   add_subdirectory(ext/glfw EXCLUDE_FROM_ALL)
 else()
   message(STATUS "GLFW lib found at: " ${GLFW})
