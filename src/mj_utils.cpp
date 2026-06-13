@@ -18,8 +18,8 @@
 
 #include "Robot_Regular_ttf.h"
 
-#include <boost/filesystem.hpp>
-namespace bfs = boost::filesystem;
+#include <filesystem>
+namespace fs = std::filesystem;
 
 namespace mc_mujoco
 {
@@ -340,7 +340,7 @@ void mujoco_create_window(MjSimImpl * mj_sim)
   auto config = [&]() -> mc_rtc::Configuration
   {
     auto path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
-    if(bfs::exists(path))
+    if(fs::exists(path))
     {
       return {path};
     }
