@@ -15,8 +15,8 @@
 
 #include "ImGuizmo.h"
 
-#include <boost/filesystem.hpp>
-namespace bfs = boost::filesystem;
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #include <mc_rtc/version.h>
 
@@ -107,16 +107,16 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
 : controller(std::make_unique<mc_control::MCGlobalController>(config.mc_config)), config(config)
 {
   auto get_robot_cfg_path_local = [&](const std::string & robot_name)
-  { return bfs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml"); };
+  { return fs::path(mc_mujoco::USER_FOLDER) / (robot_name + ".yaml"); };
   auto get_robot_cfg_path_global = [&](const std::string & robot_name)
-  { return bfs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml"); };
+  { return fs::path(mc_mujoco::SHARE_FOLDER) / (robot_name + ".yaml"); };
   auto get_robot_cfg_path = [&](const std::string & robot_name) -> std::string
   {
-    if(bfs::exists(get_robot_cfg_path_local(robot_name)))
+    if(fs::exists(get_robot_cfg_path_local(robot_name)))
     {
       return get_robot_cfg_path_local(robot_name).string();
     }
-    if(bfs::exists(get_robot_cfg_path_global(robot_name)))
+    if(fs::exists(get_robot_cfg_path_global(robot_name)))
     {
       return get_robot_cfg_path_global(robot_name).string();
     }
@@ -134,7 +134,7 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
   auto mc_mujoco_cfg_path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
   auto mc_mujoco_cfg = [&mc_mujoco_cfg_path]() -> mc_rtc::Configuration
   {
-    if(bfs::exists(mc_mujoco_cfg_path))
+    if(fs::exists(mc_mujoco_cfg_path))
     {
       return {mc_mujoco_cfg_path};
     }
@@ -163,7 +163,7 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     }
     std::string xmlFile = static_cast<std::string>(object_cfg("xmlModelPath"));
     mjObjects[object.name] = xmlFile;
-    if(!bfs::exists(xmlFile))
+    if(!fs::exists(xmlFile))
     {
       mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}", xmlFile,
                                                        co.first);
@@ -221,7 +221,7 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
           pdGainsPath = robot_cfg("pdGainsPath", std::string(""));
         }
 
-        if(!bfs::exists(xmlFile))
+        if(!fs::exists(xmlFile))
         {
           mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] XML model cannot be found at {} for {}",
                                                            xmlFile, r.name());
@@ -270,7 +270,7 @@ MjSimImpl::MjSimImpl(const MjConfiguration & config)
     {
       continue;
     }
-    if(!bfs::exists(pdGainsFiles[r.name]))
+    if(!fs::exists(pdGainsFiles[r.name]))
     {
       mc_rtc::log::error_and_throw<std::runtime_error>("[mc_mujoco] PD gains file for {} cannot be found at {}", r.name,
                                                        pdGainsFiles[r.name]);
@@ -1143,10 +1143,10 @@ void MjSimImpl::stopSimulation() {}
 
 void MjSimImpl::saveGUISettings()
 {
-  auto user_path = bfs::path(USER_FOLDER);
-  if(!bfs::exists(user_path))
+  auto user_path = fs::path(USER_FOLDER);
+  if(!fs::exists(user_path))
   {
-    if(!bfs::create_directories(user_path))
+    if(!fs::create_directories(user_path))
     {
       mc_rtc::log::critical("Failed to create the user directory: {}. GUI configuration will not be saved",
                             user_path.string());
@@ -1157,7 +1157,7 @@ void MjSimImpl::saveGUISettings()
   auto config_path = fmt::format("{}/mc_mujoco.yaml", USER_FOLDER);
   auto config = [&]() -> mc_rtc::Configuration
   {
-    if(bfs::exists(config_path))
+    if(fs::exists(config_path))
     {
       return {config_path};
     }

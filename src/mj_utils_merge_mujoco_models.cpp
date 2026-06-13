@@ -1,5 +1,6 @@
-#include <boost/filesystem.hpp>
-namespace bfs = boost::filesystem;
+#include <mc_rtc/path.h>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #include "pugixml/pugixml.hpp"
 
@@ -184,20 +185,20 @@ static void copy_and_add_prefix(const pugi::xml_node & in,
 
 static void merge_mujoco_asset(const pugi::xml_node & in,
                                pugi::xml_node & out,
-                               const bfs::path & meshPath,
-                               const bfs::path & texturePath,
+                               const fs::path & meshPath,
+                               const fs::path & texturePath,
                                const std::string & robot)
 {
   auto update_name = [&](pugi::xml_node & n) { add_prefix(robot, n, "name"); };
-  auto update_file = [&](pugi::xml_node & n, const bfs::path & dir)
+  auto update_file = [&](pugi::xml_node & n, const fs::path & dir)
   {
     auto n_file = n.attribute("file");
     if(n_file)
     {
-      bfs::path n_path(n_file.value());
+      fs::path n_path(n_file.value());
       if(!n_path.is_absolute())
       {
-        n_file.set_value(bfs::absolute(dir / n_path).c_str());
+        n_file.set_value(fs::absolute(dir / n_path).c_str());
       }
     }
   };
@@ -206,7 +207,7 @@ static void merge_mujoco_asset(const pugi::xml_node & in,
     auto hf_out = out.append_copy(hf);
     update_name(hf_out);
   }
-  auto copy_assets = [&](const char * type, const bfs::path & dir)
+  auto copy_assets = [&](const char * type, const fs::path & dir)
   {
     for(const auto & n : in.children(type))
     {
@@ -309,22 +310,22 @@ static void merge_mujoco_worldbody(const pugi::xml_node & in, pugi::xml_node & o
   }
 }
 
-static bfs::path get_mujoco_path(const std::string & xmlFile, const pugi::xml_node & in, const char * attr)
+static fs::path get_mujoco_path(const std::string & xmlFile, const pugi::xml_node & in, const char * attr)
 {
-  bfs::path xmlPath = bfs::path(xmlFile).parent_path();
+  fs::path xmlPath = fs::path(xmlFile).parent_path();
   auto dirAttr = in.child("compiler").attribute(attr);
   if(!dirAttr)
   {
     return xmlPath;
   }
-  bfs::path dir = bfs::path(dirAttr.value());
+  fs::path dir = fs::path(dirAttr.value());
   if(dir.is_absolute())
   {
     return dir;
   }
   else
   {
-    return bfs::absolute(xmlPath / dir);
+    return fs::absolute(xmlPath / dir);
   }
 }
 
@@ -344,10 +345,10 @@ static void merge_mujoco_model(const std::string & robot, const std::string & xm
   {
     for(const auto & inc : root.child(attr).children("include"))
     {
-      bfs::path include_file_path(inc.attribute("file").value());
+      fs::path include_file_path(inc.attribute("file").value());
       if(!include_file_path.is_absolute())
       {
-        bfs::path xmlPath = bfs::path(xmlFile).parent_path();
+        fs::path xmlPath = fs::path(xmlFile).parent_path();
         include_file_path = xmlPath / include_file_path;
       }
       pugi::xml_document includeDoc;
@@ -579,7 +580,7 @@ std::string merge_mujoco_models(const std::map<std::string, std::string> & mujoc
                                 std::vector<MjRobot> & mjRobots)
 {
   mjRobots.clear();
-  std::string outFile = (bfs::temp_directory_path() / bfs::unique_path("mc_mujoco_%%%%-%%%%-%%%%-%%%%.xml")).string();
+  std::string outFile = mc_rtc::temp_directory_path(mc_rtc::unique_path("mc_mujoco_%%%%-%%%%-%%%%-%%%%.xml"));
   pugi::xml_document out_doc;
   auto out = out_doc.append_child("mujoco");
   out.append_attribute("model").set_value("mc_mujoco");
