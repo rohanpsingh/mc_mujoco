@@ -39,8 +39,7 @@ set(MC_MUJOCO_SHARE_DESTINATION
 
 jrl_find_package(mc_rtc REQUIRED)
 jrl_find_package(mujoco 3.3.6 REQUIRED)
-# TODO: replace with cli11
-jrl_find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(CLI11 REQUIRED)
 
 if(NOT TARGET pugixml::pugixml)
   jrl_find_package(pugixml QUIET)

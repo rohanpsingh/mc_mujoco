@@ -7,8 +7,8 @@
 #include <iostream>
 #include <thread>
 
-#include <boost/program_options.hpp>
-namespace po = boost::program_options;
+// Replaced boost/program_options.hpp with CLI11
+#include <CLI/CLI.hpp>
 
 bool render_state = true;
 
@@ -55,43 +55,29 @@ int main(int argc, char * argv[])
   }
 
   mc_mujoco::MjConfiguration config;
-  {
-    po::options_description desc("mc_mujoco options");
-    po::positional_options_description p;
-    p.add("mc-config", 1);
-    // clang-format off
-    desc.add_options()
-      ("help,h", "Show this help message")
-      ("mc-config,f", po::value<std::string>(&config.mc_config), "Configuration given to mc_rtc")
-      ("step-by-step", po::bool_switch(&config.step_by_step), "Start the simulation in step-by-step mode")
-      ("torque-control", po::bool_switch(&config.torque_control), "Enable torque control")
-      ("without-controller", po::bool_switch(), "Disable mc_rtc controller inside mc_mujoco")
-      ("without-visualization", po::bool_switch(), "Disable mc_mujoco GUI")
-      ("without-mc-rtc-gui", po::bool_switch(), "Disable mc_rtc GUI")
-      ("with-collisions", po::bool_switch(), "Visualize collisions model")
-      ("without-visuals", po::bool_switch(), "Disable visuals display")
-      ("sync,s", po::bool_switch(&config.sync_real_time), "Synchronize mc_mujoco simulation time with real time");
-    // clang-format on
-    po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
-    po::notify(vm);
-    if(vm.count("help"))
-    {
-      std::cout << desc << "\n";
-      return 0;
-    }
-    config.with_controller = !vm["without-controller"].as<bool>();
-    config.with_visualization = !vm["without-visualization"].as<bool>();
-    config.with_mc_rtc_gui = !vm["without-mc-rtc-gui"].as<bool>();
-    if(!vm["without-visuals"].defaulted())
-    {
-      config.visualize_visual = !vm["without-visuals"].as<bool>();
-    }
-    if(!vm["with-collisions"].defaulted())
-    {
-      config.visualize_collisions = vm["with-collisions"].as<bool>();
-    }
-  }
+
+  // Initialize CLI11 App
+  CLI::App app{"mc_mujoco options"};
+
+  // Positional + Option flag for configuration
+  app.add_option("mc-config,-f,--mc-config", config.mc_config, "Configuration given to mc_rtc");
+
+  // Standard boolean switches
+  app.add_flag("--step-by-step", config.step_by_step, "Start the simulation in step-by-step mode");
+  app.add_flag("--torque-control", config.torque_control, "Enable torque control");
+  app.add_flag("-s,--sync", config.sync_real_time, "Synchronize mc_mujoco simulation time with real time");
+
+  // Inverted flags logic (CLI11 handles parsing directly into existing config variables)
+  app.add_flag("--without-controller{false}", config.with_controller, "Disable mc_rtc controller inside mc_mujoco");
+  app.add_flag("--without-visualization{false}", config.with_visualization, "Disable mc_mujoco GUI");
+  app.add_flag("--without-mc-rtc-gui{false}", config.with_mc_rtc_gui, "Disable mc_rtc GUI");
+  app.add_flag("--without-visuals{false}", config.visualize_visual, "Disable visuals display");
+
+  // Standard flag for turning a feature ON
+  app.add_flag("--with-collisions", config.visualize_collisions, "Visualize collisions model");
+
+  // Parse arguments. CLI11 automatically catches parsing exceptions and `--help` / `-h`.
+  CLI11_PARSE(app, argc, argv);
 
   scanPluginLibraries();
 
