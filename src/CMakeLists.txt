@@ -147,12 +147,9 @@ if(NOT COMBINED_MC_MUJOCO_LIB)
   set_target_properties(mc_mujoco_lib PROPERTIES EXPORT_NAME mc_mujoco)
 endif()
 
-find_package(Boost REQUIRED COMPONENTS program_options)
-
 add_executable(mc_mujoco main.cpp)
 target_compile_definitions(mc_mujoco PUBLIC MUJOCO_BIN_DIR="${MUJOCO_BIN_DIR}")
-target_link_libraries(mc_mujoco PRIVATE mc_mujoco_lib Boost::program_options
-                                        Boost::disable_autolinking)
+target_link_libraries(mc_mujoco PRIVATE mc_mujoco_lib CLI11::CLI11)
 
 install(
   TARGETS mc_mujoco

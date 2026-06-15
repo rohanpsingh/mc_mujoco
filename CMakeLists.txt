@@ -13,6 +13,8 @@ project(
   LANGUAGES C CXX
   VERSION 1.0.0)
 
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
+
 # Read MuJoCo version from single source of truth
 file(STRINGS "${CMAKE_SOURCE_DIR}/MUJOCO_VERSION" MUJOCO_VERSION)
 string(STRIP "${MUJOCO_VERSION}" MUJOCO_VERSION)
@@ -42,6 +44,7 @@ if(NOT DEFINED MUJOCO_ROOT_DIR)
 endif()
 
 find_package(mc_rtc REQUIRED)
+find_package(CLI11 REQUIRED)
 
 option(USE_GL "Use Mujoco with OpenGL" ON)
 set(MUJOCO_BIN_DIR "${MUJOCO_ROOT_DIR}/bin")
