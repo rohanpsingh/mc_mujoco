@@ -567,6 +567,7 @@ void MjSimImpl::makeDatastoreCalls()
   for(auto & o : objects)
   {
     ds.make_call(o.name + "::SetPosW", [this, name = o.name](const sva::PTransformd & pt) { setObjectPosW(name, pt); });
+    ds.make_call(o.name + "::GetPosW", [this, name = o.name]() { return getObjectPosW(name); });
   }
   for(auto & r : robots)
   {
