@@ -36,31 +36,31 @@ set(mc_mujoco_lib_SRC
 
 set(mc_mujoco_lib_HDR
     ${platform_adapter_HDR}
-    include/mc_mujoco/MujocoClient.h
-    include/mc_mujoco/mj_configuration.h
-    include/mc_mujoco/mj_sim_impl.h
-    include/mc_mujoco/mj_sim.h
-    include/mc_mujoco/mj_utils.h
-    include/mc_mujoco/widgets/Arrow.h
-    include/mc_mujoco/widgets/Force.h
-    include/mc_mujoco/widgets/MujocoWidget.h
-    include/mc_mujoco/widgets/Point3D.h
-    include/mc_mujoco/widgets/Polygon.h
-    include/mc_mujoco/widgets/Polyhedron.h
-    include/mc_mujoco/widgets/Rotation.h
-    include/mc_mujoco/widgets/Trajectory.h
-    include/mc_mujoco/widgets/Transform.h
-    include/mc_mujoco/widgets/Visual.h
-    include/mc_mujoco/widgets/XYTheta.h
-    include/mc_mujoco/widgets/details/ControlAxis.h
-    include/mc_mujoco/widgets/details/InteractiveMarker.h
-    include/mc_mujoco/widgets/details/TransformBase.h)
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/MujocoClient.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_configuration.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_sim_impl.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_sim.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_utils.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Arrow.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Force.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/MujocoWidget.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Point3D.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Polygon.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Polyhedron.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Rotation.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Trajectory.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Transform.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Visual.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/XYTheta.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/ControlAxis.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/InteractiveMarker.h
+    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/TransformBase.h)
 
 set(assets_DIR "${PROJECT_SOURCE_DIR}/assets")
 
 add_library(mc_mujoco_lib SHARED ${mc_mujoco_lib_SRC})
 jrl_target_headers(mc_mujoco_lib PUBLIC HEADERS ${mc_mujoco_lib_HDR} BASE_DIRS
-                   include)
+                   ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(
   mc_mujoco_lib PUBLIC mujoco::mujoco mc_rtc-imgui::mc_rtc-imgui
                        ImGuizmo::ImGuizmo pugixml::pugixml)
