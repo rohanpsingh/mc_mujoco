@@ -1,18 +1,20 @@
+set(OUR_GLFW_ADAPTER_BASE_DIR "${CMAKE_BINARY_DIR}/include")
 set(OUR_GLFW_ADAPTER_HDR
-    ${CMAKE_BINARY_DIR}/include/mc_mujoco/our_glfw_adapter.h)
+    ${OUR_GLFW_ADAPTER_BASE_DIR}/mc_mujoco/our_glfw_adapter.h)
 if(USE_BUNDLED_SIMULATE_ADAPTER)
   message(STATUS "Using bundled GLFW adapter from mc_mujoco")
   # MuJoCo simulate folder imported from MuJoCo We need to do this as it is not
   # installed by MuJoCo but provides a sensible default adapter for displaying
   # the scene with GLFW, but MuJoCo's cmake install does not install it
-  set(MUJOCO_SIMULATE_DIR "${PROJECT_SOURCE_DIR}/ext/mujoco_simulate/simulate")
+  set(MUJOCO_SIMULATE_BASE_DIR "${PROJECT_SOURCE_DIR}/ext/mujoco_simulate")
 else()
-  set(MUJOCO_SIMULATE_DIR "${MUJOCO_ROOT_DIR}/simulate")
+  set(MUJOCO_SIMULATE_BASE_DIR "${MUJOCO_ROOT_DIR}")
 endif()
+set(MUJOCO_SIMULATE_DIR "${MUJOCO_SIMULATE_BASE_DIR}/simulate")
 set(platform_adapter_HDR
     ${MUJOCO_SIMULATE_DIR}/glfw_dispatch.h
     ${MUJOCO_SIMULATE_DIR}/glfw_adapter.h
-    ${MUJOCO_SIMULATE_DIR}/platform_ui_adapter.h ${OUR_GLFW_ADAPTER_HDR})
+    ${MUJOCO_SIMULATE_DIR}/platform_ui_adapter.h)
 set(platform_adapter_SRC
     ${MUJOCO_SIMULATE_DIR}/glfw_dispatch.cc
     ${MUJOCO_SIMULATE_DIR}/glfw_adapter.cc
@@ -34,33 +36,44 @@ set(mc_mujoco_lib_SRC
     ../include/mc_mujoco/widgets/Visual.cpp
     ../include/mc_mujoco/widgets/details/InteractiveMarker.cpp)
 
-set(mc_mujoco_lib_HDR
-    ${platform_adapter_HDR}
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/MujocoClient.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_configuration.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_sim_impl.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_sim.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_utils.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Arrow.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Force.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/MujocoWidget.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Point3D.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Polygon.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Polyhedron.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Rotation.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Trajectory.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Transform.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Visual.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/XYTheta.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/ControlAxis.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/InteractiveMarker.h
-    ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/TransformBase.h)
-
 set(assets_DIR "${PROJECT_SOURCE_DIR}/assets")
 
 add_library(mc_mujoco_lib SHARED ${mc_mujoco_lib_SRC})
-jrl_target_headers(mc_mujoco_lib PUBLIC HEADERS ${mc_mujoco_lib_HDR} BASE_DIRS
-                   ${PROJECT_SOURCE_DIR}/include)
+jrl_target_headers(mc_mujoco_lib PUBLIC HEADERS ${OUR_GLFW_ADAPTER_HDR}
+                   BASE_DIRS ${OUR_GLFW_ADAPTER_BASE_DIR})
+jrl_target_headers(
+  mc_mujoco_lib
+  PUBLIC
+  HEADERS
+  ${platform_adapter_HDR}
+  BASE_DIRS
+  ${MUJOCO_SIMULATE_BASE_DIR}
+  ${PROJECT_SOURCE_DIR}/include)
+jrl_target_headers(
+  mc_mujoco_lib
+  PUBLIC
+  HEADERS
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/MujocoClient.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_configuration.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_sim_impl.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_sim.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/mj_utils.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Arrow.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Force.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/MujocoWidget.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Point3D.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Polygon.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Polyhedron.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Rotation.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Trajectory.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Transform.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/Visual.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/XYTheta.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/ControlAxis.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/InteractiveMarker.h
+  ${PROJECT_SOURCE_DIR}/include/mc_mujoco/widgets/details/TransformBase.h
+  BASE_DIRS
+  ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(
   mc_mujoco_lib PUBLIC mujoco::mujoco mc_rtc-imgui::mc_rtc-imgui
                        ImGuizmo::ImGuizmo pugixml::pugixml)

@@ -2,8 +2,7 @@
   description = "mc_mujoco: integration between mc_rtc and the MuJoCo simulator";
 
   inputs = {
-    # mc-rtc-nix.url = "github:mc-rtc/nixpkgs";
-    mc-rtc-nix.url = "/home/arnaud/devel/mc-rtc-nix/nixpkgs";
+    mc-rtc-nix.url = "github:mc-rtc/nixpkgs";
     flake-parts.follows = "mc-rtc-nix/flake-parts";
     systems.follows = "mc-rtc-nix/systems";
   };
