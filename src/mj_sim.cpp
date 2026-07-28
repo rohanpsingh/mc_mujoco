@@ -653,6 +653,29 @@ void MjSimImpl::makeDatastoreCalls()
                    d = r.kd[rjo_idx];
                    return true;
                  });
+
+    // make_call to apply an external wrench on a body of a robot (by name)
+    ds.make_call(
+        r.name + "::ApplyWrenchOnBody",
+        [this, &r](const std::string & bodyname, const sva::ForceVecd & wrench, const Eigen::Vector3d & localPoint)
+        {
+          if(!controller->robots().robot(r.name).hasBody(bodyname))
+          {
+            mc_rtc::log::warning("[mc_mujoco] {}::ApplyWrenchOnBody failed. Robot does not have any body called {}",
+                                 r.name, bodyname);
+            return false;
+          }
+          auto mj_body_id = mj_name2id(model, mjOBJ_BODY, r.prefixed(bodyname).c_str());
+          if(mj_body_id < 0)
+          {
+            mc_rtc::log::warning(
+                "[mc_mujoco] {}::ApplyWrenchOnBody failed. MuJoCo body {} could not be found for robot body {}", r.name,
+                r.prefixed(bodyname), bodyname);
+            return false;
+          }
+          pending_body_forces_.push_back({mj_body_id, wrench, localPoint});
+          return true;
+        });
   }
 }
 
@@ -850,6 +873,8 @@ bool MjSimImpl::controlStep()
   // After every frameskip iters
   if(config.with_controller && interp_idx == 0)
   {
+    // external wrenches only live for one control cycle, the controller must request them again
+    pending_body_forces_.clear();
     // run the controller
     if(!controller->run())
     {
@@ -875,6 +900,19 @@ void MjSimImpl::simStep()
   mju_zero(data->xfrc_applied, 6 * model->nbody);
   mjv_applyPerturbPose(model, data, &pert, 0); // move mocap bodies only
   mjv_applyPerturbForce(model, data, &pert);
+
+  // xfrc_applied is expressed at the body CoM, transport the requested wrench there
+  for(const auto & pending : pending_body_forces_)
+  {
+    Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>> bodyRotation(data->xmat + 9 * pending.body_id);
+    Eigen::Map<const Eigen::Vector3d> bodyOrigin(data->xpos + 3 * pending.body_id);
+    Eigen::Map<const Eigen::Vector3d> bodyCoM(data->xipos + 3 * pending.body_id);
+    Eigen::Map<Eigen::Matrix<double, 6, 1>> bodyWrench(data->xfrc_applied + 6 * pending.body_id);
+
+    Eigen::Vector3d worldPoint = bodyOrigin + bodyRotation * pending.localPoint;
+    bodyWrench.head<3>() += pending.wrench.force();
+    bodyWrench.tail<3>() += pending.wrench.couple() + (worldPoint - bodyCoM).cross(pending.wrench.force());
+  }
 
   // take one step in simulation
   // model.opt.timestep will be used here

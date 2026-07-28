@@ -258,6 +258,19 @@ public:
   /*! Simulation wall clock time (seconds) */
   double wallclock;
 
+  /** An external wrench queued for the current control cycle */
+  struct PendingBodyForce
+  {
+    /** Body the wrench applies to, as an index in the MuJoCo model */
+    int body_id = -1;
+    /** Force and couple, expressed in the world frame */
+    sva::ForceVecd wrench = sva::ForceVecd::Zero();
+    /** Application point, expressed in the body frame */
+    Eigen::Vector3d localPoint = Eigen::Vector3d::Zero();
+  };
+  /** Wrenches queued for the current control cycle, re-applied on every simulation step */
+  std::vector<PendingBodyForce> pending_body_forces_;
+
 private:
   /** Number of MuJoCo iteration since the start */
   size_t iterCount_ = 0;
