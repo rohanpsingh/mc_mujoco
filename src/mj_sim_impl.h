@@ -258,6 +258,40 @@ public:
   /*! Simulation wall clock time (seconds) */
   double wallclock;
 
+  /** An external wrench queued for the current control cycle */
+  struct PendingBodyForce
+  {
+    /** Body the wrench applies to, as an index in the MuJoCo model */
+    int body_id = -1;
+    /** Force and couple, expressed in the world frame */
+    sva::ForceVecd wrench = sva::ForceVecd::Zero();
+    /** Application point, expressed in the body frame */
+    Eigen::Vector3d localPoint = Eigen::Vector3d::Zero();
+  };
+  /** Wrenches queued for the current control cycle, re-applied on every simulation step */
+  std::vector<PendingBodyForce> pending_body_forces_;
+
+  /** External wrench configured from the mc_rtc GUI for a given robot */
+  struct GUIWrench
+  {
+    /** Robot the wrench applies to */
+    std::string robot;
+    /** Body the wrench applies to */
+    std::string body;
+    /** Application point, expressed in the body frame */
+    Eigen::Vector3d localPoint = Eigen::Vector3d::Zero();
+    /** Force and couple, expressed in the world frame */
+    sva::ForceVecd wrench = sva::ForceVecd::Zero();
+    /** How long the wrench is applied, applied until stopped if <= 0 */
+    double duration = 1.0;
+    /** How long the wrench is still applied for */
+    double remaining = 0.0;
+    /** True while the wrench is being applied */
+    bool active = false;
+  };
+  /** One entry per robot in the simulation */
+  std::vector<GUIWrench> gui_wrenches_;
+
 private:
   /** Number of MuJoCo iteration since the start */
   size_t iterCount_ = 0;
@@ -279,6 +313,24 @@ public:
   void cleanup();
 
   void makeDatastoreCalls();
+
+  /** Add the mc_mujoco entries to the controller's GUI
+   *
+   * Must be called again after the controller is reset as mc_rtc clears the GUI in that case
+   */
+  void makeGUIElements();
+
+  /** Push the wrenches configured from the GUI into pending_body_forces_ and update their remaining duration */
+  void applyGUIWrenches();
+
+  /** Queue an external wrench for the current control cycle
+   *
+   * \returns false and warns if \p bodyname is not a body of \p r in mc_rtc or in MuJoCo
+   */
+  bool queueBodyWrench(const MjRobot & r,
+                       const std::string & bodyname,
+                       const sva::ForceVecd & wrench,
+                       const Eigen::Vector3d & localPoint);
 
   void startSimulation();
 

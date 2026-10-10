@@ -18,6 +18,13 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+#include <mc_rtc/gui/ArrayInput.h>
+#include <mc_rtc/gui/Button.h>
+#include <mc_rtc/gui/ComboInput.h>
+#include <mc_rtc/gui/Force.h>
+#include <mc_rtc/gui/Label.h>
+#include <mc_rtc/gui/NumberInput.h>
+#include <mc_rtc/gui/Point3D.h>
 #include <mc_rtc/version.h>
 
 #ifdef USE_UI_ADAPTER
@@ -653,6 +660,169 @@ void MjSimImpl::makeDatastoreCalls()
                    d = r.kd[rjo_idx];
                    return true;
                  });
+
+    // make_call to apply an external wrench on a body of a robot (by name)
+    ds.make_call(r.name + "::ApplyWrenchOnBody", [this, &r](const std::string & bodyname, const sva::ForceVecd & wrench,
+                                                            const Eigen::Vector3d & localPoint)
+                 { return queueBodyWrench(r, bodyname, wrench, localPoint); });
+  }
+}
+
+bool MjSimImpl::queueBodyWrench(const MjRobot & r,
+                                const std::string & bodyname,
+                                const sva::ForceVecd & wrench,
+                                const Eigen::Vector3d & localPoint)
+{
+  if(!controller->robots().robot(r.name).hasBody(bodyname))
+  {
+    mc_rtc::log::warning("[mc_mujoco] {}::ApplyWrenchOnBody failed. Robot does not have any body called {}", r.name,
+                         bodyname);
+    return false;
+  }
+  auto mj_body_id = mj_name2id(model, mjOBJ_BODY, r.prefixed(bodyname).c_str());
+  if(mj_body_id < 0)
+  {
+    mc_rtc::log::warning(
+        "[mc_mujoco] {}::ApplyWrenchOnBody failed. MuJoCo body {} could not be found for robot body {}", r.name,
+        r.prefixed(bodyname), bodyname);
+    return false;
+  }
+  pending_body_forces_.push_back({mj_body_id, wrench, localPoint});
+  return true;
+}
+
+void MjSimImpl::makeGUIElements()
+{
+  if(!config.with_controller)
+  {
+    return;
+  }
+  if(gui_wrenches_.size() != robots.size())
+  {
+    gui_wrenches_.resize(robots.size());
+  }
+  auto & gui = *controller->controller().gui();
+  for(size_t i = 0; i < robots.size(); ++i)
+  {
+    auto & r = robots[i];
+    auto & w = gui_wrenches_[i];
+    w.robot = r.name;
+    // only offer the bodies that exist on both sides
+    std::vector<std::string> bodies;
+    for(const auto & b : controller->robots().robot(r.name).mb().bodies())
+    {
+      if(mj_name2id(model, mjOBJ_BODY, r.prefixed(b.name()).c_str()) >= 0)
+      {
+        bodies.push_back(b.name());
+      }
+    }
+    if(bodies.empty())
+    {
+      continue;
+    }
+    if(std::find(bodies.begin(), bodies.end(), w.body) == bodies.end())
+    {
+      w.body = bodies.front();
+    }
+
+    // world position of the application point
+    auto pointPosW = [this, &w]()
+    {
+      const auto & robot = controller->robots().robot(w.robot);
+      if(!robot.hasBody(w.body))
+      {
+        return sva::PTransformd::Identity();
+      }
+      return sva::PTransformd(w.localPoint) * robot.bodyPosW(w.body);
+    };
+    // the Force element expresses the wrench in the frame it is given, so give it a frame aligned
+    // with the world otherwise the arrow would be rotated by the body orientation
+    auto pointFrameW = [pointPosW]() { return sva::PTransformd(pointPosW().translation()); };
+
+    const std::vector<std::string> category = {"MuJoCo", "External wrench", r.name};
+    gui.removeCategory(category);
+    gui.addElement(category,
+                   mc_rtc::gui::ComboInput(
+                       "Body", bodies, [&w]() { return w.body; },
+                       [&w](const std::string & b)
+                       {
+                         w.body = b;
+                         w.localPoint.setZero();
+                       }),
+                   mc_rtc::gui::ArrayInput(
+                       "Local point [m]", {"x", "y", "z"}, [&w]() { return w.localPoint; },
+                       [&w](const Eigen::Vector3d & p) { w.localPoint = p; }),
+                   mc_rtc::gui::ArrayInput(
+                       "Force [N]", {"fx", "fy", "fz"}, [&w]() { return w.wrench.force(); },
+                       [&w](const Eigen::Vector3d & f) { w.wrench.force() = f; }),
+                   mc_rtc::gui::ArrayInput(
+                       "Moment [N.m]", {"mx", "my", "mz"}, [&w]() { return w.wrench.couple(); },
+                       [&w](const Eigen::Vector3d & m) { w.wrench.couple() = m; }),
+                   mc_rtc::gui::NumberInput(
+                       "Duration [s]", [&w]() { return w.duration; }, [&w](double d) { w.duration = d; }),
+                   mc_rtc::gui::Button("Apply",
+                                       [&w]()
+                                       {
+                                         w.active = true;
+                                         w.remaining = w.duration;
+                                       }),
+                   mc_rtc::gui::Button("Stop",
+                                       [&w]()
+                                       {
+                                         w.active = false;
+                                         w.remaining = 0.0;
+                                       }),
+                   mc_rtc::gui::Label("Status", [&w]() -> std::string { return w.active ? "applying" : "idle"; }),
+                   mc_rtc::gui::Label("Remaining [s]",
+                                      [&w]() -> std::string
+                                      {
+                                        if(!w.active)
+                                        {
+                                          return "-";
+                                        }
+                                        return w.duration > 0 ? fmt::format("{:.3f}", w.remaining) : "until stopped";
+                                      }),
+                   mc_rtc::gui::Point3D(
+                       "Application point", mc_rtc::gui::PointConfig{mc_rtc::gui::Color::Blue, 0.02},
+                       [pointPosW]() -> Eigen::Vector3d { return pointPosW().translation(); },
+                       [this, &w](const Eigen::Vector3d & p)
+                       {
+                         const auto & robot = controller->robots().robot(w.robot);
+                         if(robot.hasBody(w.body))
+                         {
+                           w.localPoint = (sva::PTransformd(p) * robot.bodyPosW(w.body).inv()).translation();
+                         }
+                       }),
+                   mc_rtc::gui::Force(
+                       "Applied wrench", mc_rtc::gui::ForceConfig{mc_rtc::gui::Color::Red},
+                       [&w]() { return w.active ? w.wrench : sva::ForceVecd::Zero(); }, pointFrameW));
+  }
+}
+
+void MjSimImpl::applyGUIWrenches()
+{
+  for(size_t i = 0; i < gui_wrenches_.size(); ++i)
+  {
+    auto & w = gui_wrenches_[i];
+    if(!w.active)
+    {
+      continue;
+    }
+    if(!queueBodyWrench(robots[i], w.body, w.wrench, w.localPoint))
+    {
+      w.active = false;
+      w.remaining = 0.0;
+      continue;
+    }
+    if(w.duration > 0)
+    {
+      w.remaining -= controller->timestep();
+      if(w.remaining <= 0)
+      {
+        w.active = false;
+        w.remaining = 0.0;
+      }
+    }
   }
 }
 
@@ -685,6 +855,7 @@ void MjSimImpl::startSimulation()
   }
   controller->init(init_qs_, init_pos_);
   controller->running = true;
+  makeGUIElements();
   setSimulationInitialState();
 }
 
@@ -850,6 +1021,8 @@ bool MjSimImpl::controlStep()
   // After every frameskip iters
   if(config.with_controller && interp_idx == 0)
   {
+    // external wrenches only live for one control cycle, the controller must request them again
+    pending_body_forces_.clear();
     // run the controller
     if(!controller->run())
     {
@@ -859,6 +1032,8 @@ bool MjSimImpl::controlStep()
     {
       r.updateControl(controller->robots().robot(r.name));
     }
+    // done after the controller ran so both sources of wrenches add up
+    applyGUIWrenches();
   }
   // On each control iter
   for(auto & r : robots)
@@ -875,6 +1050,19 @@ void MjSimImpl::simStep()
   mju_zero(data->xfrc_applied, 6 * model->nbody);
   mjv_applyPerturbPose(model, data, &pert, 0); // move mocap bodies only
   mjv_applyPerturbForce(model, data, &pert);
+
+  // xfrc_applied is expressed at the body CoM, transport the requested wrench there
+  for(const auto & pending : pending_body_forces_)
+  {
+    Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>> bodyRotation(data->xmat + 9 * pending.body_id);
+    Eigen::Map<const Eigen::Vector3d> bodyOrigin(data->xpos + 3 * pending.body_id);
+    Eigen::Map<const Eigen::Vector3d> bodyCoM(data->xipos + 3 * pending.body_id);
+    Eigen::Map<Eigen::Matrix<double, 6, 1>> bodyWrench(data->xfrc_applied + 6 * pending.body_id);
+
+    Eigen::Vector3d worldPoint = bodyOrigin + bodyRotation * pending.localPoint;
+    bodyWrench.head<3>() += pending.wrench.force();
+    bodyWrench.tail<3>() += pending.wrench.couple() + (worldPoint - bodyCoM).cross(pending.wrench.force());
+  }
 
   // take one step in simulation
   // model.opt.timestep will be used here
@@ -900,6 +1088,14 @@ void MjSimImpl::resetSimulation(const std::map<std::string, std::vector<double>>
   mj_resetData(model, data);
   setSimulationInitialState();
   makeDatastoreCalls();
+  pending_body_forces_.clear();
+  for(auto & w : gui_wrenches_)
+  {
+    w.active = false;
+    w.remaining = 0.0;
+  }
+  // mc_rtc clears the controller GUI on reset, the mc_mujoco entries must be added again
+  makeGUIElements();
   for(auto & marker : markers)
   {
     marker.marker.pose(getObjectPosW(marker.name));

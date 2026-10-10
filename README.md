@@ -107,6 +107,22 @@ PluginPaths: ["<path-to-plugins>"]
 
 An object is selected by left-double-click. The user can then apply forces and torques on the selected object by holding `Ctrl` key and dragging the left-mouse-button for torques and right-mouse-button for forces.
 
+---
+
+#### GUI: Applying an external wrench on a robot body
+
+Unlike the mouse interaction, this lets you apply a precise, reproducible wrench at a precise point of a robot body. `mc_mujoco` adds the entries itself so this works with any controller, without writing any code.
+
+In the `mc_rtc` GUI, open `MuJoCo` → `External wrench` → `{robot}`:
+
+- **Body**: the body the wrench is applied on
+- **Local point**: application point, expressed in the body frame. It can also be dragged interactively in the 3D view
+- **Force** / **Moment**: the wrench to apply, expressed in the **world** frame
+- **Duration**: for how long the wrench is applied. Use `0` (or a negative value) to apply it until `Stop` is pressed
+- **Apply** / **Stop**: start and stop applying the wrench
+
+While the wrench is applied, it is drawn as an arrow starting at the application point, and the remaining duration is displayed.
+
 ## Datastore callbacks
 
 The following callbacks are available for the controller when running inside `mc_mujoco`
@@ -118,6 +134,11 @@ The following callbacks are available for the controller when running inside `mc
 | `{robot}::SetPDGainsByName(const std::string & jn, double p, double d)`             | Set the PD gains for a given joint `jn` in `robot`                                                                 |
 | `{robot}::GetPDGains(std::vector<double> & p, std::vector<double> & d)`             | Get the current PD gains for `robot` actuation                                                                     |
 | `{robot}::GetPDGainsByName(const std::string & jn, double & p, double & d)`         | Get the current PD gains for a given joint `jn` in `robot`                                                         |
+| `{robot}::ApplyWrenchOnBody(const std::string & body, const sva::ForceVecd & wrench, const Eigen::Vector3d & localPoint)` | Apply an external `wrench` on `body` of `robot`, at `localPoint`. Returns `false` if `body` is unknown |
+
+`ApplyWrenchOnBody` expects `wrench.force()` and `wrench.couple()` in the **world** frame and `localPoint` in the **body** frame. The queued wrenches are cleared at the beginning of every control cycle, so the call must be issued on **every** iteration for as long as the wrench should be applied.
+
+The same thing can be done interactively from the GUI, see [GUI: Applying an external wrench on a robot body](#gui-applying-an-external-wrench-on-a-robot-body).
 
 ## Citation
 
