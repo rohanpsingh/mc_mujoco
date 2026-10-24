@@ -514,6 +514,20 @@ static void get_motor_names(const pugi::xml_node & in,
   joint_to_act("velocity", vel_acts);
 }
 
+static std::string get_general_actuator_name(const pugi::xml_node & in, const std::string & prefix)
+{
+  for(const auto & actuator : in.children("general"))
+  {
+    std::string name = actuator.attribute("name").value();
+    if(prefix.size())
+    {
+      name = fmt::format("{}_{}", prefix, name);
+    }
+    return name;
+  }
+  return "";
+}
+
 static void mj_object_from_xml(const std::string & name, const std::string & xmlFile, MjObject & object)
 {
   char error[1000] = "Could not load XML model";
@@ -571,6 +585,7 @@ static MjRobot mj_robot_from_xml(const std::string & name, const std::string & x
   get_joint_names(root.child("worldbody"), prefix, out.mj_jnt_names, out.root_joint);
   get_motor_names(root.child("actuator"), prefix, out.mj_jnt_names, out.mj_mot_names, out.mj_pos_act_names,
                   out.mj_vel_act_names);
+  out.mj_general_act_name = get_general_actuator_name(root.child("actuator"), prefix);
   return out;
 }
 
